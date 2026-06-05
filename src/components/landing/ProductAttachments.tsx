@@ -171,7 +171,9 @@ export default function ProductAttachments() {
 
                 <div className="mt-3">
                   <input
-                    ref={(el) => (fileInputs.current[p.id] = el)}
+                    ref={(el) => {
+                      fileInputs.current[p.id] = el;
+                    }}
                     type="file"
                     className="hidden"
                     accept="image/*,application/pdf"
