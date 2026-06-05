@@ -29,6 +29,7 @@ type AuthCtx = {
   signIn: (email: string, password: string) => Promise<{ error: string | null; needsVerification?: boolean }>;
   signInWithOtp: (identifier: string, otp: string) => Promise<{ error: string | null }>;
   sendOtp: (identifier: string) => Promise<{ error: string | null }>;
+  sendResetLink: (identifier: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, fullName: string, role?: AppRole) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
