@@ -22,10 +22,14 @@ export const Route = createFileRoute("/")({
         content:
           "Acqua Lence monitors dissolved oxygen, pH, temperature, turbidity, salinity, ammonia and device health in real time — with clear alerts and practical actions for fish and shrimp farmers.",
       },
-      { property: "og:title", content: "Acqua Lence — Crystal clear water insights for healthier fish farming" },
+      {
+        property: "og:title",
+        content: "Acqua Lence — Crystal clear water insights for healthier fish farming",
+      },
       {
         property: "og:description",
-        content: "Real-time pond water monitoring, critical alerts, and clear next-step recommendations for fish and shrimp farms.",
+        content:
+          "Real-time pond water monitoring, critical alerts, and clear next-step recommendations for fish and shrimp farms.",
       },
       { property: "og:type", content: "website" },
     ],
@@ -43,7 +47,7 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   return (
-    <main className="min-h-screen overflow-x-hidden bg-background font-sans">
+    <main className="min-h-screen overflow-x-clip bg-background font-sans">
       <Nav />
       <Hero />
       <Dashboard />

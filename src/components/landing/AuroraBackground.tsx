@@ -6,11 +6,7 @@ export function AuroraBackground() {
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
       <motion.div
         className="absolute -top-1/3 left-1/2 h-[120%] w-[160%] -translate-x-1/2"
-        animate={
-          reduced
-            ? undefined
-            : { backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }
-        }
+        animate={reduced ? undefined : { backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
         transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
         style={{
           background:

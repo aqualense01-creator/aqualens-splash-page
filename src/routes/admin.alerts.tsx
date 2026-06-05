@@ -35,11 +35,7 @@ import {
   type Profile,
   type Reading,
 } from "@/lib/insforge";
-import {
-  PageHeader,
-  StatusBadge,
-  EmptyState,
-} from "@/components/app/StatusBadge";
+import { PageHeader, StatusBadge, EmptyState } from "@/components/app/StatusBadge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -157,7 +153,8 @@ function AdminAlerts() {
   });
   const devicesQ = useQuery({
     queryKey: ["admin-alerts", "devices"],
-    queryFn: async () => ((await insforge.database.from("devices").select("*")).data ?? []) as Device[],
+    queryFn: async () =>
+      ((await insforge.database.from("devices").select("*")).data ?? []) as Device[],
   });
   const profilesQ = useQuery({
     queryKey: ["admin-alerts", "profiles"],
@@ -170,12 +167,12 @@ function AdminAlerts() {
       ((await insforge.database.from("user_roles").select("*")).data ?? []) as UserRoleRow[],
   });
 
-  const alerts = alertsQ.data ?? [];
-  const farms = farmsQ.data ?? [];
-  const ponds = pondsQ.data ?? [];
-  const devices = devicesQ.data ?? [];
-  const profiles = profilesQ.data ?? [];
-  const roles = rolesQ.data ?? [];
+  const alerts = useMemo(() => alertsQ.data ?? [], [alertsQ.data]);
+  const farms = useMemo(() => farmsQ.data ?? [], [farmsQ.data]);
+  const ponds = useMemo(() => pondsQ.data ?? [], [pondsQ.data]);
+  const devices = useMemo(() => devicesQ.data ?? [], [devicesQ.data]);
+  const profiles = useMemo(() => profilesQ.data ?? [], [profilesQ.data]);
+  const roles = useMemo(() => rolesQ.data ?? [], [rolesQ.data]);
 
   const farmById = useMemo(() => new Map(farms.map((f) => [f.id, f])), [farms]);
   const pondById = useMemo(() => new Map(ponds.map((p) => [p.id, p])), [ponds]);
@@ -249,7 +246,8 @@ function AdminAlerts() {
   }, [alerts, devices]);
 
   // ===== Drawer data =====
-  const drawerCtx = sorted.find((e) => e.alert.id === drawerId) ?? enriched.find((e) => e.alert.id === drawerId);
+  const drawerCtx =
+    sorted.find((e) => e.alert.id === drawerId) ?? enriched.find((e) => e.alert.id === drawerId);
   const drawerAlert = drawerCtx?.alert ?? null;
   const drawerFarmer = drawerCtx?.farm ? profileById.get(drawerCtx.farm.owner_id) : undefined;
 
@@ -430,7 +428,9 @@ function AdminAlerts() {
           <SelectContent>
             <SelectItem value="all">All severities</SelectItem>
             {SEVERITIES.map((s) => (
-              <SelectItem key={s} value={s}>{s}</SelectItem>
+              <SelectItem key={s} value={s}>
+                {s}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -452,7 +452,9 @@ function AdminAlerts() {
           <SelectContent>
             <SelectItem value="all">All farms</SelectItem>
             {farms.map((f) => (
-              <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+              <SelectItem key={f.id} value={f.id}>
+                {f.name}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -463,7 +465,9 @@ function AdminAlerts() {
           <SelectContent>
             <SelectItem value="all">All districts</SelectItem>
             {districts.map((d) => (
-              <SelectItem key={d} value={d}>{d}</SelectItem>
+              <SelectItem key={d} value={d}>
+                {d}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -474,7 +478,9 @@ function AdminAlerts() {
           <SelectContent>
             <SelectItem value="all">All devices</SelectItem>
             {devices.map((d) => (
-              <SelectItem key={d.id} value={d.id}>{d.name ?? d.serial}</SelectItem>
+              <SelectItem key={d.id} value={d.id}>
+                {d.name ?? d.serial}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -520,22 +526,39 @@ function AdminAlerts() {
                         severityRowTone[alert.severity],
                       )}
                     >
-                      <td className="px-3 py-3"><StatusBadge status={alert.severity} /></td>
+                      <td className="px-3 py-3">
+                        <StatusBadge status={alert.severity} />
+                      </td>
                       <td className="px-3 py-3 font-medium">{farm?.name ?? "—"}</td>
                       <td className="px-3 py-3 text-muted-foreground">{pond?.name ?? "—"}</td>
-                      <td className="px-3 py-3 text-muted-foreground">{device?.name ?? device?.serial ?? "—"}</td>
-                      <td className="px-3 py-3 text-xs uppercase tracking-wider">{alert.parameter ?? "—"}</td>
+                      <td className="px-3 py-3 text-muted-foreground">
+                        {device?.name ?? device?.serial ?? "—"}
+                      </td>
+                      <td className="px-3 py-3 text-xs uppercase tracking-wider">
+                        {alert.parameter ?? "—"}
+                      </td>
                       <td className="px-3 py-3 tabular-nums">{alert.value ?? "—"}</td>
-                      <td className="px-3 py-3 tabular-nums text-muted-foreground">{alert.threshold ?? "—"}</td>
+                      <td className="px-3 py-3 tabular-nums text-muted-foreground">
+                        {alert.threshold ?? "—"}
+                      </td>
                       <td className="px-3 py-3 text-xs text-muted-foreground">
                         {duration(alert.detected_at, alert.resolved_at)}
                       </td>
                       <td className="px-3 py-3 text-xs text-muted-foreground">
                         {tech?.full_name ?? "Unassigned"}
                       </td>
-                      <td className="px-3 py-3"><StatusBadge status={alert.status} /></td>
+                      <td className="px-3 py-3">
+                        <StatusBadge status={alert.status} />
+                      </td>
                       <td className="px-3 py-3 text-right">
-                        <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setDrawerId(alert.id); }}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDrawerId(alert.id);
+                          }}
+                        >
                           Open
                         </Button>
                       </td>
@@ -559,9 +582,12 @@ function AdminAlerts() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="font-medium">{farm?.name ?? "—"} · {pond?.name ?? "—"}</p>
+                    <p className="font-medium">
+                      {farm?.name ?? "—"} · {pond?.name ?? "—"}
+                    </p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      {alert.parameter ?? alert.alert_type} · {device?.name ?? device?.serial ?? "—"}
+                      {alert.parameter ?? alert.alert_type} ·{" "}
+                      {device?.name ?? device?.serial ?? "—"}
                     </p>
                   </div>
                   <StatusBadge status={alert.severity} />
@@ -577,7 +603,15 @@ function AdminAlerts() {
       )}
 
       {/* Detail drawer */}
-      <Sheet open={!!drawerId} onOpenChange={(o) => { if (!o) { setDrawerId(null); setNoteDraft(""); } }}>
+      <Sheet
+        open={!!drawerId}
+        onOpenChange={(o) => {
+          if (!o) {
+            setDrawerId(null);
+            setNoteDraft("");
+          }
+        }}
+      >
         <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
           {drawerAlert && drawerCtx && (
             <>
@@ -586,26 +620,24 @@ function AdminAlerts() {
                   <StatusBadge status={drawerAlert.severity} />
                   {drawerCtx.farm?.name ?? "Unknown farm"} · {drawerCtx.pond?.name ?? "—"}
                 </SheetTitle>
-                <SheetDescription>
-                  {drawerAlert.message ?? drawerAlert.alert_type}
-                </SheetDescription>
+                <SheetDescription>{drawerAlert.message ?? drawerAlert.alert_type}</SheetDescription>
               </SheetHeader>
 
               {/* Action bar */}
               <div className="mt-4 flex flex-wrap gap-2">
                 {drawerAlert.severity !== "critical" && (
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => setEscalateOpen(true)}
-                  >
+                  <Button size="sm" variant="destructive" onClick={() => setEscalateOpen(true)}>
                     <Flame className="mr-1.5 h-3.5 w-3.5" /> Escalate
                   </Button>
                 )}
-                <Button size="sm" variant="outline" onClick={() => {
-                  setAssignTechId(drawerAlert.assigned_technician_id ?? "");
-                  setAssignOpen(true);
-                }}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setAssignTechId(drawerAlert.assigned_technician_id ?? "");
+                    setAssignOpen(true);
+                  }}
+                >
                   <UserCog className="mr-1.5 h-3.5 w-3.5" /> Assign technician
                 </Button>
                 {drawerAlert.status !== "resolved" && (
@@ -638,36 +670,57 @@ function AdminAlerts() {
                         <XAxis dataKey="t" tick={{ fontSize: 10 }} />
                         <YAxis tick={{ fontSize: 10 }} />
                         <Tooltip />
-                        <Area type="monotone" dataKey="v" stroke="hsl(var(--primary))" fill="url(#alertVal)" />
+                        <Area
+                          type="monotone"
+                          dataKey="v"
+                          stroke="hsl(var(--primary))"
+                          fill="url(#alertVal)"
+                        />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
                 )}
                 {drawerAlert.threshold != null && (
                   <p className="mt-1 text-[11px] text-muted-foreground">
-                    Threshold: <span className="font-medium">{drawerAlert.threshold}</span> · Current:{" "}
-                    <span className="font-medium">{drawerAlert.value ?? "—"}</span>
+                    Threshold: <span className="font-medium">{drawerAlert.threshold}</span> ·
+                    Current: <span className="font-medium">{drawerAlert.value ?? "—"}</span>
                   </p>
                 )}
               </section>
 
               {/* Farmer contact */}
               <section className="mt-6 space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Farmer contact</h3>
-                <DRow icon={<UserCog className="h-4 w-4" />} label="Owner" value={drawerFarmer?.full_name ?? "—"} />
-                <DRow icon={<Phone className="h-4 w-4" />} label="Phone" value={drawerFarmer?.phone ?? "—"} />
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Farmer contact
+                </h3>
+                <DRow
+                  icon={<UserCog className="h-4 w-4" />}
+                  label="Owner"
+                  value={drawerFarmer?.full_name ?? "—"}
+                />
+                <DRow
+                  icon={<Phone className="h-4 w-4" />}
+                  label="Phone"
+                  value={drawerFarmer?.phone ?? "—"}
+                />
                 <DRow
                   icon={<Mail className="h-4 w-4" />}
                   label="Email"
                   value={(drawerFarmer as Profile & { email?: string | null })?.email ?? "—"}
                 />
-                <DRow icon={<MapPin className="h-4 w-4" />} label="District" value={drawerCtx.farm?.district ?? "—"} />
+                <DRow
+                  icon={<MapPin className="h-4 w-4" />}
+                  label="District"
+                  value={drawerCtx.farm?.district ?? "—"}
+                />
               </section>
 
               {/* Recommended action */}
               {drawerAlert.recommended_action && (
                 <section className="mt-6">
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Recommended action</h3>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Recommended action
+                  </h3>
                   <p className="rounded-md border border-border/60 bg-surface/40 p-3 text-sm">
                     {drawerAlert.recommended_action}
                   </p>
@@ -748,15 +801,23 @@ function AdminAlerts() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Technician</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+              Technician
+            </Label>
             <Select value={assignTechId} onValueChange={setAssignTechId}>
-              <SelectTrigger><SelectValue placeholder="Select technician" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Select technician" />
+              </SelectTrigger>
               <SelectContent>
                 {technicians.length === 0 ? (
-                  <SelectItem value="none" disabled>No technicians found</SelectItem>
+                  <SelectItem value="none" disabled>
+                    No technicians found
+                  </SelectItem>
                 ) : (
                   technicians.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.full_name ?? t.id}</SelectItem>
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.full_name ?? t.id}
+                    </SelectItem>
                   ))
                 )}
               </SelectContent>
@@ -767,7 +828,8 @@ function AdminAlerts() {
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
-                if (drawerId && assignTechId) assignMut.mutate({ id: drawerId, techId: assignTechId });
+                if (drawerId && assignTechId)
+                  assignMut.mutate({ id: drawerId, techId: assignTechId });
               }}
             >
               Assign
@@ -866,15 +928,28 @@ function SummaryTile({
       <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
         {icon} {label}
       </p>
-      <p className={cn("mt-1 font-display text-2xl font-bold tabular-nums", valTone[tone])}>{value}</p>
+      <p className={cn("mt-1 font-display text-2xl font-bold tabular-nums", valTone[tone])}>
+        {value}
+      </p>
     </div>
   );
 }
 
-function DRow({ icon, label, value }: { icon?: React.ReactNode; label: string; value: React.ReactNode }) {
+function DRow({
+  icon,
+  label,
+  value,
+}: {
+  icon?: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+}) {
   return (
     <div className="flex items-center justify-between gap-3 text-sm">
-      <span className="flex items-center gap-2 text-muted-foreground">{icon}{label}</span>
+      <span className="flex items-center gap-2 text-muted-foreground">
+        {icon}
+        {label}
+      </span>
       <span className="text-right font-medium">{value}</span>
     </div>
   );

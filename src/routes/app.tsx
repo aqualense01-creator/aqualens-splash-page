@@ -18,7 +18,11 @@ function AppLayout() {
   }, [loading, user, navigate]);
 
   if (loading) {
-    return <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">Loading…</div>;
+    return (
+      <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">
+        Loading…
+      </div>
+    );
   }
   if (!user) return null;
 

@@ -1,10 +1,19 @@
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
-  Sun, Gauge, ShieldCheck, Wrench, Waves, Anchor, BatteryFull, Zap, ArrowRight,
+  Sun,
+  Gauge,
+  ShieldCheck,
+  Wrench,
+  Waves,
+  Anchor,
+  BatteryFull,
+  Zap,
+  ArrowRight,
 } from "lucide-react";
 import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
 import { Reveal } from "./Reveal";
 import { ScrollSequence } from "./ScrollSequence";
+import { cn } from "@/lib/utils";
 
 const left = [
   { icon: Sun, title: "Solar Powered", body: "Long lasting & energy efficient" },
@@ -21,11 +30,18 @@ const right = [
 ];
 
 export function Rugged() {
-  // Outer tall section — drives scroll mapping
   const outerRef = useRef<HTMLElement>(null);
   const reduced = useReducedMotion();
+  const [isDesktop, setIsDesktop] = useState(false);
 
-  // Subtle parallax on side columns, mapped to the same scroll window
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const check = () => setIsDesktop(window.innerWidth >= 1024);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   const { scrollYProgress } = useScroll({
     target: outerRef,
     offset: ["start start", "end end"],
@@ -38,11 +54,14 @@ export function Rugged() {
       id="device"
       ref={outerRef}
       className="relative bg-background"
-      // Tall outer drives the sticky stage. ~220vh desktop, 180vh mobile.
-      style={{ height: "150vh" }}
+      style={{ height: isDesktop ? "150vh" : "auto" }}
     >
-      {/* Pinned stage */}
-      <div className="sticky top-0 flex h-screen items-center overflow-hidden">
+      <div
+        className={cn(
+          "flex items-center overflow-hidden w-full",
+          isDesktop ? "sticky top-0 h-screen" : "relative min-h-[70vh] py-12",
+        )}
+      >
         {/* Ambient backdrop */}
         <div
           aria-hidden
@@ -65,9 +84,8 @@ export function Rugged() {
                 <br /> Built for any water.
               </h2>
               <p className="mt-4 max-w-md text-sm text-muted-foreground sm:text-[15px]">
-                Engineered for harsh aquaculture environments — durable,
-                low-maintenance, and built to deliver accurate data day in and
-                day out.
+                Engineered for harsh aquaculture environments — durable, low-maintenance, and built
+                to deliver accurate data day in and day out.
               </p>
 
               <div className="mt-6 grid max-w-md grid-cols-2 gap-3">

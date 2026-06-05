@@ -9,7 +9,12 @@ import sensorTurb from "@/assets/sensor-turbidity.png";
 import solar from "@/assets/solar-kit.png";
 
 const products = [
-  { img: buoy, name: "AcquaLence Buoy", sub: "Water Quality Monitoring Device", price: "$1,299.00" },
+  {
+    img: buoy,
+    name: "AcquaLence Buoy",
+    sub: "Water Quality Monitoring Device",
+    price: "$1,299.00",
+  },
   { img: sensorDo, name: "DO Sensor", sub: "Dissolved Oxygen Sensor", price: "$199.00" },
   { img: sensorPh, name: "pH Sensor", sub: "pH Level Sensor", price: "$149.00" },
   { img: sensorTurb, name: "Turbidity Sensor", sub: "Turbidity Sensor", price: "$169.00" },
@@ -23,10 +28,13 @@ export function Shop() {
         <div className="grid gap-10 lg:grid-cols-[280px_1fr]">
           <Reveal>
             <p className="text-xs font-semibold uppercase tracking-wider text-primary">Shop</p>
-            <h2 className="mt-3 font-display text-3xl font-bold text-foreground text-balance sm:text-4xl">Everything You Need</h2>
+            <h2 className="mt-3 font-display text-3xl font-bold text-foreground text-balance sm:text-4xl">
+              Everything You Need
+            </h2>
 
             <p className="mt-3 text-sm text-muted-foreground">
-              Explore our range of smart devices, sensors and accessories — built for the demands of modern aquaculture.
+              Explore our range of smart devices, sensors and accessories — built for the demands of
+              modern aquaculture.
             </p>
             <Button className="mt-5 gap-1 bg-primary text-primary-foreground hover:bg-primary/90">
               <ShoppingBag className="h-4 w-4" /> Visit Shop
@@ -49,14 +57,17 @@ export function Shop() {
                   <p className="mt-3 text-sm font-semibold text-foreground">{p.name}</p>
                   <p className="text-[11px] text-muted-foreground">{p.sub}</p>
                   <p className="mt-2 text-sm font-bold text-foreground">{p.price}</p>
-                  <Button size="sm" variant="outline" className="mt-3 border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-3 border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground"
+                  >
                     Add to Cart
                   </Button>
                 </SpotlightCard>
               </Reveal>
             ))}
           </div>
-
         </div>
       </div>
     </section>

@@ -44,7 +44,9 @@ export function AdminSidebar() {
       <SidebarHeader className="border-b border-border/60 px-3 py-3">
         {collapsed ? <Logo iconOnly /> : <Logo />}
         {!collapsed && (
-          <p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-primary">Admin console</p>
+          <p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-primary">
+            Admin console
+          </p>
         )}
       </SidebarHeader>
       <SidebarContent>
@@ -70,7 +72,10 @@ export function AdminSidebar() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <a href="/app/dashboard" className="flex items-center gap-2 text-muted-foreground">
+                  <a
+                    href="/app/dashboard"
+                    className="flex items-center gap-2 text-muted-foreground"
+                  >
                     <ArrowLeft className="h-4 w-4" />
                     {!collapsed && <span>Back to app</span>}
                   </a>

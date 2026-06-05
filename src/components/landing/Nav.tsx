@@ -81,7 +81,9 @@ export function Nav() {
             <Button variant="ghost">Sign in</Button>
           </a>
           <a href="/signup">
-            <Button className="bg-primary text-primary-foreground hover:bg-primary/90">Get Started</Button>
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+              Get Started
+            </Button>
           </a>
           <button
             aria-label="Toggle menu"

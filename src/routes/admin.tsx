@@ -16,7 +16,11 @@ function AdminLayout() {
     else if (!isAdmin) navigate({ to: "/app/dashboard" });
   }, [loading, user, isAdmin, navigate]);
   if (loading || !user || !isAdmin) {
-    return <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">Loading…</div>;
+    return (
+      <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">
+        Loading…
+      </div>
+    );
   }
   return (
     <SidebarProvider>
@@ -24,7 +28,9 @@ function AdminLayout() {
         <AdminSidebar />
         <div className="flex min-w-0 flex-1 flex-col">
           <AppTopbar />
-          <main className="flex-1 p-4 sm:p-6"><Outlet /></main>
+          <main className="flex-1 p-4 sm:p-6">
+            <Outlet />
+          </main>
         </div>
       </div>
     </SidebarProvider>

@@ -21,6 +21,7 @@ import {
   HardDrive,
 } from "lucide-react";
 import { insforge, type Device, type Farm, type Pond } from "@/lib/insforge";
+import { MOCK_PONDS, MOCK_DEVICES, MOCK_FARMS } from "@/lib/mock-farm";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,12 +47,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  PageHeader,
-  MetricTile,
-  StatusBadge,
-  EmptyState,
-} from "@/components/app/StatusBadge";
+import { PageHeader, MetricTile, StatusBadge, EmptyState } from "@/components/app/StatusBadge";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -85,9 +81,32 @@ function DevicesPage() {
     },
   });
 
-  const devices = data?.devices ?? [];
-  const farms = data?.farms ?? [];
-  const ponds = data?.ponds ?? [];
+  const [activeFarmId, setActiveFarmId] = useState<string>(() => {
+    if (typeof window === "undefined") return "all";
+    return localStorage.getItem("active_farm_id") || "all";
+  });
+
+  const farms = data?.farms && data.farms.length > 0 ? data.farms : MOCK_FARMS;
+  const ponds = data?.ponds && data.ponds.length > 0 ? data.ponds : MOCK_PONDS;
+
+  const devices = useMemo(() => {
+    const raw =
+      data?.devices && data.devices.length > 0
+        ? data.devices
+        : (MOCK_DEVICES as unknown as Device[]);
+    // Map mock device name/pond_name to mock IDs for consistent filtering
+    const mapped = raw.map((d) => {
+      if (d.farm_id && d.pond_id) return d;
+      const matchPond = ponds.find((p) => p.name.includes(d.pond_name || ""));
+      return {
+        ...d,
+        pond_id: matchPond?.id ?? null,
+        farm_id: matchPond?.farm_id ?? null,
+      };
+    });
+    // Filter by active farm if set
+    return activeFarmId === "all" ? mapped : mapped.filter((d) => d.farm_id === activeFarmId);
+  }, [data, ponds, activeFarmId]);
 
   const counts = useMemo(
     () => ({
@@ -98,7 +117,7 @@ function DevicesPage() {
       calDue: devices.filter((d) => d.status === "calibration_due").length,
       maintDue: devices.filter((d) => d.status === "maintenance_due").length,
     }),
-    [devices]
+    [devices],
   );
 
   const filtered = useMemo(() => {
@@ -190,8 +209,12 @@ function DevicesPage() {
             <SelectItem value="online">{t("devices.online") ?? "Online"}</SelectItem>
             <SelectItem value="offline">{t("devices.offline") ?? "Offline"}</SelectItem>
             <SelectItem value="low_battery">{t("devices.lowBattery") ?? "Low battery"}</SelectItem>
-            <SelectItem value="calibration_due">{t("devices.calDue") ?? "Calibration due"}</SelectItem>
-            <SelectItem value="maintenance_due">{t("devices.maintenance") ?? "Maintenance due"}</SelectItem>
+            <SelectItem value="calibration_due">
+              {t("devices.calDue") ?? "Calibration due"}
+            </SelectItem>
+            <SelectItem value="maintenance_due">
+              {t("devices.maintenance") ?? "Maintenance due"}
+            </SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -207,8 +230,7 @@ function DevicesPage() {
             icon={<Cpu className="h-6 w-6" />}
             title={t("devices.noDevices") ?? "No devices"}
             description={
-              t("devices.noDevicesDesc") ??
-              "Run the setup wizard to register your first device."
+              t("devices.noDevicesDesc") ?? "Run the setup wizard to register your first device."
             }
             action={
               <Button asChild>
@@ -221,13 +243,21 @@ function DevicesPage() {
             <TableHeader>
               <TableRow className="border-b border-border/60 text-left text-xs uppercase tracking-wider text-muted-foreground hover:bg-transparent">
                 <TableHead className="px-4 py-3">{t("devices.colDevice") ?? "Device"}</TableHead>
-                <TableHead className="px-4 py-3">{t("devices.colFarmPond") ?? "Farm / Pond"}</TableHead>
+                <TableHead className="px-4 py-3">
+                  {t("devices.colFarmPond") ?? "Farm / Pond"}
+                </TableHead>
                 <TableHead className="px-4 py-3">{t("devices.colStatus") ?? "Status"}</TableHead>
                 <TableHead className="px-4 py-3">{t("devices.colBattery") ?? "Battery"}</TableHead>
                 <TableHead className="px-4 py-3">{t("devices.colSignal") ?? "Signal"}</TableHead>
-                <TableHead className="px-4 py-3">{t("devices.colFirmware") ?? "Firmware"}</TableHead>
-                <TableHead className="px-4 py-3">{t("devices.colLastSeen") ?? "Last seen"}</TableHead>
-                <TableHead className="px-4 py-3">{t("devices.colCalibration") ?? "Calibration"}</TableHead>
+                <TableHead className="px-4 py-3">
+                  {t("devices.colFirmware") ?? "Firmware"}
+                </TableHead>
+                <TableHead className="px-4 py-3">
+                  {t("devices.colLastSeen") ?? "Last seen"}
+                </TableHead>
+                <TableHead className="px-4 py-3">
+                  {t("devices.colCalibration") ?? "Calibration"}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -244,7 +274,7 @@ function DevicesPage() {
                     className={cn(
                       "border-b border-border/40 last:border-0 cursor-pointer",
                       isOffline && "bg-rose-500/[0.04]",
-                      !isOffline && "hover:bg-accent/30"
+                      !isOffline && "hover:bg-accent/30",
                     )}
                     onClick={() => openDevice(d)}
                   >
@@ -267,7 +297,7 @@ function DevicesPage() {
                           "inline-flex items-center gap-1 tabular-nums",
                           battery < 15 && "text-rose-600",
                           battery >= 15 && battery < 25 && "text-amber-600",
-                          battery >= 25 && "text-foreground"
+                          battery >= 25 && "text-foreground",
                         )}
                       >
                         {battery < 15 ? (
@@ -305,7 +335,9 @@ function DevicesPage() {
                           {t("devices.calDue") ?? "Due"}
                         </span>
                       ) : (
-                        <span className="text-xs text-muted-foreground">{t("devices.ok") ?? "OK"}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {t("devices.ok") ?? "OK"}
+                        </span>
                       )}
                     </TableCell>
                   </TableRow>
@@ -327,8 +359,7 @@ function DevicesPage() {
             icon={<Cpu className="h-6 w-6" />}
             title={t("devices.noDevices") ?? "No devices"}
             description={
-              t("devices.noDevicesDesc") ??
-              "Run the setup wizard to register your first device."
+              t("devices.noDevicesDesc") ?? "Run the setup wizard to register your first device."
             }
             action={
               <Button asChild>
@@ -352,7 +383,7 @@ function DevicesPage() {
                   "w-full rounded-2xl border bg-card p-4 text-left shadow-soft transition-colors",
                   isOffline
                     ? "border-rose-500/30 bg-rose-500/[0.04]"
-                    : "border-border/70 hover:bg-accent/30"
+                    : "border-border/70 hover:bg-accent/30",
                 )}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -388,7 +419,7 @@ function DevicesPage() {
                       className={cn(
                         "flex items-center justify-center gap-1 font-medium tabular-nums",
                         battery < 15 && "text-rose-600",
-                        battery >= 15 && battery < 25 && "text-amber-600"
+                        battery >= 15 && battery < 25 && "text-amber-600",
                       )}
                     >
                       {battery < 15 ? (
@@ -476,7 +507,7 @@ function DevicesPage() {
                     <div
                       className={cn(
                         "mt-1 flex items-center gap-1.5 text-lg font-bold tabular-nums",
-                        (selectedDevice.battery_pct ?? 0) < 25 && "text-amber-600"
+                        (selectedDevice.battery_pct ?? 0) < 25 && "text-amber-600",
                       )}
                     >
                       {(selectedDevice.battery_pct ?? 0) < 25 ? (
@@ -543,10 +574,7 @@ function DevicesPage() {
                     asChild
                     onClick={() => setDrawerOpen(false)}
                   >
-                    <Link
-                      to="/app/calibration/$deviceId"
-                      params={{ deviceId: selectedDevice.id }}
-                    >
+                    <Link to="/app/calibration/$deviceId" params={{ deviceId: selectedDevice.id }}>
                       <FlaskConical className="mr-2 h-4 w-4" />
                       {t("devices.calibrate") ?? "Calibrate"}
                     </Link>
@@ -557,20 +585,14 @@ function DevicesPage() {
                     asChild
                     onClick={() => setDrawerOpen(false)}
                   >
-                    <Link
-                      to="/app/maintenance/$deviceId"
-                      params={{ deviceId: selectedDevice.id }}
-                    >
+                    <Link to="/app/maintenance/$deviceId" params={{ deviceId: selectedDevice.id }}>
                       <Wrench className="mr-2 h-4 w-4" />
                       {t("devices.maintenance") ?? "Maintenance"}
                     </Link>
                   </Button>
                 </div>
                 <Button className="w-full" asChild onClick={() => setDrawerOpen(false)}>
-                  <Link
-                    to="/app/devices/$deviceId"
-                    params={{ deviceId: selectedDevice.id }}
-                  >
+                  <Link to="/app/devices/$deviceId" params={{ deviceId: selectedDevice.id }}>
                     <ChevronRight className="mr-2 h-4 w-4" />
                     {t("devices.viewDetail") ?? "View full detail"}
                   </Link>

@@ -134,8 +134,7 @@ function DeviceDetailPage() {
     onSuccess: () => toast.success("Restart command sent to device"),
   });
 
-  if (isLoading)
-    return <div className="text-sm text-muted-foreground">Loading…</div>;
+  if (isLoading) return <div className="text-sm text-muted-foreground">Loading…</div>;
   const d = data?.device;
   if (!d)
     return (
@@ -211,14 +210,12 @@ function DeviceDetailPage() {
         <MetricTile
           label="Signal"
           value={`${signal}%`}
-          accent={signal > 50 ? "text-emerald-600" : signal > 20 ? "text-amber-600" : "text-rose-600"}
+          accent={
+            signal > 50 ? "text-emerald-600" : signal > 20 ? "text-amber-600" : "text-rose-600"
+          }
         />
         <MetricTile label="Firmware" value={d.firmware_version ?? "—"} />
-        <MetricTile
-          label="Sensors"
-          value={data?.sensors.length ?? 0}
-          accent="text-sky-600"
-        />
+        <MetricTile label="Sensors" value={data?.sensors.length ?? 0} accent="text-sky-600" />
       </div>
 
       <Tabs defaultValue="overview">
@@ -239,9 +236,7 @@ function DeviceDetailPage() {
                   <div className="mx-auto grid h-20 w-20 place-items-center rounded-2xl bg-card shadow-soft">
                     <Cpu className="h-10 w-10 text-primary" />
                   </div>
-                  <p className="mt-3 font-display text-sm font-semibold">
-                    AL-Sense Buoy
-                  </p>
+                  <p className="mt-3 font-display text-sm font-semibold">AL-Sense Buoy</p>
                   <p className="font-mono text-[11px] text-muted-foreground">
                     {d.hardware_version ?? "rev A"}
                   </p>
@@ -267,7 +262,7 @@ function DeviceDetailPage() {
                     <span
                       className={cn(
                         "inline-flex items-center gap-1 tabular-nums",
-                        battery < 25 ? "text-amber-600" : "text-foreground"
+                        battery < 25 ? "text-amber-600" : "text-foreground",
                       )}
                     >
                       {battery < 25 ? (
@@ -318,8 +313,7 @@ function DeviceDetailPage() {
               </p>
             ) : (
               data!.sensors.map((s) => {
-                const calDue =
-                  s.calibration_due_at && new Date(s.calibration_due_at) <= new Date();
+                const calDue = s.calibration_due_at && new Date(s.calibration_due_at) <= new Date();
                 return (
                   <div
                     key={s.id}
@@ -329,14 +323,12 @@ function DeviceDetailPage() {
                         ? "border-rose-500/40 bg-rose-500/[0.04]"
                         : calDue
                           ? "border-violet-500/40"
-                          : "border-border/70"
+                          : "border-border/70",
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="font-display font-semibold capitalize">
-                          {s.sensor_type}
-                        </p>
+                        <p className="font-display font-semibold capitalize">{s.sensor_type}</p>
                         <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
                           {s.id.slice(0, 8)}
                         </p>
@@ -367,7 +359,7 @@ function DeviceDetailPage() {
                         <span
                           className={cn(
                             "font-medium",
-                            calDue ? "text-violet-600" : "text-foreground"
+                            calDue ? "text-violet-600" : "text-foreground",
                           )}
                         >
                           {s.calibration_due_at
@@ -455,7 +447,7 @@ function HistoryTimeline({
         title: `Calibrated ${c.sensor_type}`,
         description: `Set to ${c.calibration_value}${c.technician_name ? ` · by ${c.technician_name}` : ""}${c.result ? ` · ${c.result}` : ""}`,
         at: c.performed_at,
-      })
+      }),
     );
 
     maintenance.forEach((m) =>
@@ -465,7 +457,7 @@ function HistoryTimeline({
         title: m.visit_type ?? "Maintenance visit",
         description: m.notes,
         at: m.performed_at,
-      })
+      }),
     );
 
     if (device.firmware_version) {
@@ -474,7 +466,10 @@ function HistoryTimeline({
         kind: "firmware",
         title: `Firmware ${device.firmware_version} active`,
         description: "Current device firmware",
-        at: (device as { created_at?: string }).created_at ?? device.last_seen ?? new Date().toISOString(),
+        at:
+          (device as { created_at?: string }).created_at ??
+          device.last_seen ??
+          new Date().toISOString(),
       });
     }
 
@@ -514,16 +509,14 @@ function HistoryTimeline({
                 e.kind === "offline" && "bg-rose-500",
                 e.kind === "calibration" && "bg-violet-500",
                 e.kind === "firmware" && "bg-sky-500",
-                e.kind === "maintenance" && "bg-amber-500"
+                e.kind === "maintenance" && "bg-amber-500",
               )}
             >
               <CircleDot className="h-2 w-2 text-white" />
             </span>
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <p className="text-sm font-medium">{e.title}</p>
-              <p className="text-xs text-muted-foreground">
-                {new Date(e.at).toLocaleString()}
-              </p>
+              <p className="text-xs text-muted-foreground">{new Date(e.at).toLocaleString()}</p>
             </div>
             {e.description && (
               <p className="mt-0.5 text-xs text-muted-foreground">{e.description}</p>
@@ -532,11 +525,9 @@ function HistoryTimeline({
               className={cn(
                 "mt-1 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider",
                 e.kind === "offline" && "border-rose-500/30 bg-rose-500/10 text-rose-700",
-                e.kind === "calibration" &&
-                  "border-violet-500/30 bg-violet-500/10 text-violet-700",
+                e.kind === "calibration" && "border-violet-500/30 bg-violet-500/10 text-violet-700",
                 e.kind === "firmware" && "border-sky-500/30 bg-sky-500/10 text-sky-700",
-                e.kind === "maintenance" &&
-                  "border-amber-500/30 bg-amber-500/10 text-amber-700"
+                e.kind === "maintenance" && "border-amber-500/30 bg-amber-500/10 text-amber-700",
               )}
             >
               {e.kind === "offline" && <WifiOff className="h-3 w-3" />}
@@ -598,11 +589,7 @@ function DeviceSettings({
         <div className="space-y-3">
           <div>
             <Label>Sampling interval (sec)</Label>
-            <Input
-              type="number"
-              value={interval}
-              onChange={(e) => setInterval(e.target.value)}
-            />
+            <Input type="number" value={interval} onChange={(e) => setInterval(e.target.value)} />
             <p className="mt-1 text-xs text-muted-foreground">
               How often the device records and uploads sensor data.
             </p>
@@ -659,11 +646,7 @@ function DeviceSettings({
             </Select>
           </div>
         </div>
-        <Button
-          className="mt-4 w-full"
-          onClick={() => save.mutate()}
-          disabled={save.isPending}
-        >
+        <Button className="mt-4 w-full" onClick={() => save.mutate()} disabled={save.isPending}>
           <RefreshCw className="mr-2 h-4 w-4" />
           {save.isPending ? "Saving…" : "Save assignment"}
         </Button>
@@ -698,8 +681,8 @@ function DeviceSettings({
               Restart this device?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              The device will be unreachable for about 60 seconds while it reboots.
-              Any in-progress alerts will resume automatically.
+              The device will be unreachable for about 60 seconds while it reboots. Any in-progress
+              alerts will resume automatically.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -730,12 +713,7 @@ function Card({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        "rounded-2xl border border-border/70 bg-card p-4 shadow-soft",
-        className
-      )}
-    >
+    <div className={cn("rounded-2xl border border-border/70 bg-card p-4 shadow-soft", className)}>
       <h3 className="mb-3 flex items-center gap-2 font-display text-sm font-semibold">
         <Calendar className="h-4 w-4 text-muted-foreground" />
         {title}
@@ -748,9 +726,7 @@ function Card({
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between border-b border-border/40 pb-2 last:border-0">
-      <span className="text-xs uppercase tracking-wider text-muted-foreground">
-        {label}
-      </span>
+      <span className="text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
       <span className="text-sm font-medium">{value}</span>
     </div>
   );

@@ -1,6 +1,18 @@
 import { useState } from "react";
 import { Logo } from "./Logo";
-import { Twitter, Linkedin, Facebook, Youtube, Send, MapPin, Mail, Phone, ShieldCheck, Leaf, Award } from "lucide-react";
+import {
+  Twitter,
+  Linkedin,
+  Facebook,
+  Youtube,
+  Send,
+  MapPin,
+  Mail,
+  Phone,
+  ShieldCheck,
+  Leaf,
+  Award,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -40,7 +52,9 @@ export function Footer() {
         <div className="overflow-hidden rounded-3xl border border-border bg-card p-6 shadow-soft sm:p-10">
           <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr] lg:items-center">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-primary">Newsletter</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+                Newsletter
+              </p>
               <h3 className="mt-2 font-display text-2xl font-bold text-foreground text-balance sm:text-3xl">
                 Get the latest in smart aquaculture
               </h3>
@@ -63,7 +77,13 @@ export function Footer() {
                 size="lg"
                 className="h-12 gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
               >
-                {submitted ? "Subscribed ✓" : (<>Subscribe <Send className="h-4 w-4" /></>)}
+                {submitted ? (
+                  "Subscribed ✓"
+                ) : (
+                  <>
+                    Subscribe <Send className="h-4 w-4" />
+                  </>
+                )}
               </Button>
             </form>
           </div>
@@ -74,12 +94,19 @@ export function Footer() {
           <div>
             <Logo />
             <p className="mt-4 max-w-xs text-sm text-muted-foreground">
-              Smart aquaculture monitoring for healthier ponds, better harvests and a sustainable future.
+              Smart aquaculture monitoring for healthier ponds, better harvests and a sustainable
+              future.
             </p>
             <ul className="mt-5 space-y-2 text-sm text-muted-foreground">
-              <li className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 text-primary" /> Bengaluru, India · Oslo, Norway</li>
-              <li className="flex items-center gap-2"><Mail className="h-4 w-4 text-primary" /> hello@acqualence.com</li>
-              <li className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary" /> +91 80 4567 8910</li>
+              <li className="flex items-start gap-2">
+                <MapPin className="mt-0.5 h-4 w-4 text-primary" /> Bengaluru, India · Oslo, Norway
+              </li>
+              <li className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-primary" /> hello@acqualence.com
+              </li>
+              <li className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-primary" /> +91 80 4567 8910
+              </li>
             </ul>
             <div className="mt-5 flex gap-2 text-muted-foreground">
               {[Twitter, Linkedin, Facebook, Youtube].map((Icon, i) => (
@@ -100,7 +127,10 @@ export function Footer() {
               <ul className="mt-3 space-y-2">
                 {c.links.map((l) => (
                   <li key={l}>
-                    <a href="#" className="group inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-primary">
+                    <a
+                      href="#"
+                      className="group inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-primary"
+                    >
                       <span className="relative">
                         {l}
                         <span className="absolute inset-x-0 -bottom-0.5 h-px origin-left scale-x-0 bg-primary transition-transform duration-300 group-hover:scale-x-100" />
@@ -117,7 +147,10 @@ export function Footer() {
         <div className="mt-14 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-background/60 px-5 py-4">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
             {badges.map(({ icon: Icon, label }) => (
-              <div key={label} className="flex items-center gap-2 text-xs font-medium text-foreground/80">
+              <div
+                key={label}
+                className="flex items-center gap-2 text-xs font-medium text-foreground/80"
+              >
                 <Icon className="h-4 w-4 text-primary" /> {label}
               </div>
             ))}
@@ -145,10 +178,18 @@ export function Footer() {
         <div className="flex flex-col items-start justify-between gap-3 border-t border-border py-6 text-xs text-muted-foreground sm:flex-row sm:items-center">
           <p>© {new Date().getFullYear()} AcquaLence Technologies. All rights reserved.</p>
           <div className="flex flex-wrap gap-x-5 gap-y-1">
-            <a href="#" className="hover:text-primary">Privacy</a>
-            <a href="#" className="hover:text-primary">Terms</a>
-            <a href="#" className="hover:text-primary">Cookies</a>
-            <a href="#" className="hover:text-primary">Status</a>
+            <a href="#" className="hover:text-primary">
+              Privacy
+            </a>
+            <a href="#" className="hover:text-primary">
+              Terms
+            </a>
+            <a href="#" className="hover:text-primary">
+              Cookies
+            </a>
+            <a href="#" className="hover:text-primary">
+              Status
+            </a>
           </div>
         </div>
       </div>

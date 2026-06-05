@@ -3,16 +3,14 @@ import { ArrowRight, Play, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { HeroDashboardCard } from "./HeroDashboardCard";
 
-const trust = [
-  "Real-time readings",
-  "Critical alerts",
-  "Farmer-friendly",
-  "English & বাংলা",
-];
+const trust = ["Real-time readings", "Critical alerts", "Farmer-friendly", "English & বাংলা"];
 
 export function Hero() {
   return (
-    <section className="relative isolate overflow-hidden bg-background" aria-labelledby="hero-heading">
+    <section
+      className="relative isolate overflow-hidden bg-background"
+      aria-labelledby="hero-heading"
+    >
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10"
@@ -39,18 +37,20 @@ export function Hero() {
             id="hero-heading"
             className="mt-5 font-display text-[2.1rem] font-bold leading-[1.05] tracking-tight text-foreground text-balance sm:text-5xl lg:text-[3.75rem]"
           >
-            See your pond water health
-            {" "}
-            <span className="italic font-normal text-primary" style={{ fontFamily: "'Instrument Serif', 'Times New Roman', serif" }}>
+            See your pond water health{" "}
+            <span
+              className="italic font-normal text-primary"
+              style={{ fontFamily: "'Instrument Serif', 'Times New Roman', serif" }}
+            >
               before
-            </span>
-            {" "}problems become losses.
+            </span>{" "}
+            problems become losses.
           </h1>
 
           <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-[17px]">
-            Acqua Lence monitors dissolved oxygen, pH, temperature, turbidity, salinity, ammonia
-            and device health in real time — with clear alerts and practical actions for fish and
-            shrimp farmers.
+            Acqua Lence monitors dissolved oxygen, pH, temperature, turbidity, salinity, ammonia and
+            device health in real time — with clear alerts and practical actions for fish and shrimp
+            farmers.
           </p>
 
           <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">

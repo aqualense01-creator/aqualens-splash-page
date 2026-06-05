@@ -13,11 +13,39 @@ const items: Array<{
   cta: string;
   bn?: string;
 }> = [
-  { sev: "critical",    icon: AlertCircle, pond: "Pond 2",  title: "Oxygen is low",                   body: "DO 3.1 mg/L — below safe threshold.",   cta: "Turn on aerator now",
-    bn: "পুকুর ২: অক্সিজেন কমে গেছে। এখনই এয়ারেটর চালু করুন।" },
-  { sev: "warning",     icon: AlertTriangle, pond: "Pond 3",title: "pH is rising",                    body: "Trending toward 8.8 over last 2 hours.", cta: "Check water exchange plan" },
-  { sev: "offline",     icon: WifiOff,     pond: "AQ-188",  title: "Device offline",                   body: "Last signal 14 minutes ago.",            cta: "Check power and signal" },
-  { sev: "calibration", icon: FlaskConical,pond: "AQ-204",  title: "pH sensor calibration due",        body: "Last calibrated 28 days ago.",            cta: "Schedule calibration" },
+  {
+    sev: "critical",
+    icon: AlertCircle,
+    pond: "Pond 2",
+    title: "Oxygen is low",
+    body: "DO 3.1 mg/L — below safe threshold.",
+    cta: "Turn on aerator now",
+    bn: "পুকুর ২: অক্সিজেন কমে গেছে। এখনই এয়ারেটর চালু করুন।",
+  },
+  {
+    sev: "warning",
+    icon: AlertTriangle,
+    pond: "Pond 3",
+    title: "pH is rising",
+    body: "Trending toward 8.8 over last 2 hours.",
+    cta: "Check water exchange plan",
+  },
+  {
+    sev: "offline",
+    icon: WifiOff,
+    pond: "AQ-188",
+    title: "Device offline",
+    body: "Last signal 14 minutes ago.",
+    cta: "Check power and signal",
+  },
+  {
+    sev: "calibration",
+    icon: FlaskConical,
+    pond: "AQ-204",
+    title: "pH sensor calibration due",
+    body: "Last calibrated 28 days ago.",
+    cta: "Schedule calibration",
+  },
 ];
 
 export function AlertsActions() {
@@ -25,8 +53,13 @@ export function AlertsActions() {
     <section className="relative bg-surface py-20 sm:py-24" aria-labelledby="alerts-heading">
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-12 px-4 sm:px-6 lg:grid-cols-12">
         <Reveal className="lg:col-span-5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">Alerts &amp; Actions</p>
-          <h2 id="alerts-heading" className="mt-3 font-display text-3xl font-bold text-foreground text-balance sm:text-4xl lg:text-5xl">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+            Alerts &amp; Actions
+          </p>
+          <h2
+            id="alerts-heading"
+            className="mt-3 font-display text-3xl font-bold text-foreground text-balance sm:text-4xl lg:text-5xl"
+          >
             From risk detection to clear action.
           </h2>
           <p className="mt-4 text-[15px] text-muted-foreground">
@@ -64,21 +97,24 @@ export function AlertsActions() {
                     className={`group flex items-start gap-3 rounded-2xl border bg-card p-4 ring-1 ${m.ring} hover:shadow-soft`}
                     style={{ borderColor: `color-mix(in oklab, ${m.color} 30%, var(--border))` }}
                   >
-                    <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${m.bg} ${m.text}`} aria-hidden>
+                    <span
+                      className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${m.bg} ${m.text}`}
+                      aria-hidden
+                    >
                       <Icon className="h-5 w-5" />
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${m.bg} ${m.text}`}>
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${m.bg} ${m.text}`}
+                        >
                           {m.label}
                         </span>
                         <span className="text-[12px] font-semibold text-foreground">{a.pond}</span>
                         <span className="text-[11px] text-muted-foreground">· {a.title}</span>
                       </div>
                       <p className="mt-1 text-[13px] text-muted-foreground">{a.body}</p>
-                      {a.bn && (
-                        <p className="mt-1 text-[12px] italic text-foreground/70">{a.bn}</p>
-                      )}
+                      {a.bn && <p className="mt-1 text-[12px] italic text-foreground/70">{a.bn}</p>}
                       <div className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-semibold text-foreground">
                         <span className="text-muted-foreground">Action:</span>
                         {a.cta}

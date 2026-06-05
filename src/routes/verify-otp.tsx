@@ -4,7 +4,12 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/landing/Logo";
 import { useI18n } from "@/lib/i18n";
-import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from "@/components/ui/input-otp";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+  InputOTPSeparator,
+} from "@/components/ui/input-otp";
 import { toast } from "sonner";
 import { Waves, ArrowLeft, Globe, RotateCcw, ShieldCheck } from "lucide-react";
 import { z } from "zod";
@@ -88,7 +93,10 @@ function VerifyOtpPage() {
   async function onVerify(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
-    if (otp.length !== 6) { setErr(isBn ? "৬-সংখ্যার কোড দিন।" : "Enter the 6-digit code."); return; }
+    if (otp.length !== 6) {
+      setErr(isBn ? "৬-সংখ্যার কোড দিন।" : "Enter the 6-digit code.");
+      return;
+    }
     setBusy(true);
     const { error } = await signInWithOtp(identifier, otp);
     setBusy(false);
@@ -122,23 +130,32 @@ function VerifyOtpPage() {
         <AquaticBg />
         <div className="relative z-10 w-full max-w-[420px]">
           <div className="rounded-3xl border border-border/60 bg-white/95 p-6 shadow-soft backdrop-blur-sm sm:p-8">
-            <div className="mb-6 flex flex-col items-center gap-3"><Logo /></div>
+            <div className="mb-6 flex flex-col items-center gap-3">
+              <Logo />
+            </div>
             <h1 className="text-center font-display text-2xl font-bold tracking-tight text-foreground">
               {isBn ? "ওটিপি যাচাই করুন" : "Verify OTP"}
             </h1>
             <form
-              onSubmit={(e) => { e.preventDefault(); if (identifier.trim()) startCountdown(); }}
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (identifier.trim()) startCountdown();
+              }}
               className="mt-5 space-y-4"
             >
               <label className="block space-y-1.5">
-                <span className="text-sm font-medium">{isBn ? "ইমেইল বা ফোন" : "Email or phone"}</span>
+                <span className="text-sm font-medium">
+                  {isBn ? "ইমেইল বা ফোন" : "Email or phone"}
+                </span>
                 <input
                   type="text"
                   required
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   className="h-11 w-full rounded-lg border border-input bg-background px-3 text-base outline-none ring-ring focus:ring-1"
-                  placeholder={isBn ? "example@gmail.com বা 01712345678" : "example@gmail.com or 01712345678"}
+                  placeholder={
+                    isBn ? "example@gmail.com বা 01712345678" : "example@gmail.com or 01712345678"
+                  }
                 />
               </label>
               <Button type="submit" className="h-11 w-full text-base font-semibold">
@@ -183,20 +200,41 @@ function VerifyOtpPage() {
               <InputOTP
                 maxLength={6}
                 value={otp}
-                onChange={(value: string) => { setOtp(value); setErr(null); }}
+                onChange={(value: string) => {
+                  setOtp(value);
+                  setErr(null);
+                }}
                 disabled={busy}
                 autoFocus
               >
                 <InputOTPGroup>
-                  <InputOTPSlot index={0} className="h-12 w-12 text-lg font-semibold sm:h-14 sm:w-14" />
-                  <InputOTPSlot index={1} className="h-12 w-12 text-lg font-semibold sm:h-14 sm:w-14" />
-                  <InputOTPSlot index={2} className="h-12 w-12 text-lg font-semibold sm:h-14 sm:w-14" />
+                  <InputOTPSlot
+                    index={0}
+                    className="h-12 w-12 text-lg font-semibold sm:h-14 sm:w-14"
+                  />
+                  <InputOTPSlot
+                    index={1}
+                    className="h-12 w-12 text-lg font-semibold sm:h-14 sm:w-14"
+                  />
+                  <InputOTPSlot
+                    index={2}
+                    className="h-12 w-12 text-lg font-semibold sm:h-14 sm:w-14"
+                  />
                 </InputOTPGroup>
                 <InputOTPSeparator />
                 <InputOTPGroup>
-                  <InputOTPSlot index={3} className="h-12 w-12 text-lg font-semibold sm:h-14 sm:w-14" />
-                  <InputOTPSlot index={4} className="h-12 w-12 text-lg font-semibold sm:h-14 sm:w-14" />
-                  <InputOTPSlot index={5} className="h-12 w-12 text-lg font-semibold sm:h-14 sm:w-14" />
+                  <InputOTPSlot
+                    index={3}
+                    className="h-12 w-12 text-lg font-semibold sm:h-14 sm:w-14"
+                  />
+                  <InputOTPSlot
+                    index={4}
+                    className="h-12 w-12 text-lg font-semibold sm:h-14 sm:w-14"
+                  />
+                  <InputOTPSlot
+                    index={5}
+                    className="h-12 w-12 text-lg font-semibold sm:h-14 sm:w-14"
+                  />
                 </InputOTPGroup>
               </InputOTP>
               <p className="text-xs text-muted-foreground">
@@ -206,7 +244,9 @@ function VerifyOtpPage() {
 
             {/* Error */}
             {err && (
-              <p className="rounded-lg bg-destructive/10 px-3 py-2.5 text-center text-sm text-destructive">{err}</p>
+              <p className="rounded-lg bg-destructive/10 px-3 py-2.5 text-center text-sm text-destructive">
+                {err}
+              </p>
             )}
 
             {/* Verify button */}
@@ -242,8 +282,12 @@ function VerifyOtpPage() {
               >
                 <RotateCcw className="h-3.5 w-3.5" />
                 {countdown > 0
-                  ? (isBn ? `${countdown} সেকেন্ড পর পুনরায় পাঠান` : `Resend in ${countdown}s`)
-                  : (isBn ? "কোড পুনরায় পাঠান" : "Resend code")}
+                  ? isBn
+                    ? `${countdown} সেকেন্ড পর পুনরায় পাঠান`
+                    : `Resend in ${countdown}s`
+                  : isBn
+                    ? "কোড পুনরায় পাঠান"
+                    : "Resend code"}
               </button>
             </div>
           </form>
@@ -314,7 +358,9 @@ function LangToggle() {
           type="button"
           onClick={() => setLang("en")}
           className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
-            !isBn ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            !isBn
+              ? "bg-white text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           English
@@ -323,7 +369,9 @@ function LangToggle() {
           type="button"
           onClick={() => setLang("bn")}
           className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
-            isBn ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            isBn
+              ? "bg-white text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           বাংলা

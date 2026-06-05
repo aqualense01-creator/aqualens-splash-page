@@ -43,12 +43,12 @@ type SensorKey = "ph" | "do" | "temperature" | "turbidity" | "salinity" | "ammon
 type Result = "pass" | "fail" | "needs_review";
 
 const SENSORS: { key: SensorKey; label: string; unit: string; readingKey: string }[] = [
-  { key: "ph",          label: "pH",          unit: "pH",   readingKey: "ph" },
-  { key: "do",          label: "Dissolved O₂", unit: "mg/L", readingKey: "do_mg_l" },
-  { key: "temperature", label: "Temperature", unit: "°C",   readingKey: "temp_c" },
-  { key: "turbidity",   label: "Turbidity",   unit: "NTU",  readingKey: "turbidity_ntu" },
-  { key: "salinity",    label: "Salinity",    unit: "ppt",  readingKey: "salinity_ppt" },
-  { key: "ammonia",     label: "Ammonia",     unit: "mg/L", readingKey: "ammonia_mg_l" },
+  { key: "ph", label: "pH", unit: "pH", readingKey: "ph" },
+  { key: "do", label: "Dissolved O₂", unit: "mg/L", readingKey: "do_mg_l" },
+  { key: "temperature", label: "Temperature", unit: "°C", readingKey: "temp_c" },
+  { key: "turbidity", label: "Turbidity", unit: "NTU", readingKey: "turbidity_ntu" },
+  { key: "salinity", label: "Salinity", unit: "ppt", readingKey: "salinity_ppt" },
+  { key: "ammonia", label: "Ammonia", unit: "mg/L", readingKey: "ammonia_mg_l" },
 ];
 
 // 90 days default cadence between calibrations
@@ -304,7 +304,11 @@ function CalibrationPage() {
             Current status
           </p>
           <div className="mt-2">
-            {device?.status ? <StatusBadge status={device.status} /> : <span className="text-sm text-muted-foreground">—</span>}
+            {device?.status ? (
+              <StatusBadge status={device.status} />
+            ) : (
+              <span className="text-sm text-muted-foreground">—</span>
+            )}
           </div>
         </div>
         <HeaderField
@@ -366,15 +370,15 @@ function CalibrationPage() {
                     Last calibrated
                   </p>
                   <p className="mt-1 text-xs font-medium">
-                    {lastCalibratedAt
-                      ? new Date(lastCalibratedAt).toLocaleDateString()
-                      : "Never"}
+                    {lastCalibratedAt ? new Date(lastCalibratedAt).toLocaleDateString() : "Never"}
                   </p>
                 </div>
                 <div className="col-span-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
                   <Calendar className="h-3 w-3" />
                   Next due:{" "}
-                  <span className={cn("font-medium", overdue ? "text-rose-600" : "text-foreground")}>
+                  <span
+                    className={cn("font-medium", overdue ? "text-rose-600" : "text-foreground")}
+                  >
                     {nextDueAt ? new Date(nextDueAt).toLocaleDateString() : "—"}
                   </span>
                   {overdue && <span className="text-rose-600">(overdue)</span>}
@@ -496,7 +500,9 @@ function CalibrationPage() {
           <h3 className="font-display text-sm font-semibold">Calibration history</h3>
         </div>
         {(history ?? []).length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">No calibrations recorded yet.</p>
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            No calibrations recorded yet.
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <Table>
@@ -519,8 +525,12 @@ function CalibrationPage() {
                         {new Date(h.performed_at).toLocaleString()}
                       </TableCell>
                       <TableCell className="capitalize">{h.sensor_type}</TableCell>
-                      <TableCell className="font-mono tabular-nums">{h.calibration_value ?? "—"}</TableCell>
-                      <TableCell className="font-mono tabular-nums">{h.reference_value ?? "—"}</TableCell>
+                      <TableCell className="font-mono tabular-nums">
+                        {h.calibration_value ?? "—"}
+                      </TableCell>
+                      <TableCell className="font-mono tabular-nums">
+                        {h.reference_value ?? "—"}
+                      </TableCell>
                       <TableCell>
                         <StatusBadge status={meta.badge} />
                       </TableCell>
@@ -537,18 +547,12 @@ function CalibrationPage() {
   );
 }
 
-function HeaderField({
-  label,
-  value,
-  mono,
-}: {
-  label: string;
-  value: string;
-  mono?: boolean;
-}) {
+function HeaderField({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div>
-      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+        {label}
+      </p>
       <p className={cn("mt-2 text-sm font-semibold", mono && "font-mono")}>{value}</p>
     </div>
   );

@@ -136,11 +136,11 @@ function AdminFarmsCustomers() {
     },
   });
 
-  const profiles = data?.profiles ?? [];
-  const farms = data?.farms ?? [];
-  const ponds = data?.ponds ?? [];
-  const devices = data?.devices ?? [];
-  const alerts = data?.alerts ?? [];
+  const profiles = useMemo(() => data?.profiles ?? [], [data?.profiles]);
+  const farms = useMemo(() => data?.farms ?? [], [data?.farms]);
+  const ponds = useMemo(() => data?.ponds ?? [], [data?.ponds]);
+  const devices = useMemo(() => data?.devices ?? [], [data?.devices]);
+  const alerts = useMemo(() => data?.alerts ?? [], [data?.alerts]);
 
   const districts = useMemo(
     () =>
@@ -170,8 +170,7 @@ function AdminFarmsCustomers() {
       const pondIds = ownerPonds.map((pd) => pd.id);
       const ownerDevices = devices.filter(
         (d) =>
-          (d.farm_id && farmIds.includes(d.farm_id)) ||
-          (d.pond_id && pondIds.includes(d.pond_id)),
+          (d.farm_id && farmIds.includes(d.farm_id)) || (d.pond_id && pondIds.includes(d.pond_id)),
       );
       return {
         ...p,
@@ -210,15 +209,10 @@ function AdminFarmsCustomers() {
       if ((r as any).error) throw new Error((r as any).error.message);
     },
     onSuccess: (_d, v) => {
-      toast.success(
-        v.status === "suspended"
-          ? "Account suspended"
-          : "Account reactivated",
-      );
+      toast.success(v.status === "suspended" ? "Account suspended" : "Account reactivated");
       qc.invalidateQueries({ queryKey: ["admin-farms-customers"] });
     },
-    onError: (e: Error) =>
-      toast.error(e.message || "Could not update account status"),
+    onError: (e: Error) => toast.error(e.message || "Could not update account status"),
   });
 
   const saveFarm = useMutation({
@@ -319,29 +313,37 @@ function AdminFarmsCustomers() {
   });
 
   // === Drawer details for selected customer ===
-  const selected = openCustomer
-    ? rows.find((r) => r.id === openCustomer.id) ?? null
-    : null;
-  const selectedFarms = selected
-    ? farms.filter((f) => f.owner_id === selected.id)
-    : [];
-  const selectedPonds = selected
-    ? ponds.filter((p) => selectedFarms.some((f) => f.id === p.farm_id))
-    : [];
-  const selectedDevices = selected
-    ? devices.filter(
-        (d) =>
-          (d.farm_id && selectedFarms.some((f) => f.id === d.farm_id)) ||
-          (d.pond_id && selectedPonds.some((p) => p.id === d.pond_id)),
-      )
-    : [];
-  const selectedAlerts = selected
-    ? alerts.filter(
-        (a) =>
-          (a.pond_id && selectedPonds.some((p) => p.id === a.pond_id)) ||
-          (a.device_id && selectedDevices.some((d) => d.id === a.device_id)),
-      )
-    : [];
+  const selected = openCustomer ? (rows.find((r) => r.id === openCustomer.id) ?? null) : null;
+  const selectedFarms = useMemo(
+    () => (selected ? farms.filter((f) => f.owner_id === selected.id) : []),
+    [selected, farms],
+  );
+  const selectedPonds = useMemo(
+    () => (selected ? ponds.filter((p) => selectedFarms.some((f) => f.id === p.farm_id)) : []),
+    [selected, ponds, selectedFarms],
+  );
+  const selectedDevices = useMemo(
+    () =>
+      selected
+        ? devices.filter(
+            (d) =>
+              (d.farm_id && selectedFarms.some((f) => f.id === d.farm_id)) ||
+              (d.pond_id && selectedPonds.some((p) => p.id === d.pond_id)),
+          )
+        : [],
+    [selected, devices, selectedFarms, selectedPonds],
+  );
+  const selectedAlerts = useMemo(
+    () =>
+      selected
+        ? alerts.filter(
+            (a) =>
+              (a.pond_id && selectedPonds.some((p) => p.id === a.pond_id)) ||
+              (a.device_id && selectedDevices.some((d) => d.id === a.device_id)),
+          )
+        : [],
+    [selected, alerts, selectedPonds, selectedDevices],
+  );
 
   const activityFeed = useMemo(() => {
     if (!selected) return [] as { ts: string; label: string; kind: string }[];
@@ -362,9 +364,7 @@ function AdminFarmsCustomers() {
           kind: "device",
         }),
     );
-    return items
-      .sort((a, b) => (a.ts < b.ts ? 1 : -1))
-      .slice(0, 25);
+    return items.sort((a, b) => (a.ts < b.ts ? 1 : -1)).slice(0, 25);
   }, [selected, selectedAlerts, selectedDevices]);
 
   return (
@@ -375,9 +375,7 @@ function AdminFarmsCustomers() {
         actions={
           <Button
             size="sm"
-            onClick={() =>
-              toast.info("Use a customer profile to add their first farm")
-            }
+            onClick={() => toast.info("Use a customer profile to add their first farm")}
           >
             <Plus className="mr-1.5 h-4 w-4" /> New farm
           </Button>
@@ -465,34 +463,18 @@ function AdminFarmsCustomers() {
                       setTab("profile");
                     }}
                   >
-                    <td className="px-4 py-3 font-medium">
-                      {r.full_name ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {r.phone ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {r.email ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {r.district ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-right tabular-nums">
-                      {r.farmCount}
-                    </td>
-                    <td className="px-4 py-3 text-right tabular-nums">
-                      {r.pondCount}
-                    </td>
-                    <td className="px-4 py-3 text-right tabular-nums">
-                      {r.deviceCount}
-                    </td>
+                    <td className="px-4 py-3 font-medium">{r.full_name ?? "—"}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{r.phone ?? "—"}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{r.email ?? "—"}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{r.district ?? "—"}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{r.farmCount}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{r.pondCount}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{r.deviceCount}</td>
                     <td className="px-4 py-3">
                       <StatusBadge status={r.account_status ?? "active"} />
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {r.last_active_at
-                        ? new Date(r.last_active_at).toLocaleDateString()
-                        : "—"}
+                      {r.last_active_at ? new Date(r.last_active_at).toLocaleDateString() : "—"}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       <ChevronRight className="h-4 w-4" />
@@ -515,15 +497,12 @@ function AdminFarmsCustomers() {
                   className="flex w-full items-center justify-between gap-3 rounded-xl border border-border/70 bg-card p-3 text-left shadow-soft"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">
-                      {r.full_name ?? "—"}
-                    </p>
+                    <p className="truncate text-sm font-medium">{r.full_name ?? "—"}</p>
                     <p className="truncate text-xs text-muted-foreground">
                       {r.district ?? "—"} · {r.phone ?? "no phone"}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground tabular-nums">
-                      {r.farmCount} farms · {r.pondCount} ponds ·{" "}
-                      {r.deviceCount} devices
+                      {r.farmCount} farms · {r.pondCount} ponds · {r.deviceCount} devices
                     </p>
                   </div>
                   <StatusBadge status={r.account_status ?? "active"} />
@@ -535,10 +514,7 @@ function AdminFarmsCustomers() {
       )}
 
       {/* === Customer Drawer === */}
-      <Sheet
-        open={!!openCustomer}
-        onOpenChange={(o) => !o && setOpenCustomer(null)}
-      >
+      <Sheet open={!!openCustomer} onOpenChange={(o) => !o && setOpenCustomer(null)}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
           {selected && (
             <>
@@ -550,9 +526,7 @@ function AdminFarmsCustomers() {
                     </SheetTitle>
                     <SheetDescription>
                       {selected.role ?? "farmer"} ·{" "}
-                      <StatusBadge
-                        status={selected.account_status ?? "active"}
-                      />
+                      <StatusBadge status={selected.account_status ?? "active"} />
                     </SheetDescription>
                   </div>
                   <div className="flex flex-col gap-2">
@@ -581,11 +555,7 @@ function AdminFarmsCustomers() {
                 </div>
               </SheetHeader>
 
-              <Tabs
-                value={tab}
-                onValueChange={(v) => setTab(v as DrawerTab)}
-                className="mt-4"
-              >
+              <Tabs value={tab} onValueChange={(v) => setTab(v as DrawerTab)} className="mt-4">
                 <TabsList className="grid w-full grid-cols-6">
                   <TabsTrigger value="profile">Profile</TabsTrigger>
                   <TabsTrigger value="farms">
@@ -629,9 +599,7 @@ function AdminFarmsCustomers() {
                     label="Last active"
                     value={
                       selected.last_active_at
-                        ? new Date(
-                            selected.last_active_at,
-                          ).toLocaleString()
+                        ? new Date(selected.last_active_at).toLocaleString()
                         : "—"
                     }
                   />
@@ -711,9 +679,7 @@ function AdminFarmsCustomers() {
                     <EmptyRow label="No ponds for this customer yet." />
                   ) : (
                     selectedPonds.map((p) => {
-                      const farm = selectedFarms.find(
-                        (f) => f.id === p.farm_id,
-                      );
+                      const farm = selectedFarms.find((f) => f.id === p.farm_id);
                       return (
                         <DrawerRow
                           key={p.id}
@@ -748,9 +714,7 @@ function AdminFarmsCustomers() {
                     <EmptyRow label="No devices assigned." />
                   ) : (
                     selectedDevices.map((d) => {
-                      const pond = selectedPonds.find(
-                        (p) => p.id === d.pond_id,
-                      );
+                      const pond = selectedPonds.find((p) => p.id === d.pond_id);
                       return (
                         <DrawerRow
                           key={d.id}
@@ -785,17 +749,17 @@ function AdminFarmsCustomers() {
                   {selectedAlerts.length === 0 ? (
                     <EmptyRow label="No alerts on record." />
                   ) : (
-                    selectedAlerts.slice(0, 25).map((a) => (
-                      <DrawerRow
-                        key={a.id}
-                        icon={
-                          <AlertTriangle className="h-4 w-4 text-rose-500" />
-                        }
-                        title={a.message ?? a.alert_type}
-                        subtitle={`${a.parameter ?? "—"} · ${new Date(a.detected_at).toLocaleString()}`}
-                        badge={<StatusBadge status={a.severity} />}
-                      />
-                    ))
+                    selectedAlerts
+                      .slice(0, 25)
+                      .map((a) => (
+                        <DrawerRow
+                          key={a.id}
+                          icon={<AlertTriangle className="h-4 w-4 text-rose-500" />}
+                          title={a.message ?? a.alert_type}
+                          subtitle={`${a.parameter ?? "—"} · ${new Date(a.detected_at).toLocaleString()}`}
+                          badge={<StatusBadge status={a.severity} />}
+                        />
+                      ))
                   )}
                 </TabsContent>
 
@@ -810,9 +774,7 @@ function AdminFarmsCustomers() {
                           <span
                             className={cn(
                               "absolute -left-[27px] top-1.5 h-2.5 w-2.5 rounded-full ring-2 ring-card",
-                              it.kind === "alert"
-                                ? "bg-rose-500"
-                                : "bg-emerald-500",
+                              it.kind === "alert" ? "bg-rose-500" : "bg-emerald-500",
                             )}
                           />
                           <p className="text-sm">{it.label}</p>
@@ -831,17 +793,13 @@ function AdminFarmsCustomers() {
       </Sheet>
 
       {/* === Confirm Suspend/Reactivate === */}
-      <AlertDialog
-        open={!!confirmSuspend}
-        onOpenChange={(o) => !o && setConfirmSuspend(null)}
-      >
+      <AlertDialog open={!!confirmSuspend} onOpenChange={(o) => !o && setConfirmSuspend(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Suspend this account?</AlertDialogTitle>
             <AlertDialogDescription>
-              {confirmSuspend?.full_name ?? "This customer"} will lose access
-              to the Acqua Lence app and stop receiving alerts. You can
-              reactivate the account at any time.
+              {confirmSuspend?.full_name ?? "This customer"} will lose access to the Acqua Lence app
+              and stop receiving alerts. You can reactivate the account at any time.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -866,12 +824,8 @@ function AdminFarmsCustomers() {
       {/* === Edit Farm Dialog === */}
       <FarmDialog
         state={editFarm}
-        onClose={() =>
-          setEditFarm({ open: false, farm: null, ownerId: "" })
-        }
-        onSave={(f) =>
-          saveFarm.mutate({ ...f, owner_id: editFarm.ownerId })
-        }
+        onClose={() => setEditFarm({ open: false, farm: null, ownerId: "" })}
+        onSave={(f) => saveFarm.mutate({ ...f, owner_id: editFarm.ownerId })}
         saving={saveFarm.isPending}
       />
 
@@ -880,12 +834,8 @@ function AdminFarmsCustomers() {
         state={editPond}
         farms={selectedFarms}
         onClose={() => setEditPond({ open: false, pond: null, farmId: "" })}
-        onSave={(p) =>
-          savePond.mutate({ ...p, farm_id: editPond.farmId })
-        }
-        onFarmChange={(farmId) =>
-          setEditPond((s) => ({ ...s, farmId }))
-        }
+        onSave={(p) => savePond.mutate({ ...p, farm_id: editPond.farmId })}
+        onFarmChange={(farmId) => setEditPond((s) => ({ ...s, farmId }))}
         saving={savePond.isPending}
       />
 
@@ -955,16 +905,10 @@ function DrawerRow({
   return (
     <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-surface p-3">
       <div className="flex min-w-0 items-center gap-3">
-        <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10">
-          {icon}
-        </div>
+        <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10">{icon}</div>
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{title}</p>
-          {subtitle && (
-            <p className="truncate text-xs text-muted-foreground">
-              {subtitle}
-            </p>
-          )}
+          {subtitle && <p className="truncate text-xs text-muted-foreground">{subtitle}</p>}
         </div>
       </div>
       <div className="flex items-center gap-2">
@@ -1015,9 +959,7 @@ function FarmDialog({
     <Dialog open={state.open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>
-            {state.farm?.id ? "Edit farm" : "Add farm"}
-          </DialogTitle>
+          <DialogTitle>{state.farm?.id ? "Edit farm" : "Add farm"}</DialogTitle>
           <DialogDescription>
             Farms are the top-level grouping that contain ponds and devices.
           </DialogDescription>
@@ -1124,20 +1066,14 @@ function PondDialog({
     <Dialog open={state.open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>
-            {state.pond?.id ? "Edit pond" : "Add pond"}
-          </DialogTitle>
+          <DialogTitle>{state.pond?.id ? "Edit pond" : "Add pond"}</DialogTitle>
           <DialogDescription>
             Ponds hold sensor readings, alerts, and device assignments.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <Field label="Farm">
-            <Select
-              value={state.farmId}
-              onValueChange={onFarmChange}
-              disabled={!!state.pond?.id}
-            >
+            <Select value={state.farmId} onValueChange={onFarmChange} disabled={!!state.pond?.id}>
               <SelectTrigger>
                 <SelectValue placeholder="Select farm" />
               </SelectTrigger>
@@ -1194,9 +1130,7 @@ function PondDialog({
                   <SelectItem value="warning">Warning</SelectItem>
                   <SelectItem value="critical">Critical</SelectItem>
                   <SelectItem value="offline">Offline</SelectItem>
-                  <SelectItem value="calibration_due">
-                    Calibration due
-                  </SelectItem>
+                  <SelectItem value="calibration_due">Calibration due</SelectItem>
                 </SelectContent>
               </Select>
             </Field>
@@ -1263,18 +1197,11 @@ function AssignDeviceDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Assign device</DialogTitle>
-          <DialogDescription>
-            Choose where this device should report readings.
-          </DialogDescription>
+          <DialogDescription>Choose where this device should report readings.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <Field label="Farm">
-            <Select
-              value={state.farmId}
-              onValueChange={(v) =>
-                onChange({ farmId: v, pondId: "" })
-              }
-            >
+            <Select value={state.farmId} onValueChange={(v) => onChange({ farmId: v, pondId: "" })}>
               <SelectTrigger>
                 <SelectValue placeholder="Select farm" />
               </SelectTrigger>
@@ -1319,13 +1246,7 @@ function AssignDeviceDialog({
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block space-y-1.5">
       <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">

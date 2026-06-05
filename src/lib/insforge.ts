@@ -8,10 +8,22 @@ export const insforge = createClient({
 // ===== Domain types =====
 export type AppRole = "farmer" | "farm_manager" | "technician" | "admin" | "support";
 export type PondStatus = "good" | "watch" | "warning" | "critical" | "offline" | "calibration_due";
-export type DeviceStatus = "online" | "offline" | "low_battery" | "calibration_due" | "maintenance_due";
+export type DeviceStatus =
+  | "online"
+  | "offline"
+  | "low_battery"
+  | "calibration_due"
+  | "maintenance_due";
 export type AlertSeverity = "info" | "watch" | "warning" | "critical";
 export type AlertStatus = "open" | "acknowledged" | "resolved";
-export type SensorType = "do" | "ph" | "temperature" | "turbidity" | "salinity" | "ammonia" | "water_level";
+export type SensorType =
+  | "do"
+  | "ph"
+  | "temperature"
+  | "turbidity"
+  | "salinity"
+  | "ammonia"
+  | "water_level";
 
 export type Profile = {
   id: string;

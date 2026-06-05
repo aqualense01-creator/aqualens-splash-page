@@ -37,11 +37,19 @@ const devices = [
 
 export function DeviceHealth() {
   return (
-    <section className="relative bg-background py-20 sm:py-24" aria-labelledby="device-health-heading">
+    <section
+      className="relative bg-background py-20 sm:py-24"
+      aria-labelledby="device-health-heading"
+    >
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <Reveal className="mx-auto max-w-2xl text-center">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">Device Health</p>
-          <h2 id="device-health-heading" className="mt-3 font-display text-3xl font-bold text-foreground text-balance sm:text-4xl lg:text-5xl">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+            Device Health
+          </p>
+          <h2
+            id="device-health-heading"
+            className="mt-3 font-display text-3xl font-bold text-foreground text-balance sm:text-4xl lg:text-5xl"
+          >
             Know when your monitoring device needs attention.
           </h2>
           <p className="mt-4 text-[15px] text-muted-foreground">
@@ -62,33 +70,57 @@ export function DeviceHealth() {
             const m = statusMeta[d.status];
             const offline = d.status === "offline";
             return (
-              <div key={d.id} className="grid grid-cols-12 items-center gap-2 border-b border-border/60 px-4 py-4 text-[13px] last:border-0 sm:gap-4">
+              <div
+                key={d.id}
+                className="grid grid-cols-12 items-center gap-2 border-b border-border/60 px-4 py-4 text-[13px] last:border-0 sm:gap-4 transition-colors hover:bg-surface/40 cursor-default"
+              >
                 <div className="col-span-4 sm:col-span-3">
                   <div className="font-semibold text-foreground">{d.id}</div>
                   <div className="text-[11px] text-muted-foreground">{d.pond}</div>
                 </div>
                 <div className="col-span-3 sm:col-span-2">
-                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${m.bg} ${m.text} ${m.ring}`}>
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${m.bg} ${m.text} ${m.ring}`}
+                  >
                     {offline ? <WifiOff className="h-3 w-3" /> : <Wifi className="h-3 w-3" />}
                     {offline ? "Offline" : "Online"}
                   </span>
                 </div>
                 <div className="col-span-5 flex items-center gap-2 sm:col-span-2">
-                  {d.battery > 50 ? <BatteryFull className="h-4 w-4 text-status-good" /> : <Battery className="h-4 w-4 text-status-warning" />}
+                  {d.battery > 50 ? (
+                    <BatteryFull className="h-4 w-4 text-status-good" />
+                  ) : (
+                    <Battery className="h-4 w-4 text-status-warning" />
+                  )}
                   <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                     <div
                       className="h-full rounded-full"
-                      style={{ width: `${d.battery}%`, background: d.battery > 50 ? "var(--status-good)" : d.battery > 20 ? "var(--status-warning)" : "var(--status-critical)" }}
+                      style={{
+                        width: `${d.battery}%`,
+                        background:
+                          d.battery > 50
+                            ? "var(--status-good)"
+                            : d.battery > 20
+                              ? "var(--status-warning)"
+                              : "var(--status-critical)",
+                      }}
                     />
                   </div>
-                  <span className="tabular-nums text-[11px] text-muted-foreground">{d.battery}%</span>
+                  <span className="tabular-nums text-[11px] text-muted-foreground">
+                    {d.battery}%
+                  </span>
                 </div>
                 <div className="hidden sm:col-span-1 sm:flex sm:items-center sm:gap-0.5">
-                  {[1,2,3,4,5].map((b) => (
+                  {[1, 2, 3, 4, 5].map((b) => (
                     <span
                       key={b}
                       className="h-3 w-1 rounded-sm"
-                      style={{ background: b <= d.signal ? "var(--primary)" : "color-mix(in oklab, var(--muted-foreground) 25%, transparent)" }}
+                      style={{
+                        background:
+                          b <= d.signal
+                            ? "var(--primary)"
+                            : "color-mix(in oklab, var(--muted-foreground) 25%, transparent)",
+                      }}
                     />
                   ))}
                 </div>
@@ -104,7 +136,9 @@ export function DeviceHealth() {
         </div>
 
         <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-[11px] text-muted-foreground">
-          <span className="inline-flex items-center gap-1"><Wrench className="h-3 w-3 text-primary" /> Maintenance reminders sent automatically</span>
+          <span className="inline-flex items-center gap-1">
+            <Wrench className="h-3 w-3 text-primary" /> Maintenance reminders sent automatically
+          </span>
         </div>
       </div>
     </section>

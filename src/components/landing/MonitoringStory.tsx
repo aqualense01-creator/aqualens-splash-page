@@ -1,7 +1,13 @@
 import { useRef, useState, useEffect } from "react";
 import { motion, useScroll, useMotionValueEvent, useReducedMotion } from "framer-motion";
 import {
-  Waves, Activity, LayoutDashboard, AlertOctagon, BellRing, Wrench, CheckCircle2,
+  Waves,
+  Activity,
+  LayoutDashboard,
+  AlertOctagon,
+  BellRing,
+  Wrench,
+  CheckCircle2,
 } from "lucide-react";
 import { Reveal } from "./Reveal";
 import step1 from "@/assets/story/step-1.jpg";
@@ -13,13 +19,55 @@ import step6 from "@/assets/story/step-6.jpg";
 import step7 from "@/assets/story/step-7.jpg";
 
 const steps = [
-  { icon: Waves,          image: step1, alt: "Smart sensor buoy floating in a calm aquaculture pond", title: "Pond water is monitored 24/7",   body: "Our buoy floats in your pond and reads water around the clock." },
-  { icon: Activity,       image: step2, alt: "Underwater water-quality sensor probes reading DO and pH", title: "Sensors capture 6 parameters",   body: "DO, pH, temperature, turbidity, salinity and ammonia — second by second." },
-  { icon: LayoutDashboard,image: step3, alt: "Live water-quality dashboard with charts and gauges",      title: "Dashboard receives live data",   body: "Readings stream into a calm, farmer-friendly dashboard you can open on any phone." },
-  { icon: AlertOctagon,   image: step4, alt: "Pond water turning murky — early sign of falling oxygen",  title: "Risk detected: oxygen falling",  body: "Acqua Lence spots dangerous patterns early — like dissolved oxygen dropping below 4 mg/L." },
-  { icon: BellRing,       image: step5, alt: "Farmer checking an alert on a smartphone beside the pond", title: "Farmer is alerted instantly",    body: "SMS, WhatsApp, app push and email — in English or বাংলা." },
-  { icon: Wrench,         image: step6, alt: "Paddle wheel aerator splashing water to add oxygen",       title: "Clear action: turn on aerator",  body: "Not just a number. A practical next step the farmer can do right now." },
-  { icon: CheckCircle2,   image: step7, alt: "Healthy fish and shrimp thriving in clear pond water",     title: "Pond returns to safe levels",    body: "Status flips back to green. You saved the harvest before it became a loss." },
+  {
+    icon: Waves,
+    image: step1,
+    alt: "Smart sensor buoy floating in a calm aquaculture pond",
+    title: "Pond water is monitored 24/7",
+    body: "Our buoy floats in your pond and reads water around the clock.",
+  },
+  {
+    icon: Activity,
+    image: step2,
+    alt: "Underwater water-quality sensor probes reading DO and pH",
+    title: "Sensors capture 6 parameters",
+    body: "DO, pH, temperature, turbidity, salinity and ammonia — second by second.",
+  },
+  {
+    icon: LayoutDashboard,
+    image: step3,
+    alt: "Live water-quality dashboard with charts and gauges",
+    title: "Dashboard receives live data",
+    body: "Readings stream into a calm, farmer-friendly dashboard you can open on any phone.",
+  },
+  {
+    icon: AlertOctagon,
+    image: step4,
+    alt: "Pond water turning murky — early sign of falling oxygen",
+    title: "Risk detected: oxygen falling",
+    body: "Acqua Lence spots dangerous patterns early — like dissolved oxygen dropping below 4 mg/L.",
+  },
+  {
+    icon: BellRing,
+    image: step5,
+    alt: "Farmer checking an alert on a smartphone beside the pond",
+    title: "Farmer is alerted instantly",
+    body: "SMS, WhatsApp, app push and email — in English or বাংলা.",
+  },
+  {
+    icon: Wrench,
+    image: step6,
+    alt: "Paddle wheel aerator splashing water to add oxygen",
+    title: "Clear action: turn on aerator",
+    body: "Not just a number. A practical next step the farmer can do right now.",
+  },
+  {
+    icon: CheckCircle2,
+    image: step7,
+    alt: "Healthy fish and shrimp thriving in clear pond water",
+    title: "Pond returns to safe levels",
+    body: "Status flips back to green. You saved the harvest before it became a loss.",
+  },
 ];
 
 export function MonitoringStory() {
@@ -46,9 +94,8 @@ export function MonitoringStory() {
   useMotionValueEvent(scrollYProgress, "change", (p) => {
     if (!usePin) return;
     // Lock to final step when nearly done — guards against rounding skipping it.
-    const idx = p >= 0.98
-      ? steps.length - 1
-      : Math.min(steps.length - 1, Math.floor(p * steps.length));
+    const idx =
+      p >= 0.98 ? steps.length - 1 : Math.min(steps.length - 1, Math.floor(p * steps.length));
     setActive(idx);
   });
 
@@ -58,8 +105,13 @@ export function MonitoringStory() {
       <section className="relative bg-surface py-20 sm:py-24" aria-labelledby="story-heading">
         <div className="mx-auto max-w-3xl px-4 sm:px-6">
           <Reveal className="text-center">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">How It Works</p>
-            <h2 id="story-heading" className="mt-3 font-display text-3xl font-bold text-foreground text-balance sm:text-4xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+              How It Works
+            </p>
+            <h2
+              id="story-heading"
+              className="mt-3 font-display text-3xl font-bold text-foreground text-balance sm:text-4xl"
+            >
               From pond water to farmer action — in seconds.
             </h2>
           </Reveal>
@@ -67,7 +119,14 @@ export function MonitoringStory() {
             {steps.map(({ icon: Icon, image, alt, title, body }, i) => (
               <Reveal key={title} delay={i * 0.05}>
                 <li className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
-                  <img src={image} alt={alt} width={1280} height={896} loading="lazy" className="aspect-[16/10] w-full object-cover" />
+                  <img
+                    src={image}
+                    alt={alt}
+                    width={1280}
+                    height={896}
+                    loading="lazy"
+                    className="aspect-[16/10] w-full object-cover"
+                  />
                   <div className="flex items-start gap-3 p-4">
                     <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
                       <Icon className="h-5 w-5" />
@@ -108,13 +167,18 @@ export function MonitoringStory() {
         <div className="mx-auto grid w-full max-w-7xl grid-cols-12 items-center gap-10 px-6">
           {/* left: heading + progress rail */}
           <div className="col-span-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">How It Works</p>
-            <h2 id="story-heading" className="mt-3 font-display text-4xl font-bold text-foreground text-balance lg:text-5xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+              How It Works
+            </p>
+            <h2
+              id="story-heading"
+              className="mt-3 font-display text-4xl font-bold text-foreground text-balance lg:text-5xl"
+            >
               From pond water to farmer action — in seconds.
             </h2>
             <p className="mt-4 max-w-md text-[15px] text-muted-foreground">
-              Scroll to watch how Acqua Lence turns raw sensor data into a practical next step
-              that protects your fish and shrimp.
+              Scroll to watch how Acqua Lence turns raw sensor data into a practical next step that
+              protects your fish and shrimp.
             </p>
 
             <ol className="mt-8 space-y-1.5">
@@ -133,8 +197,8 @@ export function MonitoringStory() {
                         done
                           ? "bg-status-good text-white"
                           : current
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground"
                       }`}
                     >
                       {done ? "✓" : i + 1}

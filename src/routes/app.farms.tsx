@@ -2,18 +2,44 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import {
-  Plus, Waves, MapPin, Pencil, Archive, Search, Cpu, SlidersHorizontal,
-  Building2, Fish,
+  Plus,
+  Waves,
+  MapPin,
+  Pencil,
+  Archive,
+  Search,
+  Cpu,
+  SlidersHorizontal,
+  Building2,
+  Fish,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
 } from "@/components/ui/sheet";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { PageHeader, EmptyState, StatusBadge } from "@/components/app/StatusBadge";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
@@ -56,9 +82,27 @@ type Device = { id: string; serial: string; pond_id: string | null };
 
 // ----- Seed data -----
 const INITIAL_FARMS: Farm[] = [
-  { id: "f1", name: "Sundarban Farm", district: "Khulna", location: "Dakope, Khulna", status: "active" },
-  { id: "f2", name: "Khulna East Farm", district: "Khulna", location: "Batiaghata", status: "active" },
-  { id: "f3", name: "Satkhira Coastal", district: "Satkhira", location: "Shyamnagar", status: "suspended" },
+  {
+    id: "f1",
+    name: "Sundarban Farm",
+    district: "Khulna",
+    location: "Dakope, Khulna",
+    status: "active",
+  },
+  {
+    id: "f2",
+    name: "Khulna East Farm",
+    district: "Khulna",
+    location: "Batiaghata",
+    status: "active",
+  },
+  {
+    id: "f3",
+    name: "Satkhira Coastal",
+    district: "Satkhira",
+    location: "Shyamnagar",
+    status: "suspended",
+  },
 ];
 
 const today = new Date();
@@ -67,12 +111,102 @@ const dStr = (daysAgo: number) =>
 const minAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString();
 
 const INITIAL_PONDS: Pond[] = [
-  { id: "p1", name: "Pond 1 — Rui", farm_id: "f1", species: "Rui (Rohu)", pond_type: "earthen", water_type: "fresh", area_m2: 1200, depth_m: 1.8, stocking_date: dStr(45), stocking_density: 8, device_id: "d1", threshold_preset: "fish_default", status: "good", last_update: minAgo(3) },
-  { id: "p2", name: "Pond 2 — Shrimp", farm_id: "f1", species: "Bagda Shrimp", pond_type: "lined", water_type: "brackish", area_m2: 2000, depth_m: 1.5, stocking_date: dStr(28), stocking_density: 40, device_id: "d2", threshold_preset: "shrimp_default", status: "critical", last_update: minAgo(2) },
-  { id: "p3", name: "Pond 3 — Tilapia", farm_id: "f1", species: "Tilapia", pond_type: "earthen", water_type: "fresh", area_m2: 1500, depth_m: 1.6, stocking_date: dStr(60), stocking_density: 12, device_id: "d3", threshold_preset: "fish_default", status: "warning", last_update: minAgo(7) },
-  { id: "p4", name: "Pond 4 — Pangas", farm_id: "f2", species: "Pangasius", pond_type: "earthen", water_type: "fresh", area_m2: 2400, depth_m: 2.0, stocking_date: dStr(75), stocking_density: 15, device_id: "d4", threshold_preset: "fish_default", status: "good", last_update: minAgo(5) },
-  { id: "p5", name: "Pond 5 — Carp Mix", farm_id: "f2", species: "Mixed carp", pond_type: "earthen", water_type: "fresh", area_m2: 1800, depth_m: 1.7, stocking_date: dStr(90), stocking_density: 10, device_id: null, threshold_preset: "fish_default", status: "offline", last_update: minAgo(185) },
-  { id: "p6", name: "Pond 6 — Koi", farm_id: "f2", species: "Koi Carp", pond_type: "lined", water_type: "fresh", area_m2: 800, depth_m: 1.4, stocking_date: dStr(120), stocking_density: 6, device_id: "d6", threshold_preset: "fish_default", status: "good", last_update: minAgo(4) },
+  {
+    id: "p1",
+    name: "Pond 1 — Rui",
+    farm_id: "f1",
+    species: "Rui (Rohu)",
+    pond_type: "earthen",
+    water_type: "fresh",
+    area_m2: 1200,
+    depth_m: 1.8,
+    stocking_date: dStr(45),
+    stocking_density: 8,
+    device_id: "d1",
+    threshold_preset: "fish_default",
+    status: "good",
+    last_update: minAgo(3),
+  },
+  {
+    id: "p2",
+    name: "Pond 2 — Shrimp",
+    farm_id: "f1",
+    species: "Bagda Shrimp",
+    pond_type: "lined",
+    water_type: "brackish",
+    area_m2: 2000,
+    depth_m: 1.5,
+    stocking_date: dStr(28),
+    stocking_density: 40,
+    device_id: "d2",
+    threshold_preset: "shrimp_default",
+    status: "critical",
+    last_update: minAgo(2),
+  },
+  {
+    id: "p3",
+    name: "Pond 3 — Tilapia",
+    farm_id: "f1",
+    species: "Tilapia",
+    pond_type: "earthen",
+    water_type: "fresh",
+    area_m2: 1500,
+    depth_m: 1.6,
+    stocking_date: dStr(60),
+    stocking_density: 12,
+    device_id: "d3",
+    threshold_preset: "fish_default",
+    status: "warning",
+    last_update: minAgo(7),
+  },
+  {
+    id: "p4",
+    name: "Pond 4 — Pangas",
+    farm_id: "f2",
+    species: "Pangasius",
+    pond_type: "earthen",
+    water_type: "fresh",
+    area_m2: 2400,
+    depth_m: 2.0,
+    stocking_date: dStr(75),
+    stocking_density: 15,
+    device_id: "d4",
+    threshold_preset: "fish_default",
+    status: "good",
+    last_update: minAgo(5),
+  },
+  {
+    id: "p5",
+    name: "Pond 5 — Carp Mix",
+    farm_id: "f2",
+    species: "Mixed carp",
+    pond_type: "earthen",
+    water_type: "fresh",
+    area_m2: 1800,
+    depth_m: 1.7,
+    stocking_date: dStr(90),
+    stocking_density: 10,
+    device_id: null,
+    threshold_preset: "fish_default",
+    status: "offline",
+    last_update: minAgo(185),
+  },
+  {
+    id: "p6",
+    name: "Pond 6 — Koi",
+    farm_id: "f2",
+    species: "Koi Carp",
+    pond_type: "lined",
+    water_type: "fresh",
+    area_m2: 800,
+    depth_m: 1.4,
+    stocking_date: dStr(120),
+    stocking_density: 6,
+    device_id: "d6",
+    threshold_preset: "fish_default",
+    status: "good",
+    last_update: minAgo(4),
+  },
 ];
 
 const INITIAL_DEVICES: Device[] = [
@@ -86,8 +220,16 @@ const INITIAL_DEVICES: Device[] = [
 ];
 
 const BD_DISTRICTS = [
-  "Khulna", "Satkhira", "Bagerhat", "Cox's Bazar", "Chattogram", "Barishal",
-  "Patuakhali", "Noakhali", "Mymensingh", "Dhaka",
+  "Khulna",
+  "Satkhira",
+  "Bagerhat",
+  "Cox's Bazar",
+  "Chattogram",
+  "Barishal",
+  "Patuakhali",
+  "Noakhali",
+  "Mymensingh",
+  "Dhaka",
 ];
 
 // ----- Page -----
@@ -125,8 +267,9 @@ function FarmsPage() {
       if (pondStatusFilter !== "all" && p.status !== pondStatusFilter) return false;
       if (pondFarmFilter !== "all" && p.farm_id !== pondFarmFilter) return false;
       if (!q) return true;
-      return [p.name, p.species, farms.find((f) => f.id === p.farm_id)?.name ?? ""]
-        .some((x) => x.toLowerCase().includes(q));
+      return [p.name, p.species, farms.find((f) => f.id === p.farm_id)?.name ?? ""].some((x) =>
+        x.toLowerCase().includes(q),
+      );
     });
   }, [ponds, search, pondStatusFilter, pondFarmFilter, farms]);
 
@@ -144,26 +287,36 @@ function FarmsPage() {
   };
   const archiveFarm = (farm: Farm) => {
     setFarms((arr) =>
-      arr.map((f) => (f.id === farm.id ? { ...f, status: f.status === "active" ? "suspended" : "active" } : f))
+      arr.map((f) =>
+        f.id === farm.id ? { ...f, status: f.status === "active" ? "suspended" : "active" } : f,
+      ),
     );
     toast.success(
       farm.status === "active"
         ? t("Farm archived", "ফার্ম আর্কাইভ করা হয়েছে")
-        : t("Farm restored", "ফার্ম পুনরুদ্ধার করা হয়েছে")
+        : t("Farm restored", "ফার্ম পুনরুদ্ধার করা হয়েছে"),
     );
   };
   const savePond = (data: Omit<Pond, "id" | "status" | "last_update"> & { id?: string }) => {
     if (data.id) {
       setPonds((arr) => arr.map((p) => (p.id === data.id ? { ...p, ...data, id: data.id! } : p)));
       // sync device assignment
-      setDevices((arr) => arr.map((d) =>
-        d.id === data.device_id ? { ...d, pond_id: data.id! } :
-        d.pond_id === data.id ? { ...d, pond_id: null } : d
-      ));
+      setDevices((arr) =>
+        arr.map((d) =>
+          d.id === data.device_id
+            ? { ...d, pond_id: data.id! }
+            : d.pond_id === data.id
+              ? { ...d, pond_id: null }
+              : d,
+        ),
+      );
       toast.success(t("Pond updated", "পুকুর আপডেট হয়েছে"));
     } else {
       const id = `p${Date.now()}`;
-      setPonds((arr) => [{ ...data, id, status: "good", last_update: new Date().toISOString() }, ...arr]);
+      setPonds((arr) => [
+        { ...data, id, status: "good", last_update: new Date().toISOString() },
+        ...arr,
+      ]);
       if (data.device_id) {
         setDevices((arr) => arr.map((d) => (d.id === data.device_id ? { ...d, pond_id: id } : d)));
       }
@@ -175,9 +328,12 @@ function FarmsPage() {
     setPonds((arr) => arr.map((p) => (p.id === pond.id ? { ...p, device_id: deviceId } : p)));
     setDevices((arr) =>
       arr.map((d) =>
-        d.id === deviceId ? { ...d, pond_id: pond.id } :
-        d.pond_id === pond.id ? { ...d, pond_id: null } : d
-      )
+        d.id === deviceId
+          ? { ...d, pond_id: pond.id }
+          : d.pond_id === pond.id
+            ? { ...d, pond_id: null }
+            : d,
+      ),
     );
     toast.success(t("Device assigned", "ডিভাইস বরাদ্দ হয়েছে"));
     setAssignDrawer(null);
@@ -200,13 +356,17 @@ function FarmsPage() {
         title={t("Farms & Ponds", "ফার্ম ও পুকুর")}
         subtitle={t(
           "Organize farms, ponds and assigned devices.",
-          "ফার্ম, পুকুর ও ডিভাইস ব্যবস্থাপনা করুন।"
+          "ফার্ম, পুকুর ও ডিভাইস ব্যবস্থাপনা করুন।",
         )}
-        actions={tab === "farms" ? farmsHeaderActions : (
-          <Button onClick={() => setPondDrawer({ mode: "add" })}>
-            <Plus className="mr-2 h-4 w-4" /> {t("Add pond", "পুকুর যোগ করুন")}
-          </Button>
-        )}
+        actions={
+          tab === "farms" ? (
+            farmsHeaderActions
+          ) : (
+            <Button onClick={() => setPondDrawer({ mode: "add" })}>
+              <Plus className="mr-2 h-4 w-4" /> {t("Add pond", "পুকুর যোগ করুন")}
+            </Button>
+          )
+        }
       />
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as "farms" | "ponds")} className="w-full">
@@ -226,15 +386,22 @@ function FarmsPage() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={tab === "farms"
-                ? t("Search farms, district, location…", "ফার্ম, জেলা, অবস্থান খুঁজুন…")
-                : t("Search ponds, species, farm…", "পুকুর, প্রজাতি, ফার্ম খুঁজুন…")}
+              placeholder={
+                tab === "farms"
+                  ? t("Search farms, district, location…", "ফার্ম, জেলা, অবস্থান খুঁজুন…")
+                  : t("Search ponds, species, farm…", "পুকুর, প্রজাতি, ফার্ম খুঁজুন…")
+              }
               className="pl-9"
             />
           </div>
           {tab === "farms" ? (
-            <Select value={farmStatusFilter} onValueChange={(v) => setFarmStatusFilter(v as "all" | FarmStatus)}>
-              <SelectTrigger className="sm:w-48"><SelectValue /></SelectTrigger>
+            <Select
+              value={farmStatusFilter}
+              onValueChange={(v) => setFarmStatusFilter(v as "all" | FarmStatus)}
+            >
+              <SelectTrigger className="sm:w-48">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t("All statuses", "সব স্ট্যাটাস")}</SelectItem>
                 <SelectItem value="active">{t("Active", "সক্রিয়")}</SelectItem>
@@ -244,14 +411,25 @@ function FarmsPage() {
           ) : (
             <>
               <Select value={pondFarmFilter} onValueChange={setPondFarmFilter}>
-                <SelectTrigger className="sm:w-44"><SelectValue placeholder="Farm" /></SelectTrigger>
+                <SelectTrigger className="sm:w-44">
+                  <SelectValue placeholder="Farm" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("All farms", "সব ফার্ম")}</SelectItem>
-                  {farms.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+                  {farms.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              <Select value={pondStatusFilter} onValueChange={(v) => setPondStatusFilter(v as "all" | PondStatus)}>
-                <SelectTrigger className="sm:w-40"><SelectValue /></SelectTrigger>
+              <Select
+                value={pondStatusFilter}
+                onValueChange={(v) => setPondStatusFilter(v as "all" | PondStatus)}
+              >
+                <SelectTrigger className="sm:w-40">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("All statuses", "সব স্ট্যাটাস")}</SelectItem>
                   <SelectItem value="good">{t("Good", "ভালো")}</SelectItem>
@@ -269,8 +447,16 @@ function FarmsPage() {
             <EmptyState
               icon={<Building2 className="h-6 w-6" />}
               title={t("No farms found", "কোনো ফার্ম নেই")}
-              description={t("Add your first farm to group ponds and devices.", "প্রথম ফার্ম যোগ করুন।")}
-              action={<Button onClick={() => setFarmDrawer({ mode: "add" })}><Plus className="mr-2 h-4 w-4" />{t("Add farm", "ফার্ম যোগ করুন")}</Button>}
+              description={t(
+                "Add your first farm to group ponds and devices.",
+                "প্রথম ফার্ম যোগ করুন।",
+              )}
+              action={
+                <Button onClick={() => setFarmDrawer({ mode: "add" })}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("Add farm", "ফার্ম যোগ করুন")}
+                </Button>
+              }
             />
           ) : (
             <>
@@ -296,9 +482,15 @@ function FarmsPage() {
                           <TableCell className="text-muted-foreground">{f.district}</TableCell>
                           <TableCell className="text-muted-foreground">{f.location}</TableCell>
                           <TableCell className="text-center tabular-nums">{count}</TableCell>
-                          <TableCell><StatusBadge status={f.status} /></TableCell>
+                          <TableCell>
+                            <StatusBadge status={f.status} />
+                          </TableCell>
                           <TableCell className="text-right">
-                            <Button size="sm" variant="ghost" onClick={() => setFarmDrawer({ mode: "edit", farm: f })}>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setFarmDrawer({ mode: "edit", farm: f })}
+                            >
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
                             <Button size="sm" variant="ghost" onClick={() => archiveFarm(f)}>
@@ -317,7 +509,10 @@ function FarmsPage() {
                 {filteredFarms.map((f) => {
                   const count = ponds.filter((p) => p.farm_id === f.id).length;
                   return (
-                    <div key={f.id} className="rounded-2xl border border-border/70 bg-card p-4 shadow-soft">
+                    <div
+                      key={f.id}
+                      className="rounded-2xl border border-border/70 bg-card p-4 shadow-soft"
+                    >
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <p className="font-display text-base font-semibold">{f.name}</p>
@@ -328,10 +523,17 @@ function FarmsPage() {
                         <StatusBadge status={f.status} />
                       </div>
                       <div className="mt-3 flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">{count} {t("ponds", "পুকুর")}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {count} {t("ponds", "পুকুর")}
+                        </span>
                         <div className="flex gap-1">
-                          <Button size="sm" variant="outline" onClick={() => setFarmDrawer({ mode: "edit", farm: f })}>
-                            <Pencil className="mr-1.5 h-3.5 w-3.5" />{t("Edit", "এডিট")}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setFarmDrawer({ mode: "edit", farm: f })}
+                          >
+                            <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                            {t("Edit", "এডিট")}
                           </Button>
                           <Button size="sm" variant="ghost" onClick={() => archiveFarm(f)}>
                             <Archive className="h-3.5 w-3.5" />
@@ -352,7 +554,12 @@ function FarmsPage() {
               icon={<Waves className="h-6 w-6" />}
               title={t("No ponds found", "কোনো পুকুর নেই")}
               description={t("Add your first pond to start monitoring.", "প্রথম পুকুর যোগ করুন।")}
-              action={<Button onClick={() => setPondDrawer({ mode: "add" })}><Plus className="mr-2 h-4 w-4" />{t("Add pond", "পুকুর যোগ করুন")}</Button>}
+              action={
+                <Button onClick={() => setPondDrawer({ mode: "add" })}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("Add pond", "পুকুর যোগ করুন")}
+                </Button>
+              }
             />
           ) : (
             <>
@@ -380,7 +587,11 @@ function FarmsPage() {
                       return (
                         <TableRow key={p.id}>
                           <TableCell className="font-medium">
-                            <Link to="/app/ponds/$pondId" params={{ pondId: p.id }} className="hover:underline">
+                            <Link
+                              to="/app/ponds/$pondId"
+                              params={{ pondId: p.id }}
+                              className="hover:underline"
+                            >
                               {p.name}
                             </Link>
                           </TableCell>
@@ -389,18 +600,39 @@ function FarmsPage() {
                           <TableCell className="capitalize">{p.pond_type}</TableCell>
                           <TableCell className="capitalize">{p.water_type}</TableCell>
                           <TableCell className="text-muted-foreground">{p.stocking_date}</TableCell>
-                          <TableCell className="font-mono text-xs">{dev?.serial ?? <span className="text-muted-foreground">—</span>}</TableCell>
-                          <TableCell><StatusBadge status={p.status} /></TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{timeAgo(p.last_update, lang)}</TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {dev?.serial ?? <span className="text-muted-foreground">—</span>}
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge status={p.status} />
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {timeAgo(p.last_update, lang)}
+                          </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-0.5">
-                              <Button size="sm" variant="ghost" title={t("Edit", "এডিট")} onClick={() => setPondDrawer({ mode: "edit", pond: p })}>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                title={t("Edit", "এডিট")}
+                                onClick={() => setPondDrawer({ mode: "edit", pond: p })}
+                              >
                                 <Pencil className="h-3.5 w-3.5" />
                               </Button>
-                              <Button size="sm" variant="ghost" title={t("Assign device", "ডিভাইস বরাদ্দ")} onClick={() => setAssignDrawer(p)}>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                title={t("Assign device", "ডিভাইস বরাদ্দ")}
+                                onClick={() => setAssignDrawer(p)}
+                              >
                                 <Cpu className="h-3.5 w-3.5" />
                               </Button>
-                              <Button size="sm" variant="ghost" title={t("Set thresholds", "থ্রেশহোল্ড")} onClick={() => setThresholdDrawer(p)}>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                title={t("Set thresholds", "থ্রেশহোল্ড")}
+                                onClick={() => setThresholdDrawer(p)}
+                              >
                                 <SlidersHorizontal className="h-3.5 w-3.5" />
                               </Button>
                             </div>
@@ -418,30 +650,57 @@ function FarmsPage() {
                   const dev = devices.find((d) => d.id === p.device_id);
                   const farmName = farms.find((f) => f.id === p.farm_id)?.name ?? "—";
                   return (
-                    <div key={p.id} className="rounded-2xl border border-border/70 bg-card p-4 shadow-soft">
+                    <div
+                      key={p.id}
+                      className="rounded-2xl border border-border/70 bg-card p-4 shadow-soft"
+                    >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <Link to="/app/ponds/$pondId" params={{ pondId: p.id }} className="font-display text-base font-semibold hover:underline">
+                          <Link
+                            to="/app/ponds/$pondId"
+                            params={{ pondId: p.id }}
+                            className="font-display text-base font-semibold hover:underline"
+                          >
                             {p.name}
                           </Link>
-                          <p className="mt-0.5 text-xs text-muted-foreground">{farmName} · {p.species}</p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {farmName} · {p.species}
+                          </p>
                         </div>
                         <StatusBadge status={p.status} />
                       </div>
                       <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                        <div><dt className="text-muted-foreground">{t("Type", "ধরন")}</dt><dd className="capitalize">{p.pond_type} / {p.water_type}</dd></div>
-                        <div><dt className="text-muted-foreground">{t("Stocked", "মজুদ")}</dt><dd>{p.stocking_date}</dd></div>
-                        <div className="col-span-2"><dt className="text-muted-foreground">{t("Device", "ডিভাইস")}</dt><dd className="font-mono">{dev?.serial ?? "—"}</dd></div>
+                        <div>
+                          <dt className="text-muted-foreground">{t("Type", "ধরন")}</dt>
+                          <dd className="capitalize">
+                            {p.pond_type} / {p.water_type}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-muted-foreground">{t("Stocked", "মজুদ")}</dt>
+                          <dd>{p.stocking_date}</dd>
+                        </div>
+                        <div className="col-span-2">
+                          <dt className="text-muted-foreground">{t("Device", "ডিভাইস")}</dt>
+                          <dd className="font-mono">{dev?.serial ?? "—"}</dd>
+                        </div>
                       </dl>
                       <div className="mt-3 flex flex-wrap gap-1.5">
-                        <Button size="sm" variant="outline" onClick={() => setPondDrawer({ mode: "edit", pond: p })}>
-                          <Pencil className="mr-1.5 h-3.5 w-3.5" />{t("Edit", "এডিট")}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setPondDrawer({ mode: "edit", pond: p })}
+                        >
+                          <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                          {t("Edit", "এডিট")}
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => setAssignDrawer(p)}>
-                          <Cpu className="mr-1.5 h-3.5 w-3.5" />{t("Device", "ডিভাইস")}
+                          <Cpu className="mr-1.5 h-3.5 w-3.5" />
+                          {t("Device", "ডিভাইস")}
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => setThresholdDrawer(p)}>
-                          <SlidersHorizontal className="mr-1.5 h-3.5 w-3.5" />{t("Thresholds", "থ্রেশহোল্ড")}
+                          <SlidersHorizontal className="mr-1.5 h-3.5 w-3.5" />
+                          {t("Thresholds", "থ্রেশহোল্ড")}
                         </Button>
                       </div>
                     </div>
@@ -487,7 +746,11 @@ function FarmsPage() {
           pond={thresholdDrawer}
           onClose={() => setThresholdDrawer(null)}
           onSave={(preset) => {
-            setPonds((arr) => arr.map((p) => (p.id === thresholdDrawer.id ? { ...p, threshold_preset: preset } : p)));
+            setPonds((arr) =>
+              arr.map((p) =>
+                p.id === thresholdDrawer.id ? { ...p, threshold_preset: preset } : p,
+              ),
+            );
             toast.success(t("Thresholds updated", "থ্রেশহোল্ড আপডেট হয়েছে"));
             setThresholdDrawer(null);
           }}
@@ -513,10 +776,17 @@ type T = (en: string, bn: string) => string;
 
 // ----- Farm drawer -----
 function FarmDrawer({
-  mode, initial, onClose, onSave, t,
+  mode,
+  initial,
+  onClose,
+  onSave,
+  t,
 }: {
-  mode: "add" | "edit"; initial?: Farm; onClose: () => void;
-  onSave: (data: Omit<Farm, "id"> & { id?: string }) => void; t: T;
+  mode: "add" | "edit";
+  initial?: Farm;
+  onClose: () => void;
+  onSave: (data: Omit<Farm, "id"> & { id?: string }) => void;
+  t: T;
 }) {
   const [form, setForm] = useState<Omit<Farm, "id"> & { id?: string }>({
     id: initial?.id,
@@ -540,7 +810,9 @@ function FarmDrawer({
     <Sheet open onOpenChange={(v) => !v && onClose()}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>{mode === "add" ? t("Add farm", "ফার্ম যোগ করুন") : t("Edit farm", "ফার্ম এডিট")}</SheetTitle>
+          <SheetTitle>
+            {mode === "add" ? t("Add farm", "ফার্ম যোগ করুন") : t("Edit farm", "ফার্ম এডিট")}
+          </SheetTitle>
           <SheetDescription>
             {t("Farms group your ponds and devices.", "ফার্ম আপনার পুকুর ও ডিভাইস গ্রুপ করে।")}
           </SheetDescription>
@@ -551,18 +823,36 @@ function FarmDrawer({
           </Field>
           <Field label={t("District", "জেলা")}>
             <Select value={form.district} onValueChange={(v) => setForm({ ...form, district: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                {BD_DISTRICTS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                {BD_DISTRICTS.map((d) => (
+                  <SelectItem key={d} value={d}>
+                    {d}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </Field>
-          <Field label={t("Location", "অবস্থান") + " *"} error={errors.location} hint={t("Village, upazila or coordinates.", "গ্রাম, উপজেলা বা স্থানাঙ্ক।")}>
-            <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
+          <Field
+            label={t("Location", "অবস্থান") + " *"}
+            error={errors.location}
+            hint={t("Village, upazila or coordinates.", "গ্রাম, উপজেলা বা স্থানাঙ্ক।")}
+          >
+            <Input
+              value={form.location}
+              onChange={(e) => setForm({ ...form, location: e.target.value })}
+            />
           </Field>
           <Field label={t("Status", "অবস্থা")}>
-            <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as FarmStatus })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select
+              value={form.status}
+              onValueChange={(v) => setForm({ ...form, status: v as FarmStatus })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="active">{t("Active", "সক্রিয়")}</SelectItem>
                 <SelectItem value="suspended">{t("Suspended", "স্থগিত")}</SelectItem>
@@ -571,8 +861,12 @@ function FarmDrawer({
           </Field>
         </div>
         <SheetFooter className="mt-6 gap-2">
-          <Button variant="ghost" onClick={onClose}>{t("Cancel", "বাতিল")}</Button>
-          <Button onClick={submit}>{mode === "add" ? t("Create farm", "ফার্ম তৈরি") : t("Save changes", "সংরক্ষণ")}</Button>
+          <Button variant="ghost" onClick={onClose}>
+            {t("Cancel", "বাতিল")}
+          </Button>
+          <Button onClick={submit}>
+            {mode === "add" ? t("Create farm", "ফার্ম তৈরি") : t("Save changes", "সংরক্ষণ")}
+          </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>
@@ -581,9 +875,18 @@ function FarmDrawer({
 
 // ----- Pond drawer -----
 function PondDrawer({
-  mode, initial, farms, devices, onClose, onSave, t,
+  mode,
+  initial,
+  farms,
+  devices,
+  onClose,
+  onSave,
+  t,
 }: {
-  mode: "add" | "edit"; initial?: Pond; farms: Farm[]; devices: Device[];
+  mode: "add" | "edit";
+  initial?: Pond;
+  farms: Farm[];
+  devices: Device[];
   onClose: () => void;
   onSave: (data: Omit<Pond, "id" | "status" | "last_update"> & { id?: string }) => void;
   t: T;
@@ -610,9 +913,12 @@ function PondDrawer({
     if (!form.name.trim()) e.name = t("Pond name is required", "পুকুরের নাম প্রয়োজন");
     if (!form.farm_id) e.farm_id = t("Select a farm", "ফার্ম নির্বাচন করুন");
     if (!form.species.trim()) e.species = t("Species is required", "প্রজাতি প্রয়োজন");
-    if (!form.area_m2 || form.area_m2 <= 0) e.area_m2 = t("Area must be > 0", "এলাকা ০ এর বেশি হতে হবে");
-    if (!form.depth_m || form.depth_m <= 0) e.depth_m = t("Depth must be > 0", "গভীরতা ০ এর বেশি হতে হবে");
-    if (!form.stocking_date) e.stocking_date = t("Stocking date is required", "মজুদের তারিখ প্রয়োজন");
+    if (!form.area_m2 || form.area_m2 <= 0)
+      e.area_m2 = t("Area must be > 0", "এলাকা ০ এর বেশি হতে হবে");
+    if (!form.depth_m || form.depth_m <= 0)
+      e.depth_m = t("Depth must be > 0", "গভীরতা ০ এর বেশি হতে হবে");
+    if (!form.stocking_date)
+      e.stocking_date = t("Stocking date is required", "মজুদের তারিখ প্রয়োজন");
     setErrors(e);
     if (Object.keys(e).length) return;
     onSave(form);
@@ -622,33 +928,60 @@ function PondDrawer({
     <Sheet open onOpenChange={(v) => !v && onClose()}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
         <SheetHeader>
-          <SheetTitle>{mode === "add" ? t("Add pond", "পুকুর যোগ করুন") : t("Edit pond", "পুকুর এডিট")}</SheetTitle>
+          <SheetTitle>
+            {mode === "add" ? t("Add pond", "পুকুর যোগ করুন") : t("Edit pond", "পুকুর এডিট")}
+          </SheetTitle>
           <SheetDescription>
-            {t("Set the pond details and assign a sensor device.", "পুকুরের বিবরণ ও ডিভাইস নির্ধারণ করুন।")}
+            {t(
+              "Set the pond details and assign a sensor device.",
+              "পুকুরের বিবরণ ও ডিভাইস নির্ধারণ করুন।",
+            )}
           </SheetDescription>
         </SheetHeader>
 
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field className="sm:col-span-2" label={t("Pond name", "পুকুরের নাম") + " *"} error={errors.name}>
-            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Pond 7 — Tilapia" />
+          <Field
+            className="sm:col-span-2"
+            label={t("Pond name", "পুকুরের নাম") + " *"}
+            error={errors.name}
+          >
+            <Input
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="e.g. Pond 7 — Tilapia"
+            />
           </Field>
 
           <Field label={t("Farm", "ফার্ম") + " *"} error={errors.farm_id}>
             <Select value={form.farm_id} onValueChange={(v) => setForm({ ...form, farm_id: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                {farms.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+                {farms.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </Field>
 
           <Field label={t("Species", "প্রজাতি") + " *"} error={errors.species}>
-            <Input value={form.species} onChange={(e) => setForm({ ...form, species: e.target.value })} />
+            <Input
+              value={form.species}
+              onChange={(e) => setForm({ ...form, species: e.target.value })}
+            />
           </Field>
 
           <Field label={t("Pond type", "পুকুরের ধরন")}>
-            <Select value={form.pond_type} onValueChange={(v) => setForm({ ...form, pond_type: v as Pond["pond_type"] })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select
+              value={form.pond_type}
+              onValueChange={(v) => setForm({ ...form, pond_type: v as Pond["pond_type"] })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="earthen">{t("Earthen", "মাটির")}</SelectItem>
                 <SelectItem value="lined">{t("Lined / HDPE", "লাইনড / HDPE")}</SelectItem>
@@ -659,8 +992,13 @@ function PondDrawer({
           </Field>
 
           <Field label={t("Water type", "পানির ধরন")}>
-            <Select value={form.water_type} onValueChange={(v) => setForm({ ...form, water_type: v as Pond["water_type"] })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select
+              value={form.water_type}
+              onValueChange={(v) => setForm({ ...form, water_type: v as Pond["water_type"] })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="fresh">{t("Fresh", "মিঠা")}</SelectItem>
                 <SelectItem value="brackish">{t("Brackish", "লোনা মিশ্র")}</SelectItem>
@@ -670,43 +1008,76 @@ function PondDrawer({
           </Field>
 
           <Field label={t("Area (m²)", "এলাকা (m²)") + " *"} error={errors.area_m2}>
-            <Input type="number" min={0} value={form.area_m2}
-              onChange={(e) => setForm({ ...form, area_m2: Number(e.target.value) })} />
+            <Input
+              type="number"
+              min={0}
+              value={form.area_m2}
+              onChange={(e) => setForm({ ...form, area_m2: Number(e.target.value) })}
+            />
           </Field>
 
           <Field label={t("Depth (m)", "গভীরতা (m)") + " *"} error={errors.depth_m}>
-            <Input type="number" step="0.1" min={0} value={form.depth_m}
-              onChange={(e) => setForm({ ...form, depth_m: Number(e.target.value) })} />
+            <Input
+              type="number"
+              step="0.1"
+              min={0}
+              value={form.depth_m}
+              onChange={(e) => setForm({ ...form, depth_m: Number(e.target.value) })}
+            />
           </Field>
 
           <Field label={t("Stocking date", "মজুদের তারিখ") + " *"} error={errors.stocking_date}>
-            <Input type="date" value={form.stocking_date}
-              onChange={(e) => setForm({ ...form, stocking_date: e.target.value })} />
+            <Input
+              type="date"
+              value={form.stocking_date}
+              onChange={(e) => setForm({ ...form, stocking_date: e.target.value })}
+            />
           </Field>
 
           <Field label={t("Stocking density (pcs/m²)", "মজুদের ঘনত্ব (pcs/m²)")}>
-            <Input type="number" min={0} value={form.stocking_density}
-              onChange={(e) => setForm({ ...form, stocking_density: Number(e.target.value) })} />
+            <Input
+              type="number"
+              min={0}
+              value={form.stocking_density}
+              onChange={(e) => setForm({ ...form, stocking_density: Number(e.target.value) })}
+            />
           </Field>
 
-          <Field className="sm:col-span-2" label={t("Assigned device", "বরাদ্দকৃত ডিভাইস")}
-            hint={t("Only unassigned devices are listed.", "শুধু অব্যবহৃত ডিভাইসগুলো দেখানো হবে।")}>
-            <Select value={form.device_id ?? "__none"} onValueChange={(v) => setForm({ ...form, device_id: v === "__none" ? null : v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+          <Field
+            className="sm:col-span-2"
+            label={t("Assigned device", "বরাদ্দকৃত ডিভাইস")}
+            hint={t("Only unassigned devices are listed.", "শুধু অব্যবহৃত ডিভাইসগুলো দেখানো হবে।")}
+          >
+            <Select
+              value={form.device_id ?? "__none"}
+              onValueChange={(v) => setForm({ ...form, device_id: v === "__none" ? null : v })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none">{t("No device", "কোনো ডিভাইস নয়")}</SelectItem>
                 {availableDevices.map((d) => (
-                  <SelectItem key={d.id} value={d.id}>{d.serial}</SelectItem>
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.serial}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </Field>
 
           <Field className="sm:col-span-2" label={t("Threshold preset", "থ্রেশহোল্ড প্রিসেট")}>
-            <Select value={form.threshold_preset} onValueChange={(v) => setForm({ ...form, threshold_preset: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select
+              value={form.threshold_preset}
+              onValueChange={(v) => setForm({ ...form, threshold_preset: v })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                <SelectItem value="shrimp_default">{t("Shrimp default", "চিংড়ি ডিফল্ট")}</SelectItem>
+                <SelectItem value="shrimp_default">
+                  {t("Shrimp default", "চিংড়ি ডিফল্ট")}
+                </SelectItem>
                 <SelectItem value="fish_default">{t("Fish default", "মাছ ডিফল্ট")}</SelectItem>
                 <SelectItem value="hatchery">{t("Hatchery (tight)", "হ্যাচারি")}</SelectItem>
                 <SelectItem value="custom">{t("Custom", "কাস্টম")}</SelectItem>
@@ -716,8 +1087,12 @@ function PondDrawer({
         </div>
 
         <SheetFooter className="mt-6 gap-2">
-          <Button variant="ghost" onClick={onClose}>{t("Cancel", "বাতিল")}</Button>
-          <Button onClick={submit}>{mode === "add" ? t("Create pond", "পুকুর তৈরি") : t("Save changes", "সংরক্ষণ")}</Button>
+          <Button variant="ghost" onClick={onClose}>
+            {t("Cancel", "বাতিল")}
+          </Button>
+          <Button onClick={submit}>
+            {mode === "add" ? t("Create pond", "পুকুর তৈরি") : t("Save changes", "সংরক্ষণ")}
+          </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>
@@ -726,10 +1101,17 @@ function PondDrawer({
 
 // ----- Assign device drawer -----
 function AssignDeviceDrawer({
-  pond, devices, onClose, onAssign, t,
+  pond,
+  devices,
+  onClose,
+  onAssign,
+  t,
 }: {
-  pond: Pond; devices: Device[]; onClose: () => void;
-  onAssign: (deviceId: string | null) => void; t: T;
+  pond: Pond;
+  devices: Device[];
+  onClose: () => void;
+  onAssign: (deviceId: string | null) => void;
+  t: T;
 }) {
   const [selected, setSelected] = useState<string | null>(pond.device_id);
   const list = devices.filter((d) => !d.pond_id || d.pond_id === pond.id);
@@ -764,7 +1146,9 @@ function AssignDeviceDrawer({
           )}
         </div>
         <SheetFooter className="mt-6 gap-2">
-          <Button variant="ghost" onClick={onClose}>{t("Cancel", "বাতিল")}</Button>
+          <Button variant="ghost" onClick={onClose}>
+            {t("Cancel", "বাতিল")}
+          </Button>
           <Button onClick={() => onAssign(selected)}>{t("Save", "সংরক্ষণ")}</Button>
         </SheetFooter>
       </SheetContent>
@@ -774,8 +1158,16 @@ function AssignDeviceDrawer({
 
 // ----- Threshold drawer -----
 function ThresholdDrawer({
-  pond, onClose, onSave, t,
-}: { pond: Pond; onClose: () => void; onSave: (preset: string) => void; t: T }) {
+  pond,
+  onClose,
+  onSave,
+  t,
+}: {
+  pond: Pond;
+  onClose: () => void;
+  onSave: (preset: string) => void;
+  t: T;
+}) {
   const [preset, setPreset] = useState(pond.threshold_preset);
   return (
     <Sheet open onOpenChange={(v) => !v && onClose()}>
@@ -787,9 +1179,13 @@ function ThresholdDrawer({
         <div className="mt-4 space-y-3">
           <Field label={t("Preset", "প্রিসেট")}>
             <Select value={preset} onValueChange={setPreset}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                <SelectItem value="shrimp_default">{t("Shrimp default", "চিংড়ি ডিফল্ট")}</SelectItem>
+                <SelectItem value="shrimp_default">
+                  {t("Shrimp default", "চিংড়ি ডিফল্ট")}
+                </SelectItem>
                 <SelectItem value="fish_default">{t("Fish default", "মাছ ডিফল্ট")}</SelectItem>
                 <SelectItem value="hatchery">{t("Hatchery (tight)", "হ্যাচারি")}</SelectItem>
                 <SelectItem value="custom">{t("Custom", "কাস্টম")}</SelectItem>
@@ -799,12 +1195,14 @@ function ThresholdDrawer({
           <p className="text-xs text-muted-foreground">
             {t(
               "Presets configure DO, pH, temperature and ammonia alert ranges.",
-              "প্রিসেট DO, pH, তাপমাত্রা ও অ্যামোনিয়ার অ্যালার্ট নির্ধারণ করে।"
+              "প্রিসেট DO, pH, তাপমাত্রা ও অ্যামোনিয়ার অ্যালার্ট নির্ধারণ করে।",
             )}
           </p>
         </div>
         <SheetFooter className="mt-6 gap-2">
-          <Button variant="ghost" onClick={onClose}>{t("Cancel", "বাতিল")}</Button>
+          <Button variant="ghost" onClick={onClose}>
+            {t("Cancel", "বাতিল")}
+          </Button>
           <Button onClick={() => onSave(preset)}>{t("Save", "সংরক্ষণ")}</Button>
         </SheetFooter>
       </SheetContent>
@@ -814,8 +1212,18 @@ function ThresholdDrawer({
 
 // ----- Small Field helper -----
 function Field({
-  label, error, hint, children, className,
-}: { label: string; error?: string; hint?: string; children: React.ReactNode; className?: string }) {
+  label,
+  error,
+  hint,
+  children,
+  className,
+}: {
+  label: string;
+  error?: string;
+  hint?: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
     <div className={className}>
       <Label className="mb-1.5 block text-sm">{label}</Label>

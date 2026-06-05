@@ -2,7 +2,8 @@ import { FileText, BarChart3, BellRing, FileDown, FileSpreadsheet } from "lucide
 import { Reveal } from "./Reveal";
 
 function MiniLine({ data, color = "var(--primary)" }: { data: number[]; color?: string }) {
-  const W = 200, H = 60;
+  const W = 200,
+    H = 60;
   const min = Math.min(...data);
   const max = Math.max(...data);
   const pts = data.map((v, i) => ({
@@ -47,8 +48,13 @@ export function ReportsTrends() {
     <section className="relative bg-surface py-20 sm:py-24" aria-labelledby="reports-heading">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <Reveal className="mx-auto max-w-2xl text-center">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">Reports &amp; Trends</p>
-          <h2 id="reports-heading" className="mt-3 font-display text-3xl font-bold text-foreground text-balance sm:text-4xl lg:text-5xl">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+            Reports &amp; Trends
+          </p>
+          <h2
+            id="reports-heading"
+            className="mt-3 font-display text-3xl font-bold text-foreground text-balance sm:text-4xl lg:text-5xl"
+          >
             See what the water is telling you over time.
           </h2>
           <p className="mt-4 text-[15px] text-muted-foreground">
@@ -67,13 +73,19 @@ export function ReportsTrends() {
                       <Icon className="h-5 w-5" />
                     </span>
                     <div className="text-right">
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{c.stat.label}</div>
-                      <div className="font-display text-base font-bold text-foreground">{c.stat.value}</div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        {c.stat.label}
+                      </div>
+                      <div className="font-display text-base font-bold text-foreground">
+                        {c.stat.value}
+                      </div>
                     </div>
                   </div>
                   <h3 className="mt-4 text-[15px] font-semibold text-foreground">{c.title}</h3>
                   <p className="mt-1 text-[12px] leading-snug text-muted-foreground">{c.desc}</p>
-                  <div className="mt-4"><MiniLine data={c.data} /></div>
+                  <div className="mt-4">
+                    <MiniLine data={c.data} />
+                  </div>
                 </article>
               </Reveal>
             );

@@ -28,12 +28,7 @@ import {
   type Profile,
   type Alert,
 } from "@/lib/insforge";
-import {
-  PageHeader,
-  MetricTile,
-  StatusBadge,
-  EmptyState,
-} from "@/components/app/StatusBadge";
+import { PageHeader, MetricTile, StatusBadge, EmptyState } from "@/components/app/StatusBadge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -132,9 +127,7 @@ function AdminDevices() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [openDevice, setOpenDevice] = useState<DeviceRow | null>(null);
   const [tab, setTab] = useState("overview");
-  const [confirmDeactivate, setConfirmDeactivate] = useState<DeviceRow[] | null>(
-    null,
-  );
+  const [confirmDeactivate, setConfirmDeactivate] = useState<DeviceRow[] | null>(null);
   const [flagDialog, setFlagDialog] = useState<{
     open: boolean;
     devices: DeviceRow[];
@@ -183,18 +176,15 @@ function AdminDevices() {
     },
   });
 
-  const devices = data?.devices ?? [];
-  const farms = data?.farms ?? [];
-  const ponds = data?.ponds ?? [];
-  const profiles = data?.profiles ?? [];
-  const alerts = data?.alerts ?? [];
-  const maintenance = data?.maintenance ?? [];
+  const devices = useMemo(() => data?.devices ?? [], [data?.devices]);
+  const farms = useMemo(() => data?.farms ?? [], [data?.farms]);
+  const ponds = useMemo(() => data?.ponds ?? [], [data?.ponds]);
+  const profiles = useMemo(() => data?.profiles ?? [], [data?.profiles]);
+  const alerts = useMemo(() => data?.alerts ?? [], [data?.alerts]);
+  const maintenance = useMemo(() => data?.maintenance ?? [], [data?.maintenance]);
 
   const technicians = useMemo(
-    () =>
-      profiles.filter(
-        (p) => (p as any).role === "technician" || (p as any).role === "admin",
-      ),
+    () => profiles.filter((p) => (p as any).role === "technician" || (p as any).role === "admin"),
     [profiles],
   );
 
@@ -212,9 +202,7 @@ function AdminDevices() {
     return devices.map((d) => {
       const farm = farms.find((x) => x.id === d.farm_id) ?? null;
       const pond = ponds.find((x) => x.id === d.pond_id) ?? null;
-      const owner = farm
-        ? profiles.find((p) => p.id === farm.owner_id) ?? null
-        : null;
+      const owner = farm ? (profiles.find((p) => p.id === farm.owner_id) ?? null) : null;
       let calStatus: Enriched["calStatus"] = "unknown";
       if (d.calibration_due) {
         const due = new Date(d.calibration_due).getTime();
@@ -255,14 +243,7 @@ function AdminDevices() {
     const q = f.q.trim().toLowerCase();
     return enriched.filter((d) => {
       if (q) {
-        const hay = [
-          d.serial,
-          d.name,
-          d.customerName,
-          d.farmName,
-          d.pondName,
-          d.sim_iccid,
-        ]
+        const hay = [d.serial, d.name, d.customerName, d.farmName, d.pondName, d.sim_iccid]
           .filter(Boolean)
           .join(" ")
           .toLowerCase();
@@ -293,8 +274,7 @@ function AdminDevices() {
   const unassigned = devices.filter((d) => !d.farm_id).length;
 
   // === Selection ===
-  const allFilteredSelected =
-    filtered.length > 0 && filtered.every((d) => selected.has(d.id));
+  const allFilteredSelected = filtered.length > 0 && filtered.every((d) => selected.has(d.id));
   const someSelected = filtered.some((d) => selected.has(d.id));
   const selectedDevices = enriched.filter((d) => selected.has(d.id));
 
@@ -311,30 +291,24 @@ function AdminDevices() {
   };
   const toggleOne = (id: string) => {
     const next = new Set(selected);
-    next.has(id) ? next.delete(id) : next.add(id);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
     setSelected(next);
   };
 
   // === Mutations ===
   const patchDevices = useMutation({
-    mutationFn: async ({
-      ids,
-      patch,
-    }: {
-      ids: string[];
-      patch: Record<string, unknown>;
-    }) => {
+    mutationFn: async ({ ids, patch }: { ids: string[]; patch: Record<string, unknown> }) => {
       await Promise.all(
-        ids.map((id) =>
-          insforge.database.from("devices").update(patch).eq("id", id),
-        ),
+        ids.map((id) => insforge.database.from("devices").update(patch).eq("id", id)),
       );
     },
     onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: ["admin-devices-all"] });
-      toast.success(
-        `${v.ids.length} device${v.ids.length === 1 ? "" : "s"} updated`,
-      );
+      toast.success(`${v.ids.length} device${v.ids.length === 1 ? "" : "s"} updated`);
     },
     onError: (e: Error) => toast.error(e.message || "Update failed"),
   });
@@ -384,17 +358,13 @@ function AdminDevices() {
     };
     const csv = [
       cols.map((c) => c.label).join(","),
-      ...rows.map((r) =>
-        cols.map((c) => escape((r as any)[c.key])).join(","),
-      ),
+      ...rows.map((r) => cols.map((c) => escape((r as any)[c.key])).join(",")),
     ].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `acqua-lence-devices-${new Date()
-      .toISOString()
-      .slice(0, 10)}.csv`;
+    a.download = `acqua-lence-devices-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -414,9 +384,7 @@ function AdminDevices() {
   const openMaintenance = openDevice
     ? maintenance.filter((m: any) => m.device_id === openDevice.id)
     : [];
-  const openAlerts = openDevice
-    ? alerts.filter((a) => a.device_id === openDevice.id)
-    : [];
+  const openAlerts = openDevice ? alerts.filter((a) => a.device_id === openDevice.id) : [];
 
   return (
     <div className="mx-auto max-w-[1400px]">
@@ -424,11 +392,7 @@ function AdminDevices() {
         title="Device fleet"
         subtitle="All Acqua Lence sensor nodes across the platform"
         actions={
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => exportCsv(filtered)}
-          >
+          <Button size="sm" variant="outline" onClick={() => exportCsv(filtered)}>
             <Download className="mr-1.5 h-4 w-4" /> Export visible
           </Button>
         }
@@ -439,16 +403,8 @@ function AdminDevices() {
         <MetricTile label="Total" value={total} />
         <MetricTile label="Online" value={online} accent="text-emerald-600" />
         <MetricTile label="Offline" value={offline} accent="text-rose-600" />
-        <MetricTile
-          label="Maintenance / cal"
-          value={maintDue}
-          accent="text-violet-600"
-        />
-        <MetricTile
-          label="Unassigned"
-          value={unassigned}
-          accent="text-amber-600"
-        />
+        <MetricTile label="Maintenance / cal" value={maintDue} accent="text-violet-600" />
+        <MetricTile label="Unassigned" value={unassigned} accent="text-amber-600" />
       </div>
 
       {/* Filters */}
@@ -480,19 +436,13 @@ function AdminDevices() {
           value={f.district}
           onChange={(v) => setF((s) => ({ ...s, district: v }))}
           placeholder="District"
-          options={[
-            { v: "all", l: "All districts" },
-            ...districts.map((d) => ({ v: d, l: d })),
-          ]}
+          options={[{ v: "all", l: "All districts" }, ...districts.map((d) => ({ v: d, l: d }))]}
         />
         <FilterSelect
           value={f.firmware}
           onChange={(v) => setF((s) => ({ ...s, firmware: v }))}
           placeholder="Firmware"
-          options={[
-            { v: "all", l: "All firmware" },
-            ...firmwares.map((d) => ({ v: d, l: d })),
-          ]}
+          options={[{ v: "all", l: "All firmware" }, ...firmwares.map((d) => ({ v: d, l: d }))]}
         />
         <FilterSelect
           value={f.calibration}
@@ -534,9 +484,7 @@ function AdminDevices() {
         >
           <Wrench className="h-3 w-3" /> Maintenance due
         </button>
-        {Object.entries(f).some(
-          ([k, v]) => v !== (DEFAULTS as any)[k],
-        ) && (
+        {Object.entries(f).some(([k, v]) => v !== (DEFAULTS as any)[k]) && (
           <button
             onClick={() => setF(DEFAULTS)}
             className="text-xs text-muted-foreground underline-offset-2 hover:underline"
@@ -552,9 +500,7 @@ function AdminDevices() {
       {/* Bulk action bar */}
       {selectedDevices.length > 0 && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
-          <span className="font-medium">
-            {selectedDevices.length} selected
-          </span>
+          <span className="font-medium">{selectedDevices.length} selected</span>
           <div className="ml-auto flex flex-wrap items-center gap-1.5">
             <Button size="sm" variant="outline" onClick={bulkMarkMaintenance}>
               <Wrench className="mr-1.5 h-4 w-4" /> Mark maintenance due
@@ -562,29 +508,16 @@ function AdminDevices() {
             <Button size="sm" variant="outline" onClick={bulkAssignTech}>
               <UserCog className="mr-1.5 h-4 w-4" /> Assign technician
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => exportCsv(selectedDevices)}
-            >
+            <Button size="sm" variant="outline" onClick={() => exportCsv(selectedDevices)}>
               <Download className="mr-1.5 h-4 w-4" /> Export
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={bulkFlag}
-              className="text-amber-700"
-            >
+            <Button size="sm" variant="outline" onClick={bulkFlag} className="text-amber-700">
               <Flag className="mr-1.5 h-4 w-4" /> Flag issue
             </Button>
             <Button size="sm" variant="destructive" onClick={bulkDeactivate}>
               <Power className="mr-1.5 h-4 w-4" /> Deactivate
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setSelected(new Set())}
-            >
+            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
               Clear
             </Button>
           </div>
@@ -613,11 +546,7 @@ function AdminDevices() {
                     <th className="w-10 px-3 py-3">
                       <Checkbox
                         checked={
-                          allFilteredSelected
-                            ? true
-                            : someSelected
-                              ? "indeterminate"
-                              : false
+                          allFilteredSelected ? true : someSelected ? "indeterminate" : false
                         }
                         onCheckedChange={toggleAll}
                         aria-label="Select all"
@@ -650,12 +579,7 @@ function AdminDevices() {
                           isSelected && "bg-primary/5",
                         )}
                         onClick={(e) => {
-                          if (
-                            (e.target as HTMLElement).closest(
-                              "[data-stop-row-click]",
-                            )
-                          )
-                            return;
+                          if ((e.target as HTMLElement).closest("[data-stop-row-click]")) return;
                           setOpenDevice(d);
                           setTab("overview");
                         }}
@@ -673,22 +597,16 @@ function AdminDevices() {
                         </td>
                         <td className="px-3 py-3 font-medium">
                           {d.name ?? "—"}
-                          {d.flagged && (
-                            <Flag className="ml-1.5 inline h-3 w-3 text-amber-600" />
-                          )}
+                          {d.flagged && <Flag className="ml-1.5 inline h-3 w-3 text-amber-600" />}
                         </td>
                         <td className="px-3 py-3 font-mono text-xs text-muted-foreground">
                           {d.serial}
                         </td>
                         <td className="px-3 py-3">{d.customerName ?? "—"}</td>
                         <td className="px-3 py-3 text-muted-foreground">
-                          {d.farmName ?? (
-                            <span className="text-amber-600">Unassigned</span>
-                          )}
+                          {d.farmName ?? <span className="text-amber-600">Unassigned</span>}
                         </td>
-                        <td className="px-3 py-3 text-muted-foreground">
-                          {d.pondName ?? "—"}
-                        </td>
+                        <td className="px-3 py-3 text-muted-foreground">{d.pondName ?? "—"}</td>
                         <td className="px-3 py-3">
                           <StatusBadge status={d.status} />
                         </td>
@@ -698,15 +616,11 @@ function AdminDevices() {
                         <td className="px-3 py-3 text-right tabular-nums">
                           <SignalCell pct={d.signal_pct} />
                         </td>
-                        <td className="px-3 py-3 font-mono text-xs">
-                          {d.firmware_version ?? "—"}
-                        </td>
+                        <td className="px-3 py-3 font-mono text-xs">{d.firmware_version ?? "—"}</td>
                         <td className="px-3 py-3 text-xs text-muted-foreground">
                           {d.sim_iccid ? (
                             <>
-                              <span className="font-mono">
-                                {d.sim_iccid.slice(-6)}
-                              </span>
+                              <span className="font-mono">{d.sim_iccid.slice(-6)}</span>
                               {d.network ? ` · ${d.network}` : ""}
                             </>
                           ) : (
@@ -717,9 +631,7 @@ function AdminDevices() {
                           <WarrantyCell until={d.warranty_until} />
                         </td>
                         <td className="px-3 py-3 text-xs text-muted-foreground">
-                          {d.last_seen
-                            ? new Date(d.last_seen).toLocaleString()
-                            : "Never"}
+                          {d.last_seen ? new Date(d.last_seen).toLocaleString() : "Never"}
                         </td>
                         <td className="px-3 py-3">
                           <CalibrationBadge status={d.calStatus} />
@@ -742,8 +654,7 @@ function AdminDevices() {
                                   setTab("overview");
                                 }}
                               >
-                                <ChevronRight className="mr-2 h-4 w-4" /> View
-                                details
+                                <ChevronRight className="mr-2 h-4 w-4" /> View details
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() =>
@@ -753,8 +664,7 @@ function AdminDevices() {
                                   })
                                 }
                               >
-                                <Wrench className="mr-2 h-4 w-4" /> Mark
-                                maintenance due
+                                <Wrench className="mr-2 h-4 w-4" /> Mark maintenance due
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() =>
@@ -765,8 +675,7 @@ function AdminDevices() {
                                   })
                                 }
                               >
-                                <UserCog className="mr-2 h-4 w-4" /> Assign
-                                technician
+                                <UserCog className="mr-2 h-4 w-4" /> Assign technician
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() =>
@@ -809,10 +718,7 @@ function AdminDevices() {
                       isSelected && "ring-1 ring-primary/40",
                     )}
                   >
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={() => toggleOne(d.id)}
-                    />
+                    <Checkbox checked={isSelected} onCheckedChange={() => toggleOne(d.id)} />
                     <button
                       onClick={() => {
                         setOpenDevice(d);
@@ -821,15 +727,13 @@ function AdminDevices() {
                       className="flex flex-1 items-center justify-between gap-2 text-left"
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">
-                          {d.name ?? d.serial}
-                        </p>
+                        <p className="truncate text-sm font-medium">{d.name ?? d.serial}</p>
                         <p className="truncate text-xs text-muted-foreground">
                           {d.customerName ?? "—"} · {d.farmName ?? "Unassigned"}
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground tabular-nums">
-                          Bat {d.battery_pct ?? "—"}% · Sig{" "}
-                          {d.signal_pct ?? "—"}% · {d.firmware_version ?? "—"}
+                          Bat {d.battery_pct ?? "—"}% · Sig {d.signal_pct ?? "—"}% ·{" "}
+                          {d.firmware_version ?? "—"}
                         </p>
                       </div>
                       <StatusBadge status={d.status} />
@@ -843,10 +747,7 @@ function AdminDevices() {
       )}
 
       {/* === Device drawer === */}
-      <Sheet
-        open={!!openDevice}
-        onOpenChange={(o) => !o && setOpenDevice(null)}
-      >
+      <Sheet open={!!openDevice} onOpenChange={(o) => !o && setOpenDevice(null)}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
           {openDevice && (
             <>
@@ -857,8 +758,7 @@ function AdminDevices() {
                       {openDevice.name ?? openDevice.serial}
                     </SheetTitle>
                     <SheetDescription className="font-mono text-xs">
-                      {openDevice.serial} ·{" "}
-                      <StatusBadge status={openDevice.status} />
+                      {openDevice.serial} · <StatusBadge status={openDevice.status} />
                     </SheetDescription>
                   </div>
                   <DropdownMenu>
@@ -988,8 +888,8 @@ function AdminDevices() {
                     value={openDevice.pondName ?? "—"}
                   />
                   <p className="pt-2 text-xs text-muted-foreground">
-                    To reassign this device to a different farm or pond, open
-                    the customer profile from the Farms & Customers page.
+                    To reassign this device to a different farm or pond, open the customer profile
+                    from the Farms & Customers page.
                   </p>
                 </TabsContent>
 
@@ -998,24 +898,17 @@ function AdminDevices() {
                     <EmptyRow label="No maintenance logs yet." />
                   ) : (
                     openMaintenance.slice(0, 25).map((m: any) => (
-                      <div
-                        key={m.id}
-                        className="rounded-lg border border-border/60 bg-surface p-3"
-                      >
+                      <div key={m.id} className="rounded-lg border border-border/60 bg-surface p-3">
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-medium">
                             {m.issue_type ?? m.issue ?? "Maintenance visit"}
                           </p>
                           <span className="text-xs text-muted-foreground">
-                            {m.visit_at
-                              ? new Date(m.visit_at).toLocaleString()
-                              : ""}
+                            {m.visit_at ? new Date(m.visit_at).toLocaleString() : ""}
                           </span>
                         </div>
                         {m.work_performed && (
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {m.work_performed}
-                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">{m.work_performed}</p>
                         )}
                         {m.technician_name && (
                           <p className="mt-1 text-xs text-muted-foreground">
@@ -1067,9 +960,8 @@ function AdminDevices() {
               {confirmDeactivate?.length === 1 ? "" : "s"}?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Deactivated devices stop reporting readings and trigger no
-              alerts. The customer will see them as offline. This action can
-              be reversed by reassigning the device.
+              Deactivated devices stop reporting readings and trigger no alerts. The customer will
+              see them as offline. This action can be reversed by reassigning the device.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1097,9 +989,7 @@ function AdminDevices() {
       {/* === Flag device dialog === */}
       <Dialog
         open={flagDialog.open}
-        onOpenChange={(o) =>
-          !o && setFlagDialog({ open: false, devices: [], reason: "" })
-        }
+        onOpenChange={(o) => !o && setFlagDialog({ open: false, devices: [], reason: "" })}
       >
         <DialogContent>
           <DialogHeader>
@@ -1113,18 +1003,14 @@ function AdminDevices() {
           </DialogHeader>
           <Input
             value={flagDialog.reason}
-            onChange={(e) =>
-              setFlagDialog((s) => ({ ...s, reason: e.target.value }))
-            }
+            onChange={(e) => setFlagDialog((s) => ({ ...s, reason: e.target.value }))}
             placeholder="e.g. Pump giving false offline alerts"
             maxLength={200}
           />
           <DialogFooter>
             <Button
               variant="ghost"
-              onClick={() =>
-                setFlagDialog({ open: false, devices: [], reason: "" })
-              }
+              onClick={() => setFlagDialog({ open: false, devices: [], reason: "" })}
             >
               Cancel
             </Button>
@@ -1150,9 +1036,7 @@ function AdminDevices() {
       {/* === Assign technician dialog === */}
       <Dialog
         open={techDialog.open}
-        onOpenChange={(o) =>
-          !o && setTechDialog({ open: false, devices: [], techId: "" })
-        }
+        onOpenChange={(o) => !o && setTechDialog({ open: false, devices: [], techId: "" })}
       >
         <DialogContent>
           <DialogHeader>
@@ -1166,9 +1050,7 @@ function AdminDevices() {
           </DialogHeader>
           <Select
             value={techDialog.techId}
-            onValueChange={(v) =>
-              setTechDialog((s) => ({ ...s, techId: v }))
-            }
+            onValueChange={(v) => setTechDialog((s) => ({ ...s, techId: v }))}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select technician" />
@@ -1190,9 +1072,7 @@ function AdminDevices() {
           <DialogFooter>
             <Button
               variant="ghost"
-              onClick={() =>
-                setTechDialog({ open: false, devices: [], techId: "" })
-              }
+              onClick={() => setTechDialog({ open: false, devices: [], techId: "" })}
             >
               Cancel
             </Button>
@@ -1217,16 +1097,8 @@ function AdminDevices() {
 
 // ========== Helpers ==========
 
-function Th({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <th className={cn("px-3 py-3 whitespace-nowrap", className)}>{children}</th>
-  );
+function Th({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <th className={cn("px-3 py-3 whitespace-nowrap", className)}>{children}</th>;
 }
 
 function FilterSelect({
@@ -1258,8 +1130,7 @@ function FilterSelect({
 
 function BatteryCell({ pct }: { pct: number | null | undefined }) {
   if (pct == null) return <span className="text-muted-foreground">—</span>;
-  const cls =
-    pct < 20 ? "text-rose-600" : pct < 40 ? "text-amber-600" : "text-emerald-600";
+  const cls = pct < 20 ? "text-rose-600" : pct < 40 ? "text-amber-600" : "text-emerald-600";
   return (
     <span className={cn("inline-flex items-center justify-end gap-1", cls)}>
       <BatteryLow className="h-3 w-3" />
@@ -1270,8 +1141,7 @@ function BatteryCell({ pct }: { pct: number | null | undefined }) {
 
 function SignalCell({ pct }: { pct: number | null | undefined }) {
   if (pct == null) return <span className="text-muted-foreground">—</span>;
-  const cls =
-    pct < 25 ? "text-rose-600" : pct < 60 ? "text-amber-600" : "text-emerald-600";
+  const cls = pct < 25 ? "text-rose-600" : pct < 60 ? "text-amber-600" : "text-emerald-600";
   return (
     <span className={cn("inline-flex items-center justify-end gap-1", cls)}>
       <Signal className="h-3 w-3" />
@@ -1280,11 +1150,7 @@ function SignalCell({ pct }: { pct: number | null | undefined }) {
   );
 }
 
-function CalibrationBadge({
-  status,
-}: {
-  status: "ok" | "due" | "overdue" | "unknown";
-}) {
+function CalibrationBadge({ status }: { status: "ok" | "due" | "overdue" | "unknown" }) {
   const map = {
     ok: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700",
     due: "border-amber-500/30 bg-amber-500/10 text-amber-700",
@@ -1313,8 +1179,7 @@ function CalibrationBadge({
 function WarrantyCell({ until }: { until: string | null | undefined }) {
   if (!until) return <span className="text-muted-foreground">—</span>;
   const date = new Date(until);
-  if (Number.isNaN(date.getTime()))
-    return <span className="text-muted-foreground">—</span>;
+  if (Number.isNaN(date.getTime())) return <span className="text-muted-foreground">—</span>;
   const days = Math.round((date.getTime() - Date.now()) / 86400000);
   const expired = days < 0;
   const expiringSoon = days >= 0 && days <= 60;
@@ -1322,20 +1187,12 @@ function WarrantyCell({ until }: { until: string | null | undefined }) {
     <span
       className={cn(
         "inline-flex flex-col leading-tight",
-        expired
-          ? "text-rose-600"
-          : expiringSoon
-            ? "text-amber-600"
-            : "text-foreground",
+        expired ? "text-rose-600" : expiringSoon ? "text-amber-600" : "text-foreground",
       )}
     >
       <span className="tabular-nums">{date.toLocaleDateString()}</span>
       <span className="text-[10px] uppercase tracking-wider opacity-80">
-        {expired
-          ? `Expired ${-days}d ago`
-          : expiringSoon
-            ? `In ${days}d`
-            : "Active"}
+        {expired ? `Expired ${-days}d ago` : expiringSoon ? `In ${days}d` : "Active"}
       </span>
     </span>
   );

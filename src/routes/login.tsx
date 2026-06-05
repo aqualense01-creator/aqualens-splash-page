@@ -37,10 +37,19 @@ function LoginPage() {
   async function onPasswordLogin(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
-    if (!identifier.trim()) { setErr("Enter your email or phone number."); return; }
-    if (password.length < 8) { setErr("Password must be at least 8 characters."); return; }
+    if (!identifier.trim()) {
+      setErr("Enter your email or phone number.");
+      return;
+    }
+    if (password.length < 8) {
+      setErr("Password must be at least 8 characters.");
+      return;
+    }
     const idType = isValidIdentifier(identifier);
-    if (!idType) { setErr("Enter a valid email or Bangladesh phone number."); return; }
+    if (!idType) {
+      setErr("Enter a valid email or Bangladesh phone number.");
+      return;
+    }
     setBusy(true);
     const { error } = await signIn(identifier, password);
     setBusy(false);
@@ -52,11 +61,17 @@ function LoginPage() {
     e.preventDefault();
     setErr(null);
     const idType = isValidIdentifier(identifier);
-    if (!idType) { setErr("Enter a valid email or Bangladesh phone number."); return; }
+    if (!idType) {
+      setErr("Enter a valid email or Bangladesh phone number.");
+      return;
+    }
     setBusy(true);
     const { error } = await sendOtp(identifier);
     setBusy(false);
-    if (error) { setErr(error); return; }
+    if (error) {
+      setErr(error);
+      return;
+    }
     navigate({ to: "/verify-otp", search: { identifier } });
   }
 
@@ -85,7 +100,9 @@ function LoginPage() {
           <div className="mb-6 flex flex-col items-center gap-3">
             <Logo />
             <p className="text-center text-xs text-muted-foreground">
-              {isBn ? "স্মার্ট জলকৃষি মনিটরিং প্ল্যাটফর্ম" : "Smart aquaculture monitoring platform"}
+              {isBn
+                ? "স্মার্ট জলকৃষি মনিটরিং প্ল্যাটফর্ম"
+                : "Smart aquaculture monitoring platform"}
             </p>
           </div>
 
@@ -98,7 +115,10 @@ function LoginPage() {
           <div className="mt-5 flex rounded-xl bg-muted p-1">
             <button
               type="button"
-              onClick={() => { setMode("password"); setErr(null); }}
+              onClick={() => {
+                setMode("password");
+                setErr(null);
+              }}
               className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
                 mode === "password"
                   ? "bg-white text-foreground shadow-sm"
@@ -112,7 +132,10 @@ function LoginPage() {
             </button>
             <button
               type="button"
-              onClick={() => { setMode("otp"); setErr(null); }}
+              onClick={() => {
+                setMode("otp");
+                setErr(null);
+              }}
               className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
                 mode === "otp"
                   ? "bg-white text-foreground shadow-sm"
@@ -139,7 +162,9 @@ function LoginPage() {
                     id="identifier"
                     type="text"
                     required
-                    placeholder={isBn ? "example@gmail.com বা 01712345678" : "example@gmail.com or 01712345678"}
+                    placeholder={
+                      isBn ? "example@gmail.com বা 01712345678" : "example@gmail.com or 01712345678"
+                    }
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     className="h-11 pl-9 text-base"
@@ -147,16 +172,21 @@ function LoginPage() {
                   />
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  {isBn ? "+880 বা 01 দিয়ে শুরু হওয়া বাংলাদেশী নম্বর" : "Bangladesh number starting with +880 or 01"}
+                  {isBn
+                    ? "+880 বা 01 দিয়ে শুরু হওয়া বাংলাদেশী নম্বর"
+                    : "Bangladesh number starting with +880 or 01"}
                 </p>
               </div>
 
               <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between">
                   <Label htmlFor="password" className="text-sm font-medium">
                     {isBn ? "পাসওয়ার্ড" : "Password"}
                   </Label>
-                  <Link to="/forgot-password" className="text-xs font-medium text-primary hover:underline">
+                  <Link
+                    to="/forgot-password"
+                    className="text-xs font-medium text-primary hover:underline"
+                  >
                     {isBn ? "পাসওয়ার্ড ভুলে গেছেন?" : "Forgot password?"}
                   </Link>
                 </div>
@@ -174,7 +204,9 @@ function LoginPage() {
               </div>
 
               {err && (
-                <p className="rounded-lg bg-destructive/10 px-3 py-2.5 text-sm text-destructive">{err}</p>
+                <p className="rounded-lg bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+                  {err}
+                </p>
               )}
 
               <Button type="submit" className="h-11 w-full text-base font-semibold" disabled={busy}>
@@ -206,7 +238,9 @@ function LoginPage() {
                     id="otp-id"
                     type="text"
                     required
-                    placeholder={isBn ? "example@gmail.com বা 01712345678" : "example@gmail.com or 01712345678"}
+                    placeholder={
+                      isBn ? "example@gmail.com বা 01712345678" : "example@gmail.com or 01712345678"
+                    }
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     className="h-11 pl-9 text-base"
@@ -215,7 +249,9 @@ function LoginPage() {
               </div>
 
               {err && (
-                <p className="rounded-lg bg-destructive/10 px-3 py-2.5 text-sm text-destructive">{err}</p>
+                <p className="rounded-lg bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+                  {err}
+                </p>
               )}
 
               <Button type="submit" className="h-11 w-full text-base font-semibold" disabled={busy}>
@@ -261,7 +297,9 @@ function LoginPage() {
               type="button"
               onClick={() => setLang("en")}
               className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
-                lang === "en" ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                lang === "en"
+                  ? "bg-white text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               English
@@ -270,7 +308,9 @@ function LoginPage() {
               type="button"
               onClick={() => setLang("bn")}
               className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
-                lang === "bn" ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                lang === "bn"
+                  ? "bg-white text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               বাংলা

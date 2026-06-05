@@ -9,7 +9,10 @@ const features = [
   { icon: Plug, title: "API Integration", sub: "Seamless integration with your systems" },
 ];
 
-const miniData = Array.from({ length: 14 }, (_, i) => ({ x: i, y: 50 + Math.sin(i / 1.6) * 18 + Math.random() * 4 }));
+const miniData = Array.from({ length: 14 }, (_, i) => ({
+  x: i,
+  y: 50 + Math.sin(i / 1.6) * 18 + Math.random() * 4,
+}));
 
 export function Platform() {
   return (
@@ -21,9 +24,12 @@ export function Platform() {
           <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium uppercase tracking-wider text-primary backdrop-blur">
             Powerful Software Platform
           </span>
-          <h2 className="mt-4 font-display text-3xl font-bold text-balance sm:text-4xl md:text-5xl">Data That Drives Growth</h2>
+          <h2 className="mt-4 font-display text-3xl font-bold text-balance sm:text-4xl md:text-5xl">
+            Data That Drives Growth
+          </h2>
           <p className="mt-4 max-w-md text-sm text-white/70">
-            Our cloud platform helps you visualize data, set alerts, analyze trends and make smarter decisions to improve productivity.
+            Our cloud platform helps you visualize data, set alerts, analyze trends and make smarter
+            decisions to improve productivity.
           </p>
           <div className="mt-8 grid grid-cols-2 gap-5 sm:grid-cols-3 md:mt-10 lg:grid-cols-5">
             {features.map(({ icon: Icon, title, sub }) => (
@@ -59,7 +65,13 @@ export function Platform() {
                   <div className="h-14">
                     <ResponsiveContainer width="100%" height="100%">
                       <RLineChart data={miniData}>
-                        <Line type="monotone" dataKey="y" stroke="oklch(0.66 0.11 210)" strokeWidth={1.5} dot={false} />
+                        <Line
+                          type="monotone"
+                          dataKey="y"
+                          stroke="oklch(0.66 0.11 210)"
+                          strokeWidth={1.5}
+                          dot={false}
+                        />
                       </RLineChart>
                     </ResponsiveContainer>
                   </div>
@@ -85,13 +97,21 @@ export function Platform() {
               <div className="mt-1 h-10">
                 <ResponsiveContainer width="100%" height="100%">
                   <RLineChart data={miniData}>
-                    <Line type="monotone" dataKey="y" stroke="oklch(0.66 0.11 210)" strokeWidth={1.5} dot={false} />
+                    <Line
+                      type="monotone"
+                      dataKey="y"
+                      stroke="oklch(0.66 0.11 210)"
+                      strokeWidth={1.5}
+                      dot={false}
+                    />
                   </RLineChart>
                 </ResponsiveContainer>
               </div>
               <div className="mt-1 space-y-0.5">
                 {["DO 6.4", "pH 7.3", "T 28.6"].map((t) => (
-                  <p key={t} className="text-[8px] text-muted-foreground">{t}</p>
+                  <p key={t} className="text-[8px] text-muted-foreground">
+                    {t}
+                  </p>
                 ))}
               </div>
             </div>

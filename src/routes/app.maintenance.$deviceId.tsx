@@ -189,10 +189,7 @@ function MaintenancePage() {
   });
 
   const lastMaintenance = history?.[0];
-  const followUps = useMemo(
-    () => (history ?? []).filter((h) => h.follow_up_required),
-    [history],
-  );
+  const followUps = useMemo(() => (history ?? []).filter((h) => h.follow_up_required), [history]);
 
   // Maintenance "due" if no log in the last 90 days OR device flagged maintenance_due
   const maintenanceDue = useMemo(() => {
@@ -274,8 +271,7 @@ function MaintenancePage() {
               <SheetHeader>
                 <SheetTitle>Add maintenance log</SheetTitle>
                 <SheetDescription>
-                  Record a service visit for{" "}
-                  {device?.name ?? device?.serial ?? "this device"}.
+                  Record a service visit for {device?.name ?? device?.serial ?? "this device"}.
                 </SheetDescription>
               </SheetHeader>
 
@@ -293,9 +289,7 @@ function MaintenancePage() {
                       type="datetime-local"
                       required
                       value={form.performed_at}
-                      onChange={(e) =>
-                        setForm((p) => ({ ...p, performed_at: e.target.value }))
-                      }
+                      onChange={(e) => setForm((p) => ({ ...p, performed_at: e.target.value }))}
                     />
                   </div>
                   <div>
@@ -304,9 +298,7 @@ function MaintenancePage() {
                       required
                       maxLength={120}
                       value={form.technician_name}
-                      onChange={(e) =>
-                        setForm((p) => ({ ...p, technician_name: e.target.value }))
-                      }
+                      onChange={(e) => setForm((p) => ({ ...p, technician_name: e.target.value }))}
                     />
                   </div>
                 </div>
@@ -337,9 +329,7 @@ function MaintenancePage() {
                     rows={3}
                     maxLength={1000}
                     value={form.work_performed}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, work_performed: e.target.value }))
-                    }
+                    onChange={(e) => setForm((p) => ({ ...p, work_performed: e.target.value }))}
                     placeholder="Cleaned probes, recalibrated DO sensor…"
                   />
                 </div>
@@ -349,9 +339,7 @@ function MaintenancePage() {
                   <Input
                     maxLength={500}
                     value={form.parts_replaced}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, parts_replaced: e.target.value }))
-                    }
+                    onChange={(e) => setForm((p) => ({ ...p, parts_replaced: e.target.value }))}
                     placeholder="e.g. DO membrane, battery pack"
                   />
                 </div>
@@ -372,9 +360,7 @@ function MaintenancePage() {
                   <Label className="text-xs">Device status after maintenance *</Label>
                   <Select
                     value={form.device_status_after}
-                    onValueChange={(v) =>
-                      setForm((p) => ({ ...p, device_status_after: v }))
-                    }
+                    onValueChange={(v) => setForm((p) => ({ ...p, device_status_after: v }))}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -398,9 +384,7 @@ function MaintenancePage() {
                   </div>
                   <Switch
                     checked={form.follow_up_required}
-                    onCheckedChange={(v) =>
-                      setForm((p) => ({ ...p, follow_up_required: v }))
-                    }
+                    onCheckedChange={(v) => setForm((p) => ({ ...p, follow_up_required: v }))}
                   />
                 </div>
 
@@ -459,13 +443,9 @@ function MaintenancePage() {
             )}
           >
             {isStale && <WifiOff className="h-3.5 w-3.5" />}
-            {device?.last_seen
-              ? new Date(device.last_seen).toLocaleString()
-              : "Never"}
+            {device?.last_seen ? new Date(device.last_seen).toLocaleString() : "Never"}
           </p>
-          {isStale && (
-            <p className="text-[10px] text-amber-600">Device may be offline / stale</p>
-          )}
+          {isStale && <p className="text-[10px] text-amber-600">Device may be offline / stale</p>}
         </div>
         <div>
           <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -514,12 +494,8 @@ function MaintenancePage() {
               <li key={a.id} className="flex items-center justify-between gap-3">
                 <span className="flex items-center gap-2">
                   <CircleDot className="h-3 w-3 text-rose-500" />
-                  <span className="font-medium capitalize">
-                    {a.alert_type.replace(/_/g, " ")}
-                  </span>
-                  {a.message && (
-                    <span className="text-muted-foreground">— {a.message}</span>
-                  )}
+                  <span className="font-medium capitalize">{a.alert_type.replace(/_/g, " ")}</span>
+                  {a.message && <span className="text-muted-foreground">— {a.message}</span>}
                 </span>
                 <span className="text-[11px] text-muted-foreground">
                   {new Date(a.created_at).toLocaleDateString()}
@@ -564,9 +540,7 @@ function MaintenancePage() {
                       {new Date(m.performed_at).toLocaleString()}
                     </TableCell>
                     <TableCell className="text-sm">{m.technician_name ?? "—"}</TableCell>
-                    <TableCell className="text-sm">
-                      {m.issue_type ?? m.visit_type ?? "—"}
-                    </TableCell>
+                    <TableCell className="text-sm">{m.issue_type ?? m.visit_type ?? "—"}</TableCell>
                     <TableCell className="max-w-[260px] text-sm">
                       <p className="line-clamp-2">{m.work_performed ?? m.notes ?? "—"}</p>
                       {m.parts_replaced && (
@@ -600,15 +574,7 @@ function MaintenancePage() {
   );
 }
 
-function HeaderField({
-  label,
-  value,
-  mono,
-}: {
-  label: string;
-  value: string;
-  mono?: boolean;
-}) {
+function HeaderField({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div>
       <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -634,8 +600,8 @@ function SummaryCard({
     tone === "critical"
       ? "text-rose-600 bg-rose-500/10"
       : tone === "warning"
-      ? "text-amber-600 bg-amber-500/10"
-      : "text-emerald-600 bg-emerald-500/10";
+        ? "text-amber-600 bg-amber-500/10"
+        : "text-emerald-600 bg-emerald-500/10";
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-card p-4 shadow-soft">
       <span className={cn("grid h-10 w-10 place-items-center rounded-xl", toneCls)}>

@@ -64,22 +64,20 @@ export function ScrollSequence({
     if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
       canvas.width = w * dpr;
       canvas.height = h * dpr;
-      sizeRef.current = { w, h, dpr };
-      const idx = Math.round(currentRef.current);
-      drawFrame(idx);
-    } else {
-      sizeRef.current = { w, h, dpr };
     }
+    sizeRef.current = { w, h, dpr };
+    const idx = Math.max(0, Math.min(frameCount - 1, Math.round(currentRef.current)));
+    drawFrame(idx);
   };
 
-  const drawFrame = (index: number) => {
+  const drawFrame = (index: number): boolean => {
     const canvas = canvasRef.current;
     const img = framesRef.current[index];
-    if (!canvas || !img || !img.complete || img.naturalWidth === 0) return;
+    if (!canvas || !img || !img.complete || img.naturalWidth === 0) return false;
     const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (!ctx) return false;
     const { w, h, dpr } = sizeRef.current;
-    if (w === 0 || h === 0) return;
+    if (w === 0 || h === 0) return false;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
     // contain fit (preserve aspect ratio, centered)
@@ -97,6 +95,7 @@ export function ScrollSequence({
       dx = (w - dw) / 2;
     }
     ctx.drawImage(img, dx, dy, dw, dh);
+    return true;
   };
 
   // Preload all frames in parallel
@@ -111,7 +110,6 @@ export function ScrollSequence({
       if (i === 0) {
         // Draw first frame as soon as it's available so the canvas isn't empty
         resizeCanvas();
-        drawFrame(0);
       }
     };
     for (let i = 0; i < frameCount; i++) {
@@ -121,7 +119,10 @@ export function ScrollSequence({
       img.onload = () => {
         // Prefer decode() for smoother first paint
         if (typeof img.decode === "function") {
-          img.decode().then(() => finish(i)).catch(() => finish(i));
+          img
+            .decode()
+            .then(() => finish(i))
+            .catch(() => finish(i));
         } else {
           finish(i);
         }
@@ -164,7 +165,7 @@ export function ScrollSequence({
       const traveled = Math.max(0, -rect.top);
       let p = Math.max(0, Math.min(1, traveled / scrollable));
       // Force final frame when near end — guards against rounding skipping the last frame
-      if (p >= 0.98) p = 1;
+      if (p >= 0.95) p = 1;
       targetIndexRef.current = p * (frameCount - 1);
     };
     compute();
@@ -176,7 +177,7 @@ export function ScrollSequence({
     };
   }, [targetRef, frameCount]);
 
-  // Smooth animation loop — only paints when the rounded frame changes
+  // Smooth animation loop — only paints when the rounded frame changes or was not successfully drawn
   useEffect(() => {
     if (reduced) {
       // Reduced motion: hold the middle frame
@@ -187,7 +188,6 @@ export function ScrollSequence({
         const img = framesRef.current[mid];
         if (img?.complete && img.naturalWidth > 0) {
           resizeCanvas();
-          drawFrame(mid);
         } else {
           rafRef.current = requestAnimationFrame(tryDraw);
         }
@@ -198,23 +198,22 @@ export function ScrollSequence({
       };
     }
 
-    let lastDrawn = -1;
+    let lastPainted = -1;
     const tick = () => {
       const target = targetIndexRef.current;
       const diff = target - currentRef.current;
       if (Math.abs(diff) > 0.5) {
         // Smoothly approach target — high factor so we track scroll closely
-        currentRef.current += diff * 0.35;
+        currentRef.current += diff * 0.6;
       } else {
         currentRef.current = target;
       }
-      const idx = Math.max(
-        0,
-        Math.min(frameCount - 1, Math.round(currentRef.current)),
-      );
-      if (idx !== lastDrawn) {
-        drawFrame(idx);
-        lastDrawn = idx;
+      const idx = Math.max(0, Math.min(frameCount - 1, Math.round(currentRef.current)));
+      if (idx !== lastPainted) {
+        const success = drawFrame(idx);
+        if (success) {
+          lastPainted = idx;
+        }
       }
       rafRef.current = requestAnimationFrame(tick);
     };
@@ -230,12 +229,7 @@ export function ScrollSequence({
 
   return (
     <div className={`relative ${className ?? ""}`}>
-      <canvas
-        ref={canvasRef}
-        className="h-full w-full"
-        aria-label={alt}
-        role="img"
-      />
+      <canvas ref={canvasRef} className="h-full w-full" aria-label={alt} role="img" />
       {showLoader && (
         <div className="pointer-events-none absolute inset-x-0 bottom-3 mx-auto flex w-40 flex-col items-center gap-1">
           <div className="h-0.5 w-full overflow-hidden rounded-full bg-foreground/10">

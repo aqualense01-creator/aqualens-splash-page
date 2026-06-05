@@ -66,7 +66,12 @@ const DISTRICTS = [
   "Mymensingh",
 ];
 
-const CHANNELS: { key: ChannelKey; en: string; bn: string; icon: React.ComponentType<{ className?: string }> }[] = [
+const CHANNELS: {
+  key: ChannelKey;
+  en: string;
+  bn: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
   { key: "sms", en: "SMS", bn: "এসএমএস", icon: Smartphone },
   { key: "whatsapp", en: "WhatsApp", bn: "হোয়াটসঅ্যাপ", icon: MessageCircle },
   { key: "email", en: "Email", bn: "ইমেইল", icon: Mail },
@@ -81,7 +86,13 @@ type NotifType = {
   severity?: "critical" | "warning" | "info";
 };
 const NOTIF_TYPES: NotifType[] = [
-  { key: "critical", en: "Critical alerts", bn: "জরুরি সতর্কতা", required: true, severity: "critical" },
+  {
+    key: "critical",
+    en: "Critical alerts",
+    bn: "জরুরি সতর্কতা",
+    required: true,
+    severity: "critical",
+  },
   { key: "warning", en: "Warning alerts", bn: "সতর্কতা", severity: "warning" },
   { key: "offline", en: "Device offline", bn: "ডিভাইস অফলাইন", severity: "warning" },
   { key: "battery", en: "Low battery", bn: "ব্যাটারি কম", severity: "warning" },
@@ -125,7 +136,9 @@ function SettingsPage() {
 
   const changePassword = () => {
     if (pwd.next.length < 8) {
-      toast.error(T("Password must be at least 8 characters", "পাসওয়ার্ড অন্তত ৮ অক্ষরের হতে হবে"));
+      toast.error(
+        T("Password must be at least 8 characters", "পাসওয়ার্ড অন্তত ৮ অক্ষরের হতে হবে"),
+      );
       return;
     }
     if (pwd.next !== pwd.confirm) {
@@ -137,20 +150,18 @@ function SettingsPage() {
   };
 
   // ----- Notifications matrix -----
-  const [matrix, setMatrix] = useState<Record<string, Record<ChannelKey, boolean>>>(
-    () => {
-      const m: Record<string, Record<ChannelKey, boolean>> = {};
-      NOTIF_TYPES.forEach((t) => {
-        m[t.key] = {
-          sms: t.key === "critical" || t.key === "offline",
-          whatsapp: t.key === "critical",
-          email: t.key !== "daily",
-          app: true,
-        };
-      });
-      return m;
-    }
-  );
+  const [matrix, setMatrix] = useState<Record<string, Record<ChannelKey, boolean>>>(() => {
+    const m: Record<string, Record<ChannelKey, boolean>> = {};
+    NOTIF_TYPES.forEach((t) => {
+      m[t.key] = {
+        sms: t.key === "critical" || t.key === "offline",
+        whatsapp: t.key === "critical",
+        email: t.key !== "daily",
+        app: true,
+      };
+    });
+    return m;
+  });
 
   const toggle = (typeKey: string, ch: ChannelKey, v: boolean, required?: boolean) => {
     if (required) {
@@ -159,8 +170,8 @@ function SettingsPage() {
         toast.error(
           T(
             "Critical alerts must use at least one channel",
-            "জরুরি সতর্কতার জন্য অন্তত একটি চ্যানেল প্রয়োজন"
-          )
+            "জরুরি সতর্কতার জন্য অন্তত একটি চ্যানেল প্রয়োজন",
+          ),
         );
         return;
       }
@@ -176,7 +187,7 @@ function SettingsPage() {
         title={T("Settings", "সেটিংস")}
         subtitle={T(
           "Profile, security, notifications and language.",
-          "প্রোফাইল, নিরাপত্তা, নোটিফিকেশন এবং ভাষা।"
+          "প্রোফাইল, নিরাপত্তা, নোটিফিকেশন এবং ভাষা।",
         )}
       />
 
@@ -206,7 +217,7 @@ function SettingsPage() {
             title={T("Personal information", "ব্যক্তিগত তথ্য")}
             description={T(
               "How you appear across Acqua Lence.",
-              "আপনি Acqua Lence-এ কীভাবে দেখা যাবেন।"
+              "আপনি Acqua Lence-এ কীভাবে দেখা যাবেন।",
             )}
           >
             <div className="grid gap-4 sm:grid-cols-2">
@@ -312,13 +323,11 @@ function SettingsPage() {
           >
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-sm font-medium">
-                  {T("OTP verification", "ওটিপি যাচাই")}
-                </p>
+                <p className="text-sm font-medium">{T("OTP verification", "ওটিপি যাচাই")}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {T(
                     "Receive a 6-digit code on your phone or email at sign-in.",
-                    "সাইন-ইন করার সময় আপনার ফোন বা ইমেইলে ৬-সংখ্যার কোড পাবেন।"
+                    "সাইন-ইন করার সময় আপনার ফোন বা ইমেইলে ৬-সংখ্যার কোড পাবেন।",
                   )}
                 </p>
               </div>
@@ -329,7 +338,7 @@ function SettingsPage() {
                   toast.success(
                     v
                       ? T("OTP enabled", "ওটিপি চালু করা হয়েছে")
-                      : T("OTP disabled", "ওটিপি বন্ধ করা হয়েছে")
+                      : T("OTP disabled", "ওটিপি বন্ধ করা হয়েছে"),
                   );
                 }}
               />
@@ -341,7 +350,7 @@ function SettingsPage() {
             icon={<LogOut className="h-4 w-4 text-rose-600" />}
             description={T(
               "Sign out from all other devices currently logged into your account.",
-              "আপনার অ্যাকাউন্টে লগ-ইন থাকা অন্য সব ডিভাইস থেকে সাইন আউট করুন।"
+              "আপনার অ্যাকাউন্টে লগ-ইন থাকা অন্য সব ডিভাইস থেকে সাইন আউট করুন।",
             )}
           >
             <Button
@@ -361,7 +370,7 @@ function SettingsPage() {
             title={T("Notification preferences", "নোটিফিকেশন পছন্দ")}
             description={T(
               "Choose which channels to use for each alert type.",
-              "প্রতিটি সতর্কতার জন্য কোন চ্যানেল ব্যবহার করবেন তা নির্বাচন করুন।"
+              "প্রতিটি সতর্কতার জন্য কোন চ্যানেল ব্যবহার করবেন তা নির্বাচন করুন।",
             )}
           >
             {/* Desktop: matrix */}
@@ -419,7 +428,7 @@ function SettingsPage() {
                   key={t.key}
                   className={cn(
                     "rounded-xl border bg-card p-3",
-                    t.required ? "border-rose-500/30" : "border-border/70"
+                    t.required ? "border-rose-500/30" : "border-border/70",
                   )}
                 >
                   <div className="mb-3 flex items-center justify-between gap-2">
@@ -460,7 +469,7 @@ function SettingsPage() {
               <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               {T(
                 "Critical alerts must use at least one channel and cannot be fully disabled.",
-                "জরুরি সতর্কতার জন্য অন্তত একটি চ্যানেল ব্যবহার করতে হবে এবং সম্পূর্ণ বন্ধ করা যাবে না।"
+                "জরুরি সতর্কতার জন্য অন্তত একটি চ্যানেল ব্যবহার করতে হবে এবং সম্পূর্ণ বন্ধ করা যাবে না।",
               )}
             </p>
 
@@ -468,7 +477,7 @@ function SettingsPage() {
               <Button
                 onClick={() =>
                   toast.success(
-                    T("Notification preferences saved", "নোটিফিকেশন পছন্দ সংরক্ষিত হয়েছে")
+                    T("Notification preferences saved", "নোটিফিকেশন পছন্দ সংরক্ষিত হয়েছে"),
                   )
                 }
               >
@@ -484,7 +493,7 @@ function SettingsPage() {
             title={T("Interface language", "ইন্টারফেস ভাষা")}
             description={T(
               "Applies across the app, alerts and reports.",
-              "অ্যাপ, সতর্কতা এবং রিপোর্ট জুড়ে প্রযোজ্য।"
+              "অ্যাপ, সতর্কতা এবং রিপোর্ট জুড়ে প্রযোজ্য।",
             )}
           >
             <div className="grid gap-3 sm:grid-cols-2">
@@ -499,14 +508,16 @@ function SettingsPage() {
                   onClick={() => {
                     setLang(opt.v as Lang);
                     toast.success(
-                      opt.v === "bn" ? "ভাষা বাংলায় পরিবর্তিত হয়েছে" : "Language switched to English"
+                      opt.v === "bn"
+                        ? "ভাষা বাংলায় পরিবর্তিত হয়েছে"
+                        : "Language switched to English",
                     );
                   }}
                   className={cn(
                     "rounded-xl border p-4 text-left transition-colors",
                     lang === opt.v
                       ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                      : "border-border/70 hover:bg-accent/30"
+                      : "border-border/70 hover:bg-accent/30",
                   )}
                 >
                   <p className="font-display text-lg font-semibold">{opt.label}</p>
@@ -534,7 +545,7 @@ function SettingsPage() {
             <AlertDialogDescription>
               {T(
                 "You'll be signed out everywhere, including this device. You will need to sign in again.",
-                "এই ডিভাইস সহ সব জায়গা থেকে আপনি সাইন আউট হবেন। আবার সাইন ইন করতে হবে।"
+                "এই ডিভাইস সহ সব জায়গা থেকে আপনি সাইন আউট হবেন। আবার সাইন ইন করতে হবে।",
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -575,9 +586,7 @@ function Card({
           {icon}
           {title}
         </h3>
-        {description && (
-          <p className="mt-1 text-xs text-muted-foreground">{description}</p>
-        )}
+        {description && <p className="mt-1 text-xs text-muted-foreground">{description}</p>}
       </div>
       {children}
     </div>

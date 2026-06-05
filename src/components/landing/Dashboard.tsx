@@ -4,8 +4,10 @@ import { Reveal } from "./Reveal";
 import { farms, ponds, statusMeta, trend12h } from "@/lib/mock-pond";
 
 function TrendChart({ data }: { data: number[] }) {
-  const W = 480, H = 140;
-  const padX = 8, padY = 12;
+  const W = 480,
+    H = 140;
+  const padX = 8,
+    padY = 12;
   const min = Math.min(...data);
   const max = Math.max(...data);
   const pts = data.map((v, i) => ({
@@ -23,11 +25,26 @@ function TrendChart({ data }: { data: number[] }) {
           <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
         </linearGradient>
       </defs>
-      <line x1={padX} x2={W - padX} y1={safeY} y2={safeY} stroke="var(--status-critical)" strokeOpacity={0.5} strokeDasharray="4 4" strokeWidth={1} />
+      <line
+        x1={padX}
+        x2={W - padX}
+        y1={safeY}
+        y2={safeY}
+        stroke="var(--status-critical)"
+        strokeOpacity={0.5}
+        strokeDasharray="4 4"
+        strokeWidth={1}
+      />
       <path d={`${d} L ${W - padX} ${H} L ${padX} ${H} Z`} fill="url(#dash-fade)" />
       <path d={d} fill="none" stroke="var(--primary)" strokeWidth={2.5} strokeLinecap="round" />
       {pts.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r={i === pts.length - 1 ? 3.5 : 0} fill="var(--status-critical)" />
+        <circle
+          key={i}
+          cx={p.x}
+          cy={p.y}
+          r={i === pts.length - 1 ? 3.5 : 0}
+          fill="var(--status-critical)"
+        />
       ))}
     </svg>
   );
@@ -38,8 +55,13 @@ export function Dashboard() {
     <section className="relative bg-surface py-20 sm:py-24" aria-labelledby="dashboard-heading">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <Reveal className="mx-auto max-w-2xl text-center">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">Live Dashboard</p>
-          <h2 id="dashboard-heading" className="mt-3 font-display text-3xl font-bold text-foreground text-balance sm:text-4xl lg:text-5xl">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+            Live Dashboard
+          </p>
+          <h2
+            id="dashboard-heading"
+            className="mt-3 font-display text-3xl font-bold text-foreground text-balance sm:text-4xl lg:text-5xl"
+          >
             One calm view of every pond, every parameter.
           </h2>
           <p className="mt-4 text-[15px] text-muted-foreground">
@@ -81,7 +103,9 @@ export function Dashboard() {
                     {i === 0 && <ChevronDown className="h-3 w-3" />}
                   </button>
                 ))}
-                <div className="ml-auto text-[11px] text-muted-foreground">Updated 4 seconds ago</div>
+                <div className="ml-auto text-[11px] text-muted-foreground">
+                  Updated 4 seconds ago
+                </div>
               </div>
 
               {/* layout */}
@@ -96,26 +120,46 @@ export function Dashboard() {
                           key={p.id}
                           whileHover={{ y: -2 }}
                           className={`rounded-xl border bg-card p-4 ring-1 ${m.ring}`}
-                          style={{ borderColor: `color-mix(in oklab, ${m.color} 30%, var(--border))` }}
+                          style={{
+                            borderColor: `color-mix(in oklab, ${m.color} 30%, var(--border))`,
+                          }}
                         >
                           <div className="flex items-center justify-between">
                             <h4 className="text-[12px] font-semibold text-foreground">{p.name}</h4>
-                            <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${m.bg} ${m.text}`}>
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${m.bg} ${m.text}`}
+                            >
                               {m.label}
                             </span>
                           </div>
                           <div className="mt-3 grid grid-cols-3 gap-1 text-center">
                             <div>
-                              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">DO</div>
-                              <div className={`font-display text-base font-bold tabular-nums ${p.status === "critical" ? "text-status-critical" : "text-foreground"}`}>{p.do}</div>
+                              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
+                                DO
+                              </div>
+                              <div
+                                className={`font-display text-base font-bold tabular-nums ${p.status === "critical" ? "text-status-critical" : "text-foreground"}`}
+                              >
+                                {p.do}
+                              </div>
                             </div>
                             <div>
-                              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">pH</div>
-                              <div className={`font-display text-base font-bold tabular-nums ${p.status === "warning" ? "text-status-warning" : "text-foreground"}`}>{p.ph}</div>
+                              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
+                                pH
+                              </div>
+                              <div
+                                className={`font-display text-base font-bold tabular-nums ${p.status === "warning" ? "text-status-warning" : "text-foreground"}`}
+                              >
+                                {p.ph}
+                              </div>
                             </div>
                             <div>
-                              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">°C</div>
-                              <div className="font-display text-base font-bold tabular-nums text-foreground">{p.temp}</div>
+                              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
+                                °C
+                              </div>
+                              <div className="font-display text-base font-bold tabular-nums text-foreground">
+                                {p.temp}
+                              </div>
                             </div>
                           </div>
                           {p.alert && (
@@ -133,14 +177,20 @@ export function Dashboard() {
                   <div className="mt-4 rounded-xl border border-border bg-card p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="text-[13px] font-semibold text-foreground">Pond 2 · DO (12h)</h4>
-                        <p className="text-[11px] text-muted-foreground">Dashed line = safe threshold 4.0 mg/L</p>
+                        <h4 className="text-[13px] font-semibold text-foreground">
+                          Pond 2 · DO (12h)
+                        </h4>
+                        <p className="text-[11px] text-muted-foreground">
+                          Dashed line = safe threshold 4.0 mg/L
+                        </p>
                       </div>
                       <span className="rounded-full bg-status-critical/10 px-2 py-0.5 text-[10px] font-semibold text-status-critical">
                         Below safe
                       </span>
                     </div>
-                    <div className="mt-3"><TrendChart data={trend12h} /></div>
+                    <div className="mt-3">
+                      <TrendChart data={trend12h} />
+                    </div>
                   </div>
                 </div>
 
@@ -151,7 +201,9 @@ export function Dashboard() {
                       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-status-critical" />
                       <div>
                         <p className="text-[12px] font-bold text-foreground">Critical · Pond 2</p>
-                        <p className="mt-0.5 text-[12px] text-muted-foreground">DO 3.1 mg/L — below safe threshold for shrimp.</p>
+                        <p className="mt-0.5 text-[12px] text-muted-foreground">
+                          DO 3.1 mg/L — below safe threshold for shrimp.
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -161,7 +213,9 @@ export function Dashboard() {
                       <ListChecks className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                       <div>
                         <p className="text-[12px] font-bold text-foreground">Recommended action</p>
-                        <p className="mt-0.5 text-[12px] text-muted-foreground">Turn on Pond 2 aerator and recheck in 15 minutes.</p>
+                        <p className="mt-0.5 text-[12px] text-muted-foreground">
+                          Turn on Pond 2 aerator and recheck in 15 minutes.
+                        </p>
                         <button className="mt-2 rounded-md bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground">
                           Mark as done
                         </button>
@@ -178,13 +232,15 @@ export function Dashboard() {
                       <li className="flex items-center justify-between">
                         <span className="text-foreground">AQ-204</span>
                         <span className="inline-flex items-center gap-1 text-status-good">
-                          <Wifi className="h-3 w-3" /> online · <BatteryFull className="h-3 w-3" /> 78%
+                          <Wifi className="h-3 w-3" /> online · <BatteryFull className="h-3 w-3" />{" "}
+                          78%
                         </span>
                       </li>
                       <li className="flex items-center justify-between">
                         <span className="text-foreground">AQ-211</span>
                         <span className="inline-flex items-center gap-1 text-status-good">
-                          <Wifi className="h-3 w-3" /> online · <BatteryFull className="h-3 w-3" /> 64%
+                          <Wifi className="h-3 w-3" /> online · <BatteryFull className="h-3 w-3" />{" "}
+                          64%
                         </span>
                       </li>
                       <li className="flex items-center justify-between">

@@ -34,9 +34,30 @@ export const Route = createFileRoute("/signup")({
 });
 
 const BD_DISTRICTS = [
-  "Dhaka", "Chattogram", "Khulna", "Rajshahi", "Sylhet", "Barishal", "Rangpur", "Mymensingh",
-  "Cox's Bazar", "Bagerhat", "Satkhira", "Jashore", "Patuakhali", "Bhola", "Noakhali", "Feni",
-  "Cumilla", "Faridpur", "Bogura", "Pabna", "Tangail", "Gazipur", "Narayanganj", "Manikganj",
+  "Dhaka",
+  "Chattogram",
+  "Khulna",
+  "Rajshahi",
+  "Sylhet",
+  "Barishal",
+  "Rangpur",
+  "Mymensingh",
+  "Cox's Bazar",
+  "Bagerhat",
+  "Satkhira",
+  "Jashore",
+  "Patuakhali",
+  "Bhola",
+  "Noakhali",
+  "Feni",
+  "Cumilla",
+  "Faridpur",
+  "Bogura",
+  "Pabna",
+  "Tangail",
+  "Gazipur",
+  "Narayanganj",
+  "Manikganj",
 ];
 
 type Step = 0 | 1 | 2;
@@ -89,15 +110,23 @@ function SignupPage() {
 
   function validateStep0(): string | null {
     if (!fullName.trim()) return isBn ? "পুরো নাম দিন।" : "Full name is required.";
-    if (!isBangladeshPhone(phone)) return isBn ? "সঠিক বাংলাদেশি ফোন নম্বর দিন (+880 বা 01)।" : "Enter a valid Bangladesh phone number (+880 or 01 format).";
+    if (!isBangladeshPhone(phone))
+      return isBn
+        ? "সঠিক বাংলাদেশি ফোন নম্বর দিন (+880 বা 01)।"
+        : "Enter a valid Bangladesh phone number (+880 or 01 format).";
     if (!isValidEmail(email)) return isBn ? "সঠিক ইমেইল দিন।" : "Enter a valid email address.";
     if (!district) return isBn ? "জেলা নির্বাচন করুন।" : "Select your district.";
     return null;
   }
   function validateStep1(): string | null {
-    if (password.length < 8) return isBn ? "পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের হতে হবে।" : "Password must be at least 8 characters.";
-    if (pwScore.score < 3) return isBn ? "আরও শক্তিশালী পাসওয়ার্ড ব্যবহার করুন।" : "Please use a stronger password.";
-    if (password !== confirmPassword) return isBn ? "পাসওয়ার্ড মিলছে না।" : "Passwords do not match.";
+    if (password.length < 8)
+      return isBn
+        ? "পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের হতে হবে।"
+        : "Password must be at least 8 characters.";
+    if (pwScore.score < 3)
+      return isBn ? "আরও শক্তিশালী পাসওয়ার্ড ব্যবহার করুন।" : "Please use a stronger password.";
+    if (password !== confirmPassword)
+      return isBn ? "পাসওয়ার্ড মিলছে না।" : "Passwords do not match.";
     return null;
   }
 
@@ -172,45 +201,89 @@ function SignupPage() {
                       {isBn ? "আপনার প্রোফাইল" : "Your profile"}
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                      {isBn ? "আপনার খামার চিনতে আমাদের কিছু তথ্য দিন।" : "Tell us a bit about you so we can set up your farm."}
+                      {isBn
+                        ? "আপনার খামার চিনতে আমাদের কিছু তথ্য দিন।"
+                        : "Tell us a bit about you so we can set up your farm."}
                     </p>
 
-                    <Field label={isBn ? "পুরো নাম" : "Full name"} helper={isBn ? "যেমন: রহিম মিয়া" : "e.g. Rahim Mia"}>
-                      <Input value={fullName} onChange={(e) => setFullName(e.target.value)} className="h-11 text-base" />
+                    <Field
+                      label={isBn ? "পুরো নাম" : "Full name"}
+                      helper={isBn ? "যেমন: রহিম মিয়া" : "e.g. Rahim Mia"}
+                    >
+                      <Input
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="h-11 text-base"
+                      />
                     </Field>
 
-                    <Field label={isBn ? "ফোন নম্বর" : "Phone number"} helper={isBn ? "+880 বা 01 ফরম্যাটে" : "Use +880 or 01 format"}>
+                    <Field
+                      label={isBn ? "ফোন নম্বর" : "Phone number"}
+                      helper={isBn ? "+880 বা 01 ফরম্যাটে" : "Use +880 or 01 format"}
+                    >
                       <Input
                         type="tel"
                         inputMode="tel"
                         placeholder="+8801712345678"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        onBlur={() => phone && isBangladeshPhone(phone) && setPhone(normalizeBangladeshPhone(phone))}
+                        onBlur={() =>
+                          phone &&
+                          isBangladeshPhone(phone) &&
+                          setPhone(normalizeBangladeshPhone(phone))
+                        }
                         className="h-11 text-base"
                       />
                     </Field>
 
-                    <Field label={isBn ? "ইমেইল" : "Email"} helper={isBn ? "অ্যাকাউন্ট পুনরুদ্ধারের জন্য ব্যবহৃত হবে" : "Used for account recovery"}>
-                      <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-11 text-base" />
+                    <Field
+                      label={isBn ? "ইমেইল" : "Email"}
+                      helper={
+                        isBn
+                          ? "অ্যাকাউন্ট পুনরুদ্ধারের জন্য ব্যবহৃত হবে"
+                          : "Used for account recovery"
+                      }
+                    >
+                      <Input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="h-11 text-base"
+                      />
                     </Field>
 
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <Field label={isBn ? "জেলা" : "District"} helper={isBn ? "আপনার খামারের জেলা" : "Where your farm is located"}>
+                      <Field
+                        label={isBn ? "জেলা" : "District"}
+                        helper={isBn ? "আপনার খামারের জেলা" : "Where your farm is located"}
+                      >
                         <Select value={district} onValueChange={setDistrict}>
                           <SelectTrigger className="h-11 text-base">
-                            <SelectValue placeholder={isBn ? "জেলা নির্বাচন করুন" : "Select district"} />
+                            <SelectValue
+                              placeholder={isBn ? "জেলা নির্বাচন করুন" : "Select district"}
+                            />
                           </SelectTrigger>
                           <SelectContent>
                             {BD_DISTRICTS.map((d) => (
-                              <SelectItem key={d} value={d}>{d}</SelectItem>
+                              <SelectItem key={d} value={d}>
+                                {d}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </Field>
 
-                      <Field label={isBn ? "পছন্দের ভাষা" : "Preferred language"} helper={isBn ? "অ্যাপ এই ভাষায় দেখাবে" : "App will use this language"}>
-                        <Select value={prefLang} onValueChange={(v) => { setPrefLang(v as "en" | "bn"); setLang(v as "en" | "bn"); }}>
+                      <Field
+                        label={isBn ? "পছন্দের ভাষা" : "Preferred language"}
+                        helper={isBn ? "অ্যাপ এই ভাষায় দেখাবে" : "App will use this language"}
+                      >
+                        <Select
+                          value={prefLang}
+                          onValueChange={(v) => {
+                            setPrefLang(v as "en" | "bn");
+                            setLang(v as "en" | "bn");
+                          }}
+                        >
                           <SelectTrigger className="h-11 text-base">
                             <SelectValue />
                           </SelectTrigger>
@@ -222,7 +295,10 @@ function SignupPage() {
                       </Field>
                     </div>
 
-                    <Field label={isBn ? "আপনার ভূমিকা" : "Your role"} helper={isBn ? "একটি নির্বাচন করুন" : "Choose what best describes you"}>
+                    <Field
+                      label={isBn ? "আপনার ভূমিকা" : "Your role"}
+                      helper={isBn ? "একটি নির্বাচন করুন" : "Choose what best describes you"}
+                    >
                       <div className="grid grid-cols-2 gap-3">
                         <RoleCard
                           checked={roleKind === "farmer"}
@@ -252,7 +328,14 @@ function SignupPage() {
                       {isBn ? "আপনার পুকুরের ডেটা সুরক্ষিত রাখতে।" : "To keep your farm data safe."}
                     </p>
 
-                    <Field label={isBn ? "পাসওয়ার্ড" : "Password"} helper={isBn ? "কমপক্ষে ৮ অক্ষর, বড়/ছোট হাতের ও সংখ্যা মিশিয়ে" : "At least 8 characters, mix of letters and numbers"}>
+                    <Field
+                      label={isBn ? "পাসওয়ার্ড" : "Password"}
+                      helper={
+                        isBn
+                          ? "কমপক্ষে ৮ অক্ষর, বড়/ছোট হাতের ও সংখ্যা মিশিয়ে"
+                          : "At least 8 characters, mix of letters and numbers"
+                      }
+                    >
                       <div className="relative">
                         <Input
                           type={showPw ? "text" : "password"}
@@ -283,7 +366,8 @@ function SignupPage() {
                             ))}
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            {isBn ? "শক্তি: " : "Strength: "}<span className="font-medium text-foreground">{pwScore.label}</span>
+                            {isBn ? "শক্তি: " : "Strength: "}
+                            <span className="font-medium text-foreground">{pwScore.label}</span>
                           </p>
                         </div>
                       )}
@@ -303,7 +387,9 @@ function SignupPage() {
                             {pwMatch ? (
                               <Check className="h-4 w-4 text-emerald-600" />
                             ) : (
-                              <span className="text-xs text-destructive">{isBn ? "মিলছে না" : "no match"}</span>
+                              <span className="text-xs text-destructive">
+                                {isBn ? "মিলছে না" : "no match"}
+                              </span>
                             )}
                           </span>
                         )}
@@ -318,15 +404,31 @@ function SignupPage() {
                       {isBn ? "তথ্য পর্যালোচনা করুন" : "Review your details"}
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                      {isBn ? "সবকিছু ঠিক থাকলে সক্রিয় করুন।" : "Make sure everything looks right before activating."}
+                      {isBn
+                        ? "সবকিছু ঠিক থাকলে সক্রিয় করুন।"
+                        : "Make sure everything looks right before activating."}
                     </p>
                     <div className="space-y-2 rounded-2xl border border-border/60 bg-muted/40 p-4">
                       <Row label={isBn ? "নাম" : "Name"} value={fullName} />
-                      <Row label={isBn ? "ভূমিকা" : "Role"} value={roleKind === "manager" ? (isBn ? "ফার্ম ম্যানেজার" : "Farm Manager") : (isBn ? "কৃষক" : "Farmer")} />
+                      <Row
+                        label={isBn ? "ভূমিকা" : "Role"}
+                        value={
+                          roleKind === "manager"
+                            ? isBn
+                              ? "ফার্ম ম্যানেজার"
+                              : "Farm Manager"
+                            : isBn
+                              ? "কৃষক"
+                              : "Farmer"
+                        }
+                      />
                       <Row label={isBn ? "ফোন" : "Phone"} value={normalizeBangladeshPhone(phone)} />
                       <Row label={isBn ? "ইমেইল" : "Email"} value={email} />
                       <Row label={isBn ? "জেলা" : "District"} value={district} />
-                      <Row label={isBn ? "ভাষা" : "Language"} value={prefLang === "bn" ? "বাংলা" : "English"} />
+                      <Row
+                        label={isBn ? "ভাষা" : "Language"}
+                        value={prefLang === "bn" ? "বাংলা" : "English"}
+                      />
                     </div>
                     <p className="rounded-xl bg-[oklch(0.72_0.12_195/0.08)] px-4 py-3 text-xs text-[oklch(0.45_0.06_200)]">
                       {isBn
@@ -337,23 +439,39 @@ function SignupPage() {
                 )}
 
                 {err && (
-                  <p className="mt-4 rounded-lg bg-destructive/10 px-3 py-2.5 text-sm text-destructive">{err}</p>
+                  <p className="mt-4 rounded-lg bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+                    {err}
+                  </p>
                 )}
 
                 <div className="mt-6 flex items-center gap-3">
                   {step > 0 && (
-                    <Button type="button" variant="outline" onClick={back} className="h-11 flex-1 text-base">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={back}
+                      className="h-11 flex-1 text-base"
+                    >
                       <ArrowLeft className="mr-2 h-4 w-4" />
                       {isBn ? "ফিরে যান" : "Back"}
                     </Button>
                   )}
                   {step < 2 ? (
-                    <Button type="button" onClick={next} className="h-11 flex-1 text-base font-semibold">
+                    <Button
+                      type="button"
+                      onClick={next}
+                      className="h-11 flex-1 text-base font-semibold"
+                    >
                       {isBn ? "পরবর্তী" : "Continue"}
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   ) : (
-                    <Button type="button" onClick={activate} disabled={busy} className="h-11 flex-1 text-base font-semibold">
+                    <Button
+                      type="button"
+                      onClick={activate}
+                      disabled={busy}
+                      className="h-11 flex-1 text-base font-semibold"
+                    >
                       {busy ? (
                         <span className="flex items-center gap-2">
                           <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" />
@@ -392,7 +510,10 @@ function SignupPage() {
                   ? `স্বাগতম, ${fullName}। আপনার পুকুর মনিটরিং ড্যাশবোর্ড প্রস্তুত।`
                   : `Welcome, ${fullName}. Your pond monitoring dashboard is ready.`}
               </p>
-              <Button onClick={goToDashboard} className="mt-2 h-11 w-full text-base font-semibold sm:w-auto sm:px-8">
+              <Button
+                onClick={goToDashboard}
+                className="mt-2 h-11 w-full text-base font-semibold sm:w-auto sm:px-8"
+              >
                 {isBn ? "ড্যাশবোর্ডে যান" : "Go to dashboard"}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -420,7 +541,9 @@ function SignupPage() {
               type="button"
               onClick={() => setLang("en")}
               className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
-                lang === "en" ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                lang === "en"
+                  ? "bg-white text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               English
@@ -429,7 +552,9 @@ function SignupPage() {
               type="button"
               onClick={() => setLang("bn")}
               className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
-                lang === "bn" ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                lang === "bn"
+                  ? "bg-white text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               বাংলা
@@ -468,8 +593,8 @@ function Stepper({
                   completed
                     ? "border-primary bg-primary text-primary-foreground"
                     : active
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border bg-muted text-muted-foreground"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-muted text-muted-foreground"
                 }`}
               >
                 {completed ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
@@ -483,7 +608,9 @@ function Stepper({
               </span>
             </div>
             {i < steps.length - 1 && (
-              <div className={`mb-5 h-0.5 flex-1 rounded-full ${i < current ? "bg-primary" : "bg-border"}`} />
+              <div
+                className={`mb-5 h-0.5 flex-1 rounded-full ${i < current ? "bg-primary" : "bg-border"}`}
+              />
             )}
           </div>
         );
@@ -541,7 +668,9 @@ function RoleCard({
         checked ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/40"
       }`}
     >
-      <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary">{icon}</div>
+      <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary">
+        {icon}
+      </div>
       <div>
         <p className="text-sm font-semibold text-foreground">{title}</p>
         <p className="text-xs text-muted-foreground">{desc}</p>

@@ -50,8 +50,17 @@ export function MetricTile({
 }) {
   return (
     <div className="rounded-xl border border-border/70 bg-card p-4 shadow-soft">
-      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className={cn("mt-2 font-display text-3xl font-bold tabular-nums", accent ?? "text-foreground")}>{value}</p>
+      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+        {label}
+      </p>
+      <p
+        className={cn(
+          "mt-2 font-display text-3xl font-bold tabular-nums",
+          accent ?? "text-foreground",
+        )}
+      >
+        {value}
+      </p>
       {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
@@ -90,7 +99,11 @@ export function EmptyState({
 }) {
   return (
     <div className="grid place-items-center rounded-2xl border border-dashed border-border bg-card p-12 text-center">
-      {icon && <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-primary/10 text-primary">{icon}</div>}
+      {icon && (
+        <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-primary/10 text-primary">
+          {icon}
+        </div>
+      )}
       <h2 className="mt-4 font-display text-lg font-semibold">{title}</h2>
       {description && <p className="mt-1 max-w-md text-sm text-muted-foreground">{description}</p>}
       {action && <div className="mt-5">{action}</div>}

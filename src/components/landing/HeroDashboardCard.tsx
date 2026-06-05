@@ -1,9 +1,18 @@
-import { Activity, Droplets, FlaskConical, Thermometer, Wifi, BatteryFull, AlertCircle } from "lucide-react";
+import {
+  Activity,
+  Droplets,
+  FlaskConical,
+  Thermometer,
+  Wifi,
+  BatteryFull,
+  AlertCircle,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { trend12h } from "@/lib/mock-pond";
 
 function Sparkline({ data, color = "var(--status-critical)" }: { data: number[]; color?: string }) {
-  const W = 240, H = 56;
+  const W = 240,
+    H = 56;
   const min = Math.min(...data);
   const max = Math.max(...data);
   const pts = data.map((v, i) => ({
@@ -34,7 +43,10 @@ export function HeroDashboardCard() {
       className="relative mx-auto w-full max-w-[520px]"
     >
       {/* glow */}
-      <div aria-hidden className="absolute -inset-6 -z-10 rounded-[40px] bg-gradient-to-br from-primary/20 via-primary/5 to-transparent blur-2xl" />
+      <div
+        aria-hidden
+        className="absolute -inset-6 -z-10 rounded-[40px] bg-gradient-to-br from-primary/20 via-primary/5 to-transparent blur-2xl"
+      />
 
       <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-[0_40px_80px_-30px_rgba(15,44,68,0.35)]">
         {/* header */}
@@ -59,13 +71,21 @@ export function HeroDashboardCard() {
           {[
             { icon: Droplets, label: "DO", val: "3.1", unit: "mg/L", tone: "text-status-critical" },
             { icon: FlaskConical, label: "pH", val: "8.4", unit: "", tone: "text-status-warning" },
-            { icon: Thermometer, label: "Temp", val: "31.2", unit: "°C", tone: "text-status-watch" },
+            {
+              icon: Thermometer,
+              label: "Temp",
+              val: "31.2",
+              unit: "°C",
+              tone: "text-status-watch",
+            },
           ].map(({ icon: Icon, label, val, unit, tone }) => (
             <div key={label} className="px-3 py-4 text-center">
               <div className="mx-auto flex items-center justify-center gap-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                 <Icon className="h-3 w-3" /> {label}
               </div>
-              <div className={`mt-1 font-display text-2xl font-bold tabular-nums sm:text-3xl ${tone}`}>
+              <div
+                className={`mt-1 font-display text-2xl font-bold tabular-nums sm:text-3xl ${tone}`}
+              >
                 {val}
               </div>
               <div className="text-[10px] text-muted-foreground">{unit || "—"}</div>
@@ -80,7 +100,8 @@ export function HeroDashboardCard() {
             <div className="min-w-0 flex-1">
               <p className="text-[12px] font-semibold text-foreground">Low oxygen detected</p>
               <p className="mt-0.5 text-[11px] text-muted-foreground">
-                Recommended: <span className="font-medium text-foreground">Turn on aerator now</span>
+                Recommended:{" "}
+                <span className="font-medium text-foreground">Turn on aerator now</span>
               </p>
             </div>
             <button className="shrink-0 rounded-md bg-status-critical px-2.5 py-1 text-[11px] font-semibold text-white hover:opacity-90">
@@ -105,8 +126,12 @@ export function HeroDashboardCard() {
             AQ-204 online
           </div>
           <div className="flex items-center gap-3 text-muted-foreground">
-            <span className="inline-flex items-center gap-1"><BatteryFull className="h-3 w-3 text-status-good" /> 78%</span>
-            <span className="inline-flex items-center gap-1"><Wifi className="h-3 w-3 text-primary" /> 4/5</span>
+            <span className="inline-flex items-center gap-1">
+              <BatteryFull className="h-3 w-3 text-status-good" /> 78%
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Wifi className="h-3 w-3 text-primary" /> 4/5
+            </span>
           </div>
         </div>
       </div>

@@ -91,12 +91,12 @@ function AdminDashboard() {
     },
   });
 
-  const farms = data?.farms ?? [];
-  const ponds = data?.ponds ?? [];
-  const devices = data?.devices ?? [];
-  const alerts = data?.alerts ?? [];
-  const profiles = data?.profiles ?? [];
-  const tickets = data?.tickets ?? [];
+  const farms = useMemo(() => data?.farms ?? [], [data?.farms]);
+  const ponds = useMemo(() => data?.ponds ?? [], [data?.ponds]);
+  const devices = useMemo(() => data?.devices ?? [], [data?.devices]);
+  const alerts = useMemo(() => data?.alerts ?? [], [data?.alerts]);
+  const profiles = useMemo(() => data?.profiles ?? [], [data?.profiles]);
+  const tickets = useMemo(() => data?.tickets ?? [], [data?.tickets]);
 
   const online = devices.filter((d) => d.status === "online").length;
   const offline = devices.filter((d) => d.status === "offline").length;
@@ -108,9 +108,7 @@ function AdminDashboard() {
   const openAlerts = alerts.filter((a) => a.status !== "resolved");
   const critical = openAlerts.filter((a) => a.severity === "critical");
 
-  const openTickets = tickets.filter(
-    (t: any) => t.status !== "resolved" && t.status !== "closed",
-  );
+  const openTickets = tickets.filter((t: any) => t.status !== "resolved" && t.status !== "closed");
 
   // === Chart data ===
   const deviceStatusData = useMemo(
@@ -125,7 +123,10 @@ function AdminDashboard() {
 
   const alertTrendData = useMemo(() => {
     const days = range === "7d" ? 7 : 30;
-    const buckets: Record<string, { date: string; critical: number; warning: number; watch: number }> = {};
+    const buckets: Record<
+      string,
+      { date: string; critical: number; warning: number; watch: number }
+    > = {};
     for (let i = days - 1; i >= 0; i--) {
       const d = new Date();
       d.setHours(0, 0, 0, 0);
@@ -191,10 +192,7 @@ function AdminDashboard() {
     ];
   }, [devices.length, calibrationDue]);
 
-  const recentFarms = useMemo(
-    () => [...farms].slice(-5).reverse(),
-    [farms],
-  );
+  const recentFarms = useMemo(() => [...farms].slice(-5).reverse(), [farms]);
 
   const offlineDevices = useMemo(
     () => devices.filter((d) => d.status === "offline").slice(0, 6),
@@ -202,7 +200,7 @@ function AdminDashboard() {
   );
 
   const farmName = (id: string | null) =>
-    id ? farms.find((f) => f.id === id)?.name ?? "—" : "—";
+    id ? (farms.find((f) => f.id === id)?.name ?? "—") : "—";
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -329,13 +327,40 @@ function AdminDashboard() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 11 }}
+                  stroke="hsl(var(--muted-foreground))"
+                />
+                <YAxis
+                  tick={{ fontSize: 11 }}
+                  stroke="hsl(var(--muted-foreground))"
+                  allowDecimals={false}
+                />
                 <Tooltip contentStyle={tooltipStyle} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Area type="monotone" dataKey="critical" stroke="hsl(350 80% 55%)" fill="url(#g-crit)" name="Critical" />
-                <Area type="monotone" dataKey="warning" stroke="hsl(38 92% 50%)" fill="url(#g-warn)" name="Warning" />
-                <Area type="monotone" dataKey="watch" stroke="hsl(200 80% 50%)" fillOpacity={0.15} fill="hsl(200 80% 50%)" name="Watch" />
+                <Area
+                  type="monotone"
+                  dataKey="critical"
+                  stroke="hsl(350 80% 55%)"
+                  fill="url(#g-crit)"
+                  name="Critical"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="warning"
+                  stroke="hsl(38 92% 50%)"
+                  fill="url(#g-warn)"
+                  name="Warning"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="watch"
+                  stroke="hsl(200 80% 50%)"
+                  fillOpacity={0.15}
+                  fill="hsl(200 80% 50%)"
+                  name="Watch"
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -411,10 +436,21 @@ function AdminDashboard() {
               <EmptyChart label="No farms yet" />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={farmDistribution} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+                <BarChart
+                  data={farmDistribution}
+                  margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="district" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                  <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
+                  <XAxis
+                    dataKey="district"
+                    tick={{ fontSize: 11 }}
+                    stroke="hsl(var(--muted-foreground))"
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11 }}
+                    stroke="hsl(var(--muted-foreground))"
+                    allowDecimals={false}
+                  />
                   <Tooltip contentStyle={tooltipStyle} />
                   <Bar dataKey="count" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
                 </BarChart>
@@ -434,12 +470,34 @@ function AdminDashboard() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={fleetTrend} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 11 }}
+                  stroke="hsl(var(--muted-foreground))"
+                />
+                <YAxis
+                  tick={{ fontSize: 11 }}
+                  stroke="hsl(var(--muted-foreground))"
+                  allowDecimals={false}
+                />
                 <Tooltip contentStyle={tooltipStyle} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Line type="monotone" dataKey="online" stroke="hsl(152 60% 45%)" strokeWidth={2} dot={false} name="Online" />
-                <Line type="monotone" dataKey="offline" stroke="hsl(350 70% 55%)" strokeWidth={2} dot={false} name="Offline" />
+                <Line
+                  type="monotone"
+                  dataKey="online"
+                  stroke="hsl(152 60% 45%)"
+                  strokeWidth={2}
+                  dot={false}
+                  name="Online"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="offline"
+                  stroke="hsl(350 70% 55%)"
+                  strokeWidth={2}
+                  dot={false}
+                  name="Offline"
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -473,9 +531,7 @@ function AdminDashboard() {
                     className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-surface p-3 transition hover:border-rose-400/60 hover:bg-rose-500/5"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">
-                        {a.message ?? a.alert_type}
-                      </p>
+                      <p className="truncate text-sm font-medium">{a.message ?? a.alert_type}</p>
                       <p className="text-xs text-muted-foreground">
                         {a.parameter ? `${a.parameter} · ` : ""}
                         {new Date(a.detected_at).toLocaleString()}
@@ -514,9 +570,7 @@ function AdminDashboard() {
                     className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-surface p-3 transition hover:border-primary/40 hover:bg-primary/5"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">
-                        {d.name ?? d.serial}
-                      </p>
+                      <p className="truncate text-sm font-medium">{d.name ?? d.serial}</p>
                       <p className="text-xs text-muted-foreground">
                         {farmName(d.farm_id)} ·{" "}
                         {d.last_seen
@@ -600,9 +654,7 @@ function AdminDashboard() {
                         {t.subject ?? t.title ?? "Untitled ticket"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {t.created_at
-                          ? new Date(t.created_at).toLocaleString()
-                          : ""}
+                        {t.created_at ? new Date(t.created_at).toLocaleString() : ""}
                       </p>
                     </div>
                     <StatusBadge status={t.status ?? "open"} />
@@ -615,9 +667,7 @@ function AdminDashboard() {
       </div>
 
       {isLoading && (
-        <p className="mt-6 text-center text-xs text-muted-foreground">
-          Loading platform metrics…
-        </p>
+        <p className="mt-6 text-center text-xs text-muted-foreground">Loading platform metrics…</p>
       )}
     </div>
   );
@@ -634,12 +684,7 @@ const tooltipStyle = {
 
 function Card({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
-    <div
-      className={cn(
-        "rounded-2xl border border-border/70 bg-card p-5 shadow-soft",
-        className,
-      )}
-    >
+    <div className={cn("rounded-2xl border border-border/70 bg-card p-5 shadow-soft", className)}>
       {children}
     </div>
   );
@@ -717,9 +762,7 @@ function Stat({
         </p>
         <span className="text-muted-foreground">{icon}</span>
       </div>
-      <p className={cn("mt-2 font-display text-3xl font-bold tabular-nums", accent)}>
-        {value}
-      </p>
+      <p className={cn("mt-2 font-display text-3xl font-bold tabular-nums", accent)}>{value}</p>
       {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
@@ -738,14 +781,9 @@ function Legendly({ items }: { items: { name: string; value: number; color: stri
     <ul className="mt-3 grid grid-cols-2 gap-1.5 text-xs">
       {items.map((i) => (
         <li key={i.name} className="flex items-center gap-2">
-          <span
-            className="h-2.5 w-2.5 rounded-full"
-            style={{ backgroundColor: i.color }}
-          />
+          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: i.color }} />
           <span className="text-muted-foreground">{i.name}</span>
-          <span className="ml-auto font-display font-semibold tabular-nums">
-            {i.value}
-          </span>
+          <span className="ml-auto font-display font-semibold tabular-nums">{i.value}</span>
         </li>
       ))}
     </ul>

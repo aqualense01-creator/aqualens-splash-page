@@ -24,7 +24,6 @@ export function Stats() {
   return (
     <section className="bg-surface py-16 sm:py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-
         <Reveal>
           <div className="flex flex-wrap items-end justify-between gap-4">
             <h2 className="font-display text-2xl font-bold text-foreground md:text-3xl">
@@ -67,9 +66,13 @@ export function Stats() {
           <Reveal>
             <div className="flex h-full flex-col justify-between rounded-2xl bg-gradient-to-br from-primary/10 to-transparent p-6 ring-1 ring-primary/15">
               <p className="text-sm leading-relaxed text-foreground/80">
-                AcquaLence combines advanced sensors, robust hardware and intelligent software to give you complete control over your aquaculture operations.
+                AcquaLence combines advanced sensors, robust hardware and intelligent software to
+                give you complete control over your aquaculture operations.
               </p>
-              <a href="#" className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary">
+              <a
+                href="#"
+                className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary"
+              >
                 Explore the platform <ArrowRight className="h-4 w-4" />
               </a>
             </div>

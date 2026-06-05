@@ -17,12 +17,7 @@ import {
   Filter,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  insforge,
-  type AppRole,
-  type Farm,
-  type Profile,
-} from "@/lib/insforge";
+import { insforge, type AppRole, type Farm, type Profile } from "@/lib/insforge";
 import { PageHeader, StatusBadge, EmptyState } from "@/components/app/StatusBadge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -166,10 +161,7 @@ function AdminUsers() {
   const profilesQ = useQuery({
     queryKey: ["admin-users", "profiles"],
     queryFn: async () => {
-      const r = await insforge.database
-        .from("profiles")
-        .select("*")
-        .order("full_name");
+      const r = await insforge.database.from("profiles").select("*").order("full_name");
       if (r.error) throw r.error;
       return (r.data ?? []) as AdminProfile[];
     },
@@ -193,17 +185,15 @@ function AdminUsers() {
     },
   });
 
-  const profiles = profilesQ.data ?? [];
-  const roles = rolesQ.data ?? [];
-  const farms = farmsQ.data ?? [];
+  const profiles = useMemo(() => profilesQ.data ?? [], [profilesQ.data]);
+  const roles = useMemo(() => rolesQ.data ?? [], [rolesQ.data]);
+  const farms = useMemo(() => farmsQ.data ?? [], [farmsQ.data]);
 
   const roleByUser = useMemo(() => {
     const m = new Map<string, AppRole>();
     // first role wins per user; admins/support take precedence
     const priority: AppRole[] = ["admin", "support", "technician", "farm_manager", "farmer"];
-    const sorted = [...roles].sort(
-      (a, b) => priority.indexOf(a.role) - priority.indexOf(b.role),
-    );
+    const sorted = [...roles].sort((a, b) => priority.indexOf(a.role) - priority.indexOf(b.role));
     for (const r of sorted) if (!m.has(r.user_id)) m.set(r.user_id, r.role);
     return m;
   }, [roles]);
@@ -212,9 +202,7 @@ function AdminUsers() {
 
   const districts = useMemo(
     () =>
-      Array.from(
-        new Set(profiles.map((p) => p.district).filter((d): d is string => !!d)),
-      ).sort(),
+      Array.from(new Set(profiles.map((p) => p.district).filter((d): d is string => !!d))).sort(),
     [profiles],
   );
 
@@ -225,7 +213,7 @@ function AdminUsers() {
         const role = roleByUser.get(p.id) ?? "farmer";
         const ownedFarm = farms.find((f) => f.owner_id === p.id);
         const assignedFarm = p.assigned_farm_id ? farmById.get(p.assigned_farm_id) : undefined;
-        const farm = role === "farmer" ? ownedFarm : assignedFarm ?? ownedFarm;
+        const farm = role === "farmer" ? ownedFarm : (assignedFarm ?? ownedFarm);
         return {
           ...p,
           role,
@@ -272,10 +260,7 @@ function AdminUsers() {
         assigned_farm_id: f.assigned_farm_id || null,
       };
       if (id) {
-        const r = await insforge.database
-          .from("profiles")
-          .update(profilePayload)
-          .eq("id", id);
+        const r = await insforge.database.from("profiles").update(profilePayload).eq("id", id);
         if (r.error) throw r.error;
         // sync role
         const existing = roles.filter((x) => x.user_id === id);
@@ -285,9 +270,7 @@ function AdminUsers() {
           await insforge.database.from("user_roles").delete().eq("id", x.id);
         }
         if (!keep) {
-          await insforge.database
-            .from("user_roles")
-            .insert([{ user_id: id, role: f.role }]);
+          await insforge.database.from("user_roles").insert([{ user_id: id, role: f.role }]);
         }
         return id;
       }
@@ -348,7 +331,7 @@ function AdminUsers() {
 
   // ===== Drawer data =====
   const drawerUser = profiles.find((p) => p.id === drawerUserId) ?? null;
-  const drawerRole = drawerUserId ? roleByUser.get(drawerUserId) ?? "farmer" : null;
+  const drawerRole = drawerUserId ? (roleByUser.get(drawerUserId) ?? "farmer") : null;
 
   const activityQ = useQuery({
     queryKey: ["admin-users", "activity", drawerUserId],
@@ -501,11 +484,17 @@ function AdminUsers() {
                     <td className="px-4 py-3 font-medium">{u.full_name ?? "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground">{u.phone ?? "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground">{u.email ?? "—"}</td>
-                    <td className="px-4 py-3"><RoleBadge role={u.role} /></td>
+                    <td className="px-4 py-3">
+                      <RoleBadge role={u.role} />
+                    </td>
                     <td className="px-4 py-3 text-muted-foreground">{u.farmName ?? "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground">{u.district ?? "—"}</td>
-                    <td className="px-4 py-3"><StatusBadge status={u.status} /></td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">{fmtDate(u.last_active_at)}</td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={u.status} />
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">
+                      {fmtDate(u.last_active_at)}
+                    </td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1">
                         <Button
@@ -557,7 +546,9 @@ function AdminUsers() {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="font-medium">{u.full_name ?? "—"}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{u.email ?? u.phone ?? "—"}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {u.email ?? u.phone ?? "—"}
+                    </p>
                   </div>
                   <RoleBadge role={u.role} />
                 </div>
@@ -588,15 +579,30 @@ function AdminUsers() {
 
               <div className="mt-6 space-y-5 text-sm">
                 <section className="space-y-2">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contact</h3>
-                  <Row icon={<Mail className="h-4 w-4" />} label="Email" value={drawerUser.email ?? "—"} />
-                  <Row icon={<Phone className="h-4 w-4" />} label="Phone" value={drawerUser.phone ?? "—"} />
-                  <Row icon={<MapPin className="h-4 w-4" />} label="District" value={drawerUser.district ?? "—"} />
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Contact
+                  </h3>
+                  <Row
+                    icon={<Mail className="h-4 w-4" />}
+                    label="Email"
+                    value={drawerUser.email ?? "—"}
+                  />
+                  <Row
+                    icon={<Phone className="h-4 w-4" />}
+                    label="Phone"
+                    value={drawerUser.phone ?? "—"}
+                  />
+                  <Row
+                    icon={<MapPin className="h-4 w-4" />}
+                    label="District"
+                    value={drawerUser.district ?? "—"}
+                  />
                   <Row
                     icon={<Building2 className="h-4 w-4" />}
                     label="Farm"
                     value={
-                      (drawerUser.assigned_farm_id && farmById.get(drawerUser.assigned_farm_id)?.name) ||
+                      (drawerUser.assigned_farm_id &&
+                        farmById.get(drawerUser.assigned_farm_id)?.name) ||
                       farms.find((f) => f.owner_id === drawerUser.id)?.name ||
                       "—"
                     }
@@ -604,8 +610,13 @@ function AdminUsers() {
                 </section>
 
                 <section className="space-y-2">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Account</h3>
-                  <Row label="Language" value={drawerUser.language === "bn" ? "Bangla" : "English"} />
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Account
+                  </h3>
+                  <Row
+                    label="Language"
+                    value={drawerUser.language === "bn" ? "Bangla" : "English"}
+                  />
                   <Row label="Last active" value={fmtDate(drawerUser.last_active_at)} />
                 </section>
 
@@ -620,10 +631,15 @@ function AdminUsers() {
                   ) : (
                     <ul className="space-y-1.5">
                       {(activityQ.data ?? []).map((a) => (
-                        <li key={a.id} className="rounded-md border border-border/60 bg-surface/40 p-2">
+                        <li
+                          key={a.id}
+                          className="rounded-md border border-border/60 bg-surface/40 p-2"
+                        >
                           <p className="font-medium">{a.action}</p>
                           {a.detail && <p className="text-xs text-muted-foreground">{a.detail}</p>}
-                          <p className="mt-0.5 text-[11px] text-muted-foreground">{fmtDate(a.occurred_at)}</p>
+                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                            {fmtDate(a.occurred_at)}
+                          </p>
                         </li>
                       ))}
                     </ul>
@@ -645,9 +661,13 @@ function AdminUsers() {
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => setSuspendId(drawerUser.id)}>
                     {(drawerUser.account_status ?? "active") === "suspended" ? (
-                      <><Play className="mr-1.5 h-3.5 w-3.5" /> Reactivate</>
+                      <>
+                        <Play className="mr-1.5 h-3.5 w-3.5" /> Reactivate
+                      </>
                     ) : (
-                      <><Pause className="mr-1.5 h-3.5 w-3.5" /> Suspend</>
+                      <>
+                        <Pause className="mr-1.5 h-3.5 w-3.5" /> Suspend
+                      </>
                     )}
                   </Button>
                 </div>
@@ -697,10 +717,14 @@ function AdminUsers() {
                   value={form.role}
                   onValueChange={(v) => setForm({ ...form, role: v as AppRole })}
                 >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     {ROLES.map((r) => (
-                      <SelectItem key={r} value={r}>{roleLabels[r]}</SelectItem>
+                      <SelectItem key={r} value={r}>
+                        {roleLabels[r]}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -708,12 +732,18 @@ function AdminUsers() {
               <Field label="Status">
                 <Select
                   value={form.account_status}
-                  onValueChange={(v) => setForm({ ...form, account_status: v as UserForm["account_status"] })}
+                  onValueChange={(v) =>
+                    setForm({ ...form, account_status: v as UserForm["account_status"] })
+                  }
                 >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     {STATUSES.map((s) => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -724,11 +754,15 @@ function AdminUsers() {
                 value={form.assigned_farm_id || "none"}
                 onValueChange={(v) => setForm({ ...form, assigned_farm_id: v === "none" ? "" : v })}
               >
-                <SelectTrigger><SelectValue placeholder="Select farm" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select farm" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">— None —</SelectItem>
                   {farms.map((f) => (
-                    <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -745,10 +779,14 @@ function AdminUsers() {
                   value={form.language}
                   onValueChange={(v) => setForm({ ...form, language: v as "en" | "bn" })}
                 >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     {LANGUAGES.map((l) => (
-                      <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+                      <SelectItem key={l.value} value={l.value}>
+                        {l.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -757,7 +795,9 @@ function AdminUsers() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditorOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setEditorOpen(false)}>
+              Cancel
+            </Button>
             <Button
               disabled={upsertMut.isPending}
               onClick={() => {
@@ -832,9 +872,7 @@ function AdminUsers() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => resetId && resetPasswordMut.mutate(resetId)}
-            >
+            <AlertDialogAction onClick={() => resetId && resetPasswordMut.mutate(resetId)}>
               Send reset email
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -873,18 +911,12 @@ function Row({
   );
 }
 
-function Stat({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number;
-  tone?: "danger";
-}) {
+function Stat({ label, value, tone }: { label: string; value: number; tone?: "danger" }) {
   return (
     <div className="rounded-xl border border-border/70 bg-card p-3 shadow-soft">
-      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+        {label}
+      </p>
       <p
         className={cn(
           "mt-1 font-display text-2xl font-bold tabular-nums",

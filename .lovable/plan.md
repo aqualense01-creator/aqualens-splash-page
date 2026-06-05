@@ -69,6 +69,7 @@ Comments in code explicitly call out: short scroll range (140vh), final-state lo
 ## Fix existing buoy `ScrollSequence` (used by `Rugged.tsx`)
 
 Keep the canvas approach but harden it per the brief:
+
 - Tighten `Rugged` outer height: 200vh → **150vh** desktop, **stack (no sticky) on mobile** showing only the middle frame statically
 - In `ScrollSequence.tsx`:
   - Force-draw the last frame when `p >= 0.995` (off-by-one guard)
@@ -81,6 +82,7 @@ Keep the canvas approach but harden it per the brief:
 ## Water Parameters bento (new `WaterParameters.tsx`)
 
 7 cards in a 12-col bento (DO + Device Health span 2 cols on lg). Each card:
+
 - lucide icon, parameter name, large value + unit, status badge (good/watch/warning/critical), tiny inline-SVG sparkline, one-line copy from brief.
 
 ## Alerts & Recommendations (new `AlertsActions.tsx`)
@@ -123,6 +125,7 @@ Keep `Footer.tsx`, only re-order links to match brief.
 ## Image generation
 
 Generate 3 images into `src/assets/` (fast tier, .jpg):
+
 - `pond-hero.jpg` — calm pond with buoy at golden hour (subtle, for hero background tint)
 - `farmer-mobile.jpg` — farmer holding phone at pond edge (for Farmers section)
 - `monitoring-illustration.jpg` — abstract isometric pond + sensors (for Monitoring Story background)
@@ -165,6 +168,7 @@ All used at low opacity behind glass cards; no decorative-only large hero photo.
 ## Files changed
 
 New:
+
 - `src/components/landing/HeroDashboardCard.tsx`
 - `src/components/landing/MonitoringStory.tsx`
 - `src/components/landing/WaterParameters.tsx`
@@ -178,6 +182,7 @@ New:
 - `src/assets/monitoring-illustration.jpg`
 
 Edited:
+
 - `src/routes/index.tsx` (section order, metadata)
 - `src/components/landing/Hero.tsx`
 - `src/components/landing/Dashboard.tsx`

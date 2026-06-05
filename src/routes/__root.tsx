@@ -81,17 +81,31 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Acqua Lence — Smart Aquaculture Monitoring" },
-      { name: "description", content: "Acqua Lence helps fish and shrimp farmers monitor pond water quality in real time." },
+      {
+        name: "description",
+        content:
+          "Acqua Lence helps fish and shrimp farmers monitor pond water quality in real time.",
+      },
       { name: "author", content: "Acqua Lence" },
       { property: "og:title", content: "Acqua Lence" },
-      { property: "og:description", content: "Smart pond and farm water-quality monitoring for aquaculture." },
+      {
+        property: "og:description",
+        content: "Smart pond and farm water-quality monitoring for aquaculture.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", type: "image/png", href: "/__l5e/assets-v1/6bfdaa75-47e9-4a78-b207-9bc76e2def32/acqua-lence-logo.png" },
-      { rel: "apple-touch-icon", href: "/__l5e/assets-v1/6bfdaa75-47e9-4a78-b207-9bc76e2def32/acqua-lence-logo.png" },
+      {
+        rel: "icon",
+        type: "image/png",
+        href: "/__l5e/assets-v1/6bfdaa75-47e9-4a78-b207-9bc76e2def32/acqua-lence-logo.png",
+      },
+      {
+        rel: "apple-touch-icon",
+        href: "/__l5e/assets-v1/6bfdaa75-47e9-4a78-b207-9bc76e2def32/acqua-lence-logo.png",
+      },
     ],
   }),
   shellComponent: RootShell,

@@ -26,11 +26,19 @@ type AuthCtx = {
   isAdmin: boolean;
   isTechnician: boolean;
   isFarmer: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null; needsVerification?: boolean }>;
+  signIn: (
+    email: string,
+    password: string,
+  ) => Promise<{ error: string | null; needsVerification?: boolean }>;
   signInWithOtp: (identifier: string, otp: string) => Promise<{ error: string | null }>;
   sendOtp: (identifier: string) => Promise<{ error: string | null }>;
   sendResetLink: (identifier: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, fullName: string, role?: AppRole) => Promise<{ error: string | null }>;
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string,
+    role?: AppRole,
+  ) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
 };
@@ -38,10 +46,7 @@ type AuthCtx = {
 const Ctx = createContext<AuthCtx | null>(null);
 
 /* ─── mock accounts ─── */
-const MOCK_USERS: Record<
-  string,
-  { password: string; role: AppRole; profile: Profile }
-> = {
+const MOCK_USERS: Record<string, { password: string; role: AppRole; profile: Profile }> = {
   "farmer@acqualence.com": {
     password: "farmer123",
     role: "farmer",
@@ -104,12 +109,12 @@ function setMockSession(data: { user: AuthUser; profile: Profile; roles: AppRole
 
 /* ─── validation helpers ─── */
 export function isBangladeshPhone(value: string): boolean {
-  const cleaned = value.replace(/[\s\-]/g, "");
+  const cleaned = value.replace(/[\s-]/g, "");
   return /^\+8801[3-9]\d{8}$/.test(cleaned) || /^01[3-9]\d{8}$/.test(cleaned);
 }
 
 export function normalizeBangladeshPhone(value: string): string {
-  const cleaned = value.replace(/[\s\-]/g, "");
+  const cleaned = value.replace(/[\s-]/g, "");
   if (/^01[3-9]\d{8}$/.test(cleaned)) return "+880" + cleaned.slice(1);
   return cleaned;
 }
@@ -211,7 +216,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       avatar_url: null,
       created_at: new Date().toISOString(),
     };
-    const u: AuthUser = { id: newProfile.id, email: idType === "email" ? key : "", phone: newProfile.phone };
+    const u: AuthUser = {
+      id: newProfile.id,
+      email: idType === "email" ? key : "",
+      phone: newProfile.phone,
+    };
     const session = { user: u, profile: newProfile, roles: ["farmer" as AppRole] };
     setMockSession(session);
     setUser(u);

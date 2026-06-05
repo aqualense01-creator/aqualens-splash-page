@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
 type Lang = "en" | "bn";
 
@@ -91,7 +99,8 @@ const dict: Record<Lang, Record<string, string>> = {
     "auth.resetSent": "রিসেট নির্দেশাবলী পাঠানো হয়েছে। আপনার ফোন বা ইমেইল চেক করুন।",
     "auth.backToLogin": "লগইনে ফিরে যান",
     "auth.enterIdentifier": "আপনার ইমেইল বা ফোন নম্বর দিন",
-    "auth.resetSubtitle": "আমরা একটি ওটিপি বা রিসেট নির্দেশাবলী পাঠাবো যাতে আপনি আবার অ্যাক্সেস পান।",
+    "auth.resetSubtitle":
+      "আমরা একটি ওটিপি বা রিসেট নির্দেশাবলী পাঠাবো যাতে আপনি আবার অ্যাক্সেস পান।",
     "dashboard.title": "খামার ওভারভিউ",
     "dashboard.subtitle": "আপনার পুকুর, ডিভাইস ও ঝুঁকির একটি শান্ত দৃশ্য।",
     "dashboard.totalPonds": "মোট পুকুর",

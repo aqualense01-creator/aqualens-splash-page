@@ -22,7 +22,7 @@ export default function ProductAttachments() {
     const { data, error } = await insforge.database
       .from("products")
       .select(
-        "id, sku, name, category, tagline, price_cents, attachment_url, attachment_key, attachment_name, attachment_uploaded_at"
+        "id, sku, name, category, tagline, price_cents, attachment_url, attachment_key, attachment_name, attachment_uploaded_at",
       )
       .order("price_cents", { ascending: false });
     if (error) setError(error.message ?? "Failed to load products");
@@ -45,9 +45,7 @@ export default function ProductAttachments() {
       const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const key = `${product.id}/${Date.now()}-${safe}`;
 
-      const { data: up, error: upErr } = await insforge.storage
-        .from(BUCKET)
-        .upload(key, file);
+      const { data: up, error: upErr } = await insforge.storage.from(BUCKET).upload(key, file);
       if (upErr || !up) throw new Error(upErr?.message ?? "Upload failed");
 
       const { error: dbErr } = await insforge.database
@@ -71,8 +69,8 @@ export default function ProductAttachments() {
                 attachment_name: file.name,
                 attachment_uploaded_at: new Date().toISOString(),
               }
-            : p
-        )
+            : p,
+        ),
       );
     } catch (e: any) {
       setError(e.message ?? "Something went wrong");
@@ -84,15 +82,13 @@ export default function ProductAttachments() {
   return (
     <section className="container mx-auto px-4 py-16 md:py-24">
       <header className="mb-10 max-w-2xl">
-        <p className="text-xs uppercase tracking-[0.2em] text-primary mb-3">
-          Product files
-        </p>
+        <p className="text-xs uppercase tracking-[0.2em] text-primary mb-3">Product files</p>
         <h2 className="text-3xl md:text-4xl font-display font-semibold tracking-tight">
           Attach datasheets & photos
         </h2>
         <p className="mt-3 text-muted-foreground">
-          Upload a spec sheet, calibration certificate, or product image. Files
-          are stored in InsForge Storage and linked to the product record.
+          Upload a spec sheet, calibration certificate, or product image. Files are stored in
+          InsForge Storage and linked to the product record.
         </p>
       </header>
 
@@ -119,11 +115,7 @@ export default function ProductAttachments() {
                     {p.category} · {p.sku}
                   </p>
                   <h3 className="mt-1 text-lg font-semibold">{p.name}</h3>
-                  {p.tagline && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {p.tagline}
-                    </p>
-                  )}
+                  {p.tagline && <p className="text-sm text-muted-foreground mt-1">{p.tagline}</p>}
                 </div>
                 <div className="text-right text-sm font-medium">
                   ${(p.price_cents / 100).toFixed(2)}
@@ -154,19 +146,12 @@ export default function ProductAttachments() {
                       <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
                       Attached
                       {p.attachment_uploaded_at && (
-                        <span>
-                          ·{" "}
-                          {new Date(
-                            p.attachment_uploaded_at
-                          ).toLocaleString()}
-                        </span>
+                        <span>· {new Date(p.attachment_uploaded_at).toLocaleString()}</span>
                       )}
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
-                    No file attached yet.
-                  </p>
+                  <p className="text-sm text-muted-foreground">No file attached yet.</p>
                 )}
 
                 <div className="mt-3">
