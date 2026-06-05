@@ -8,10 +8,23 @@ export type MockPond = {
   do_mg_l: number;
   ph: number;
   temp_c: number;
+  turbidity_ntu: number;
+  salinity_ppt: number | null;
+  ammonia_mg_l: number | null;
+  battery_pct: number;
+  signal_pct: number;
+  farm_id: string;
   last_updated: string; // ISO
   device_status: DeviceStatus;
   trend: number[]; // last 12 DO readings
 };
+
+export type MockFarm = { id: string; name: string };
+
+export const MOCK_FARMS: MockFarm[] = [
+  { id: "f1", name: "Sundarban Farm" },
+  { id: "f2", name: "Khulna East Farm" },
+];
 
 export type MockDevice = {
   id: string;
