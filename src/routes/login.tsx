@@ -53,7 +53,7 @@ function LoginPage() {
     }
   }
 
-  /* Request OTP */
+  /* Request OTP — navigate to dedicated verify page */
   async function onRequestOtp(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
@@ -63,11 +63,8 @@ function LoginPage() {
     setBusy(true);
     const { error } = await sendOtp(identifier);
     setBusy(false);
-    if (error) setErr(error);
-    else {
-      setMode("otp-verify");
-      setInfo("A 6-digit code has been sent. Use 123456 for demo accounts.");
-    }
+    if (error) { setErr(error); return; }
+    navigate({ to: "/verify-otp", search: { identifier } });
   }
 
   /* Verify OTP */
