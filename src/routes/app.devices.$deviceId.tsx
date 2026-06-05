@@ -299,9 +299,9 @@ function DeviceDetailPage() {
                 <Row
                   label="Operating since"
                   value={
-                    d.created_at ? new Date(d.created_at).toLocaleDateString() : "—"
-                  }
-                />
+                    (d as { created_at?: string }).created_at
+                      ? new Date((d as { created_at?: string }).created_at!).toLocaleDateString()
+                      : "—"
               </Card>
             </div>
           </div>
