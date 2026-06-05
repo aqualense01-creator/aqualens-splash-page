@@ -22,8 +22,9 @@ const items: Item[] = [
 
 export function Stats() {
   return (
-    <section className="bg-surface py-20">
-      <div className="mx-auto max-w-7xl px-6">
+    <section className="bg-surface py-16 sm:py-20">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+
         <Reveal>
           <div className="flex flex-wrap items-end justify-between gap-4">
             <h2 className="font-display text-2xl font-bold text-foreground md:text-3xl">

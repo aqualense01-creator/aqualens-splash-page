@@ -13,19 +13,19 @@ const miniData = Array.from({ length: 14 }, (_, i) => ({ x: i, y: 50 + Math.sin(
 
 export function Platform() {
   return (
-    <section className="relative overflow-hidden bg-navy py-24 text-navy-foreground">
+    <section className="relative overflow-hidden bg-navy py-20 text-navy-foreground sm:py-24">
       <div className="absolute inset-0 bg-navy-grid opacity-50" />
       <div className="absolute -left-40 top-0 h-96 w-96 rounded-full bg-primary/20 blur-3xl" />
-      <div className="relative mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-2 lg:items-center">
+      <div className="relative mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:items-center">
         <div>
           <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium uppercase tracking-wider text-primary backdrop-blur">
             Powerful Software Platform
           </span>
-          <h2 className="mt-4 font-display text-4xl font-bold text-balance md:text-5xl">Data That Drives Growth</h2>
+          <h2 className="mt-4 font-display text-3xl font-bold text-balance sm:text-4xl md:text-5xl">Data That Drives Growth</h2>
           <p className="mt-4 max-w-md text-sm text-white/70">
             Our cloud platform helps you visualize data, set alerts, analyze trends and make smarter decisions to improve productivity.
           </p>
-          <div className="mt-10 grid grid-cols-2 gap-6 sm:grid-cols-5">
+          <div className="mt-8 grid grid-cols-2 gap-5 sm:grid-cols-3 md:mt-10 lg:grid-cols-5">
             {features.map(({ icon: Icon, title, sub }) => (
               <div key={title}>
                 <Icon className="h-5 w-5 text-primary" />
@@ -35,6 +35,7 @@ export function Platform() {
             ))}
           </div>
         </div>
+
         <div className="relative flex items-end justify-end gap-4">
           {/* Laptop */}
           <div className="relative w-full max-w-[480px]">

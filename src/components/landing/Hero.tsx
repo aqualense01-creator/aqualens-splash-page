@@ -30,7 +30,7 @@ export function Hero() {
       <GradientMesh />
 
 
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-6 pt-20 pb-28 md:grid-cols-12 md:pt-28 md:pb-40">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-4 pt-16 pb-20 sm:px-6 sm:pt-20 sm:pb-28 md:grid-cols-12 md:pt-28 md:pb-40">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -40,13 +40,12 @@ export function Hero() {
           <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
             <Sparkles className="h-3.5 w-3.5" /> New · AI Insight Engine v2
           </span>
-          <h1 className="mt-5 font-display text-5xl font-bold leading-[1.02] text-foreground text-balance md:text-7xl">
+          <h1 className="mt-5 font-display text-4xl font-bold leading-[1.05] text-foreground text-balance sm:text-5xl md:text-6xl lg:text-7xl">
             Smarter Water.{" "}
-            <span className="bg-gradient-to-r from-primary to-[#0ea5b7] bg-clip-text text-transparent">
-              Stronger Harvests.
-            </span>
+            <span className="text-shimmer">Stronger Harvests.</span>
           </h1>
-          <p className="mt-6 max-w-xl text-base text-muted-foreground md:text-lg">
+          <p className="mt-5 max-w-xl text-sm text-muted-foreground sm:text-base md:mt-6 md:text-lg">
+
             AcquaLence is an all-in-one smart aquaculture solution that monitors water quality in real
             time, helps you make better decisions, and maximizes your yield.
           </p>
@@ -94,7 +93,8 @@ export function Hero() {
 
       {/* trust strip */}
       <div className="border-y border-border/60 bg-background/70 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center gap-8 px-6 py-5">
+        <div className="mx-auto flex max-w-7xl items-center gap-6 px-4 py-4 sm:gap-8 sm:px-6 sm:py-5">
+
           <span className="hidden shrink-0 text-xs font-medium uppercase tracking-wider text-muted-foreground md:inline">
             Trusted by aquaculture leaders
           </span>

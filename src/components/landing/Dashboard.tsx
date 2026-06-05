@@ -44,12 +44,13 @@ const alerts = [
 
 export function Dashboard() {
   return (
-    <section className="relative overflow-hidden bg-surface py-24">
+    <section className="relative overflow-hidden bg-surface py-20 sm:py-24">
       <div className="absolute -left-32 top-1/2 -z-10 h-72 w-72 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl" />
-      <div className="mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-[340px_1fr] lg:items-center">
+      <div className="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-[340px_1fr] lg:items-center">
         <Reveal>
           <p className="text-xs font-semibold uppercase tracking-wider text-primary">Real-time Monitoring</p>
-          <h2 className="mt-3 font-display text-4xl font-bold text-foreground text-balance md:text-5xl">
+          <h2 className="mt-3 font-display text-3xl font-bold text-foreground text-balance sm:text-4xl md:text-5xl">
+
             Every Parameter.
             <br />
             Every Moment.
@@ -69,9 +70,9 @@ export function Dashboard() {
           </a>
         </Reveal>
 
-        <Reveal delay={0.1} className="overflow-hidden rounded-2xl border border-border bg-card shadow-[0_40px_100px_-30px_rgba(15,44,68,0.35)]">
-          <div className="grid grid-cols-[180px_1fr]">
-            <aside className="border-r border-border bg-surface p-4">
+        <Reveal delay={0.1} className="conic-border overflow-hidden rounded-2xl border border-border bg-card shadow-[0_40px_100px_-30px_rgba(15,44,68,0.35)]">
+          <div className="grid md:grid-cols-[180px_1fr]">
+            <aside className="hidden border-r border-border bg-surface p-4 md:block">
               <Logo />
               <ul className="mt-6 space-y-1">
                 {sidebar.map(({ icon: Icon, label, active }) => (
@@ -86,12 +87,12 @@ export function Dashboard() {
                 ))}
               </ul>
             </aside>
-            <div className="p-5">
+            <div className="p-4 sm:p-5">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold">Dashboard</h3>
                 <span className="text-xs text-muted-foreground">Pond Group A</span>
               </div>
-              <div className="mt-4 grid grid-cols-5 gap-2">
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
                 {metrics.map((m) => (
                   <div key={m.label} className="rounded-md border border-border/70 p-2">
                     <p className="truncate text-[10px] text-muted-foreground">{m.label}</p>
@@ -100,7 +101,7 @@ export function Dashboard() {
                   </div>
                 ))}
               </div>
-              <div className="mt-4 grid grid-cols-[1fr_180px] gap-3">
+              <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_180px]">
                 <div className="rounded-md border border-border/70 p-3">
                   <p className="text-xs font-medium">Water Quality Trend</p>
                   <div className="mt-2 h-40">
@@ -136,6 +137,7 @@ export function Dashboard() {
             </div>
           </div>
         </Reveal>
+
       </div>
     </section>
   );

@@ -98,3 +98,63 @@
   mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
 }
 
+/* Animated gradient text shimmer */
+@keyframes text-shimmer {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+.text-shimmer {
+  background: linear-gradient(
+    90deg,
+    oklch(0.66 0.11 210),
+    oklch(0.78 0.14 195),
+    oklch(0.50 0.14 250),
+    oklch(0.66 0.11 210)
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: text-shimmer 5s linear infinite;
+}
+
+/* Conic rotating gradient border */
+@keyframes conic-spin {
+  to { transform: rotate(1turn); }
+}
+.conic-border {
+  position: relative;
+  isolation: isolate;
+}
+.conic-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    oklch(0.66 0.11 210 / 0.9) 60deg,
+    transparent 120deg,
+    transparent 240deg,
+    oklch(0.72 0.13 195 / 0.7) 300deg,
+    transparent 360deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  animation: conic-spin 6s linear infinite;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Scale-down for desktop mockup on small screens */
+.scale-mock {
+  transform-origin: top left;
+}
+@media (max-width: 640px) {
+  .scale-mock { transform: scale(0.78); width: 128%; }
+}
+
+
