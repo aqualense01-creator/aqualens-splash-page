@@ -97,7 +97,14 @@ type DeviceExtras = {
   flagged?: boolean | null;
   flag_reason?: string | null;
 };
-type DeviceRow = Device & DeviceExtras;
+type DeviceRow = Device &
+  DeviceExtras & {
+    customerName?: string | null;
+    farmName?: string | null;
+    pondName?: string | null;
+    district?: string | null;
+    calStatus?: "ok" | "due" | "overdue" | "unknown";
+  };
 
 type FilterState = {
   q: string;
