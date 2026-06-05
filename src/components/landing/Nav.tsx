@@ -4,7 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const links = ["Product", "Solutions", "Platform", "Shop", "Resources", "Support"];
+const links: { label: string; href: string }[] = [
+  { label: "Product", href: "#" },
+  { label: "Device", href: "#device" },
+  { label: "Platform", href: "#" },
+  { label: "Shop", href: "#" },
+  { label: "Support", href: "#" },
+];
 
 export function Nav() {
   const [open, setOpen] = useState(false);
