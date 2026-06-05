@@ -1,508 +1,203 @@
-import {
-  ArrowUpRight,
-  ArrowDownRight,
-  LayoutDashboard,
-  Radio,
-  Anchor,
-  Bell,
-  FileText,
-  BarChart3,
-  Cpu,
-  Settings,
-  CheckCircle2,
-  ArrowRight,
-  AlertCircle,
-  AlertTriangle,
-  Info,
-  CheckCheck,
-  ChevronDown,
-} from "lucide-react";
-import { motion, useInView, useReducedMotion } from "framer-motion";
-import { useMemo, useRef } from "react";
-import { Logo } from "./Logo";
+import { ChevronDown, Activity, AlertCircle, Wifi, BatteryFull, ListChecks } from "lucide-react";
+import { motion } from "framer-motion";
 import { Reveal } from "./Reveal";
-import { CountUp } from "./CountUp";
+import { farms, ponds, statusMeta, trend12h } from "@/lib/mock-pond";
 
-/* ---------- data ---------- */
-
-const metrics = [
-  { label: "Dissolved Oxygen", value: 6.42, unit: "mg/L", delta: +4.2, tone: "primary" as const },
-  { label: "pH Level", value: 7.35, unit: "pH", delta: +1.1, tone: "neutral" as const },
-  { label: "Temperature", value: 28.6, unit: "°C", delta: -0.4, tone: "warn" as const },
-  { label: "Turbidity", value: 12.4, unit: "NTU", delta: -3.6, tone: "danger" as const },
-  { label: "Salinity", value: 15.2, unit: "ppt", delta: +2.0, tone: "ok" as const },
-];
-
-const sidebar = [
-  { icon: LayoutDashboard, label: "Overview", active: true },
-  { icon: Radio, label: "Sensors" },
-  { icon: Anchor, label: "Buoys" },
-  { icon: Bell, label: "Alerts" },
-  { icon: FileText, label: "Reports" },
-  { icon: BarChart3, label: "Analytics" },
-  { icon: Cpu, label: "Devices" },
-  { icon: Settings, label: "Settings" },
-];
-
-const alerts = [
-  { icon: AlertCircle, color: "text-rose-500", bg: "bg-rose-500/10", title: "High Turbidity", meta: "18.7 NTU", time: "12 min" },
-  { icon: AlertTriangle, color: "text-amber-500", bg: "bg-amber-500/10", title: "pH Fluctuation", meta: "7.9 pH", time: "25 min" },
-  { icon: Info, color: "text-sky-500", bg: "bg-sky-500/10", title: "DO Level Normal", meta: "6.42 mg/L", time: "35 min" },
-  { icon: Info, color: "text-sky-500", bg: "bg-sky-500/10", title: "Temperature Stable", meta: "28.6 °C", time: "47 min" },
-  { icon: CheckCheck, color: "text-emerald-500", bg: "bg-emerald-500/10", title: "System Online", meta: "All sensors", time: "1 hr" },
-];
-
-const bullets = [
-  "Sub-minute telemetry, no polling delays",
-  "Threshold + anomaly alerts to SMS, app, email",
-  "Multi-pond, multi-site rollups",
-  "Exportable CSV & API for your stack",
-];
-
-const series = [
-  { name: "Temperature", color: "#f59e0b", values: [29, 28, 30, 32, 31, 30, 29, 28, 29, 30, 29, 28, 29], yScale: 0.55 },
-  { name: "pH",          color: "#14b8a6", values: [14, 15, 14, 13, 16, 17, 15, 13, 12, 13, 14, 13, 14], yScale: 0.32 },
-  { name: "DO",          color: "#3b82f6", values: [11, 12, 11, 12, 11, 10, 11, 12, 12, 11, 11, 12, 11], yScale: 0.28 },
-  { name: "Salinity",    color: "#06b6d4", values: [15, 14, 13, 12, 11, 12, 13, 14, 15, 13, 12, 13, 14], yScale: 0.36 },
-  { name: "Turbidity",   color: "#ef4444", values: [7, 8, 6, 5, 4, 5, 6, 7, 8, 7, 6, 7, 8], yScale: 0.18 },
-];
-
-const HOURS = ["06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00"];
-
-/* ---------- chart ---------- */
-
-function smoothPath(points: { x: number; y: number }[]) {
-  if (points.length === 0) return "";
-  let d = `M ${points[0].x} ${points[0].y}`;
-  for (let i = 1; i < points.length; i++) {
-    const p0 = points[i - 1];
-    const p1 = points[i];
-    const cx = (p0.x + p1.x) / 2;
-    d += ` C ${cx} ${p0.y}, ${cx} ${p1.y}, ${p1.x} ${p1.y}`;
-  }
-  return d;
-}
-
-function TrendChart() {
-  const ref = useRef<SVGSVGElement>(null);
-  const inView = useInView(ref, { once: true, amount: 0.4 });
-  const reduced = useReducedMotion();
-
-  const W = 720;
-  const H = 240;
-  const padX = 20;
-  const padY = 16;
-  const maxY = 36;
-
-  const paths = useMemo(
-    () =>
-      series.map((s) => {
-        const pts = s.values.map((v, i) => ({
-          x: padX + (i / (s.values.length - 1)) * (W - padX * 2),
-          y: padY + (1 - v / maxY) * (H - padY * 2),
-        }));
-        return { ...s, d: smoothPath(pts), pts };
-      }),
-    []
-  );
-
-  return (
-    <svg ref={ref} viewBox={`0 0 ${W} ${H}`} className="h-full w-full" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="chart-fade" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor="oklch(0.66 0.11 210)" stopOpacity="0.18" />
-          <stop offset="100%" stopColor="oklch(0.66 0.11 210)" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-
-      {/* grid */}
-      {[0, 1, 2, 3, 4].map((i) => {
-        const y = padY + (i / 4) * (H - padY * 2);
-        return (
-          <line
-            key={i}
-            x1={padX}
-            x2={W - padX}
-            y1={y}
-            y2={y}
-            stroke="currentColor"
-            strokeOpacity={0.06}
-            strokeDasharray="3 4"
-          />
-        );
-      })}
-
-      {/* lines */}
-      {paths.map((p, idx) => (
-        <motion.path
-          key={p.name}
-          d={p.d}
-          fill="none"
-          stroke={p.color}
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          initial={reduced ? false : { pathLength: 0, opacity: 0 }}
-          animate={inView || reduced ? { pathLength: 1, opacity: 1 } : {}}
-          transition={{ duration: 1.6, delay: 0.15 * idx, ease: [0.22, 1, 0.36, 1] }}
-        />
-      ))}
-
-      {/* travelling pulse on the primary (DO) line */}
-      {!reduced &&
-        (() => {
-          const p = paths.find((x) => x.name === "DO");
-          if (!p) return null;
-          return (
-            <motion.circle
-              r={4}
-              fill="#3b82f6"
-              stroke="white"
-              strokeWidth={2}
-              initial={false}
-              animate={
-                inView
-                  ? {
-                      cx: p.pts.map((pt) => pt.x),
-                      cy: p.pts.map((pt) => pt.y),
-                    }
-                  : {}
-              }
-              transition={{ duration: 6, repeat: Infinity, ease: "linear", delay: 1.6 }}
-            />
-          );
-        })()}
-    </svg>
-  );
-}
-
-/* ---------- mini sparkline for metric cards ---------- */
-
-function Spark({ data, color }: { data: number[]; color: string }) {
-  const W = 80;
-  const H = 24;
+function TrendChart({ data }: { data: number[] }) {
+  const W = 480, H = 140;
+  const padX = 8, padY = 12;
   const min = Math.min(...data);
   const max = Math.max(...data);
   const pts = data.map((v, i) => ({
-    x: (i / (data.length - 1)) * W,
-    y: H - ((v - min) / (max - min || 1)) * H,
+    x: padX + (i / (data.length - 1)) * (W - padX * 2),
+    y: padY + (1 - (v - min) / (max - min || 1)) * (H - padY * 2),
   }));
-  const d = smoothPath(pts);
-  const ref = useRef<SVGSVGElement>(null);
-  const inView = useInView(ref, { once: true, amount: 0.5 });
-  const reduced = useReducedMotion();
+  const d = pts.map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`)).join(" ");
+  // threshold line at safe-DO=4.0
+  const safeY = padY + (1 - (4.0 - min) / (max - min || 1)) * (H - padY * 2);
   return (
-    <svg ref={ref} viewBox={`0 0 ${W} ${H}`} className="h-6 w-20" preserveAspectRatio="none">
-      <motion.path
-        d={d}
-        fill="none"
-        stroke={color}
-        strokeWidth={1.5}
-        strokeLinecap="round"
-        initial={reduced ? false : { pathLength: 0 }}
-        animate={inView || reduced ? { pathLength: 1 } : {}}
-        transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
-      />
+    <svg viewBox={`0 0 ${W} ${H}`} className="h-32 w-full" preserveAspectRatio="none" aria-hidden>
+      <defs>
+        <linearGradient id="dash-fade" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.25" />
+          <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <line x1={padX} x2={W - padX} y1={safeY} y2={safeY} stroke="var(--status-critical)" strokeOpacity={0.5} strokeDasharray="4 4" strokeWidth={1} />
+      <path d={`${d} L ${W - padX} ${H} L ${padX} ${H} Z`} fill="url(#dash-fade)" />
+      <path d={d} fill="none" stroke="var(--primary)" strokeWidth={2.5} strokeLinecap="round" />
+      {pts.map((p, i) => (
+        <circle key={i} cx={p.x} cy={p.y} r={i === pts.length - 1 ? 3.5 : 0} fill="var(--status-critical)" />
+      ))}
     </svg>
   );
 }
 
-/* ---------- section ---------- */
-
 export function Dashboard() {
   return (
-    <section className="relative overflow-hidden bg-surface py-20 sm:py-28">
-      {/* ambient */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10"
-        style={{
-          background:
-            "radial-gradient(800px 500px at 90% 0%, color-mix(in oklab, var(--primary) 10%, transparent), transparent 60%), radial-gradient(700px 500px at -10% 100%, color-mix(in oklab, var(--navy) 8%, transparent), transparent 60%)",
-        }}
-      />
-
+    <section className="relative bg-surface py-20 sm:py-24" aria-labelledby="dashboard-heading">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        {/* header */}
-        <div className="grid items-end gap-10 lg:grid-cols-12">
-          <Reveal className="lg:col-span-7">
-            <div className="inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-              <span className="h-px w-8 bg-primary/60" />
-              Real-time Monitoring
-            </div>
-            <h2 className="mt-5 font-display text-3xl font-bold leading-[1.05] tracking-tight text-foreground text-balance sm:text-5xl md:text-[3.5rem]">
-              The control room{" "}
-              <span className="italic font-normal text-primary" style={{ fontFamily: "'Instrument Serif', 'Times New Roman', serif" }}>
-                for your water.
+        <Reveal className="mx-auto max-w-2xl text-center">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">Live Dashboard</p>
+          <h2 id="dashboard-heading" className="mt-3 font-display text-3xl font-bold text-foreground text-balance sm:text-4xl lg:text-5xl">
+            One calm view of every pond, every parameter.
+          </h2>
+          <p className="mt-4 text-[15px] text-muted-foreground">
+            The same dashboard farmers use every day — readings, alerts and recommended actions
+            without the noise.
+          </p>
+        </Reveal>
+
+        <Reveal delay={0.15} className="mt-10">
+          <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-[0_60px_120px_-40px_rgba(15,44,68,0.30)]">
+            {/* chrome */}
+            <div className="flex items-center justify-between border-b border-border/70 bg-surface/60 px-4 py-2.5">
+              <div className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-rose-400/70" />
+                <span className="h-2.5 w-2.5 rounded-full bg-amber-400/70" />
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/70" />
+              </div>
+              <div className="hidden rounded-md bg-background px-3 py-1 font-mono text-[11px] text-muted-foreground sm:block">
+                app.acqualence.io/overview
+              </div>
+              <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-status-good" /> Live
               </span>
-            </h2>
-            <p className="mt-5 max-w-xl text-base text-muted-foreground md:text-[17px]">
-              Every parameter, every pond, every minute — streamed to one calm interface.
-              Spot a problem in seconds, not on the next morning round.
-            </p>
-          </Reveal>
+            </div>
 
-          <Reveal delay={0.15} className="lg:col-span-5">
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {bullets.map((b) => (
-                <li
-                  key={b}
-                  className="flex items-start gap-2 rounded-xl border border-border/70 bg-background/60 p-3 text-[13px] text-foreground backdrop-blur"
-                >
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  <span className="leading-snug">{b}</span>
-                </li>
-              ))}
-            </ul>
-            <a href="#" className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-primary">
-              Tour the dashboard <ArrowRight className="h-4 w-4" />
-            </a>
-          </Reveal>
-        </div>
-
-        {/* dashboard mock */}
-        <Reveal delay={0.2} className="mt-10 sm:mt-12">
-          <div className="relative">
-            {/* outer glow */}
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 -z-10 rounded-[40px] bg-gradient-to-b from-primary/10 via-transparent to-transparent blur-2xl"
-            />
-
-            <div className="overflow-hidden rounded-[20px] border border-border/70 bg-background shadow-[0_60px_120px_-40px_rgba(15,44,68,0.35)]">
-              {/* browser chrome */}
-              <div className="flex items-center justify-between border-b border-border/60 bg-surface/70 px-4 py-2.5">
-                <div className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-rose-400/70" />
-                  <span className="h-2.5 w-2.5 rounded-full bg-amber-400/70" />
-                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/70" />
-                </div>
-                <div className="hidden rounded-md bg-background px-3 py-1 font-mono text-[11px] text-muted-foreground sm:block">
-                  app.acqualence.io/overview
-                </div>
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Live</span>
+            <div className="p-4 sm:p-6">
+              {/* farm selector */}
+              <div className="flex flex-wrap items-center gap-2">
+                {farms.map((f, i) => (
+                  <button
+                    key={f}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                      i === 0
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card text-foreground hover:bg-accent"
+                    }`}
+                  >
+                    {f}
+                    {i === 0 && <ChevronDown className="h-3 w-3" />}
+                  </button>
+                ))}
+                <div className="ml-auto text-[11px] text-muted-foreground">Updated 4 seconds ago</div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-[200px_1fr]">
-                {/* sidebar */}
-                <aside className="hidden border-r border-border/60 bg-surface/50 p-4 md:block">
-                  <div className="px-1">
-                    <Logo />
-                  </div>
-                  <ul className="mt-7 space-y-0.5">
-                    {sidebar.map(({ icon: Icon, label, active }) => (
-                      <li
-                        key={label}
-                        className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[12.5px] transition-colors ${
-                          active
-                            ? "bg-primary/10 font-medium text-primary"
-                            : "text-muted-foreground hover:bg-accent/60"
-                        }`}
-                      >
-                        <Icon className="h-3.5 w-3.5" /> {label}
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="mt-8 rounded-lg border border-border/70 bg-background/80 p-3">
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Plan</p>
-                    <p className="mt-0.5 font-display text-sm font-semibold text-foreground">Fleet · 12 buoys</p>
-                  </div>
-                </aside>
-
-                {/* main */}
-                <div className="p-4 sm:p-6">
-                  {/* header */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-display text-lg font-semibold text-foreground">Overview</h3>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">Updated 4 seconds ago</p>
-                    </div>
-                    <div className="flex items-center gap-2 rounded-full border border-border/70 bg-surface px-3 py-1.5 text-[12px] text-foreground">
-                      <span className="grid h-5 w-5 place-items-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">
-                        Ω
-                      </span>
-                      Farm Omega
-                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                    </div>
-                  </div>
-
-                  {/* metric cards */}
-                  <motion.div
-                    initial="hidden"
-                    whileInView="show"
-                    viewport={{ once: true, amount: 0.3 }}
-                    variants={{
-                      hidden: {},
-                      show: { transition: { staggerChildren: 0.07 } },
-                    }}
-                    className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
-                  >
-                    {metrics.map((m) => {
-                      const up = m.delta >= 0;
-                      const sparkColor =
-                        m.tone === "primary"
-                          ? "#3b82f6"
-                          : m.tone === "warn"
-                          ? "#f59e0b"
-                          : m.tone === "danger"
-                          ? "#ef4444"
-                          : m.tone === "ok"
-                          ? "#06b6d4"
-                          : "#14b8a6";
-                      const sparkData = Array.from({ length: 14 }, () => Math.random() * 10 + 4);
+              {/* layout */}
+              <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-12">
+                {/* pond cards */}
+                <div className="lg:col-span-7">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    {ponds.map((p) => {
+                      const m = statusMeta[p.status];
                       return (
-                        <motion.div
-                          key={m.label}
-                          variants={{
-                            hidden: { opacity: 0, y: 14 },
-                            show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } },
-                          }}
-                          className="group relative overflow-hidden rounded-xl border border-border/70 bg-card p-4 transition-shadow hover:shadow-soft"
+                        <motion.article
+                          key={p.id}
+                          whileHover={{ y: -2 }}
+                          className={`rounded-xl border bg-card p-4 ring-1 ${m.ring}`}
+                          style={{ borderColor: `color-mix(in oklab, ${m.color} 30%, var(--border))` }}
                         >
-                          <div className="flex items-start justify-between">
-                            <p className="text-[11px] font-medium text-muted-foreground">{m.label}</p>
-                            <button className="grid h-4 w-4 place-items-center rounded-full text-muted-foreground/60">
-                              <Info className="h-3 w-3" />
-                            </button>
-                          </div>
-                          <div className="mt-3 flex items-baseline gap-1.5">
-                            <CountUp
-                              to={m.value}
-                              decimals={m.value % 1 === 0 ? 0 : 2}
-                              className="font-display text-[28px] font-bold leading-none tracking-tight text-foreground tabular-nums"
-                            />
-                          </div>
-                          <p className="mt-1 text-[11px] text-muted-foreground">{m.unit}</p>
-
-                          <div className="mt-3 flex items-end justify-between">
-                            <span
-                              className={`inline-flex items-center gap-0.5 text-[11px] font-medium ${
-                                up ? "text-emerald-600" : "text-rose-500"
-                              }`}
-                            >
-                              {up ? (
-                                <ArrowUpRight className="h-3 w-3" />
-                              ) : (
-                                <ArrowDownRight className="h-3 w-3" />
-                              )}
-                              {Math.abs(m.delta).toFixed(1)}%
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-[12px] font-semibold text-foreground">{p.name}</h4>
+                            <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${m.bg} ${m.text}`}>
+                              {m.label}
                             </span>
-                            <Spark data={sparkData} color={sparkColor} />
                           </div>
-                        </motion.div>
+                          <div className="mt-3 grid grid-cols-3 gap-1 text-center">
+                            <div>
+                              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">DO</div>
+                              <div className={`font-display text-base font-bold tabular-nums ${p.status === "critical" ? "text-status-critical" : "text-foreground"}`}>{p.do}</div>
+                            </div>
+                            <div>
+                              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">pH</div>
+                              <div className={`font-display text-base font-bold tabular-nums ${p.status === "warning" ? "text-status-warning" : "text-foreground"}`}>{p.ph}</div>
+                            </div>
+                            <div>
+                              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">°C</div>
+                              <div className="font-display text-base font-bold tabular-nums text-foreground">{p.temp}</div>
+                            </div>
+                          </div>
+                          {p.alert && (
+                            <p className="mt-3 line-clamp-2 text-[10.5px] text-muted-foreground">
+                              <AlertCircle className={`mr-1 inline h-3 w-3 ${m.text}`} />
+                              {p.alert}
+                            </p>
+                          )}
+                        </motion.article>
                       );
                     })}
-                  </motion.div>
+                  </div>
 
-                  {/* chart + alerts */}
-                  <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_280px]">
-                    {/* chart */}
-                    <div className="rounded-xl border border-border/70 bg-card p-4">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <h4 className="font-display text-base font-semibold text-foreground">
-                            Water Quality Trend
-                          </h4>
-                          <p className="mt-0.5 inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                            <span className="relative flex h-1.5 w-1.5">
-                              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                            </span>
-                            Streaming · 6h window
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1 rounded-full border border-border/70 bg-surface p-0.5 text-[11px]">
-                          {["1H", "6H", "24H", "7D"].map((p, i) => (
-                            <button
-                              key={p}
-                              className={`rounded-full px-2.5 py-1 ${
-                                i === 1 ? "bg-foreground text-background" : "text-muted-foreground"
-                              }`}
-                            >
-                              {p}
-                            </button>
-                          ))}
-                        </div>
+                  {/* trend */}
+                  <div className="mt-4 rounded-xl border border-border bg-card p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-[13px] font-semibold text-foreground">Pond 2 · DO (12h)</h4>
+                        <p className="text-[11px] text-muted-foreground">Dashed line = safe threshold 4.0 mg/L</p>
                       </div>
+                      <span className="rounded-full bg-status-critical/10 px-2 py-0.5 text-[10px] font-semibold text-status-critical">
+                        Below safe
+                      </span>
+                    </div>
+                    <div className="mt-3"><TrendChart data={trend12h} /></div>
+                  </div>
+                </div>
 
-                      {/* legend */}
-                      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px]">
-                        {series.map((s) => (
-                          <span key={s.name} className="inline-flex items-center gap-1.5 text-muted-foreground">
-                            <span className="h-2 w-2 rounded-full" style={{ background: s.color }} />
-                            {s.name}
-                          </span>
-                        ))}
-                      </div>
-
-                      {/* chart canvas */}
-                      <div className="relative mt-3 h-56 text-foreground">
-                        <TrendChart />
-                        {/* x-axis */}
-                        <div className="mt-1 flex justify-between px-2 text-[10px] text-muted-foreground tabular-nums">
-                          {HOURS.map((h) => (
-                            <span key={h}>{h}</span>
-                          ))}
-                        </div>
+                {/* right rail */}
+                <div className="space-y-3 lg:col-span-5">
+                  <div className="rounded-xl border border-status-critical/30 bg-status-critical/5 p-4">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-status-critical" />
+                      <div>
+                        <p className="text-[12px] font-bold text-foreground">Critical · Pond 2</p>
+                        <p className="mt-0.5 text-[12px] text-muted-foreground">DO 3.1 mg/L — below safe threshold for shrimp.</p>
                       </div>
                     </div>
+                  </div>
 
-                    {/* alerts */}
-                    <div className="rounded-xl border border-border/70 bg-card p-4">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-display text-base font-semibold text-foreground">
-                          Alerts & Activity
-                        </h4>
-                        <a href="#" className="text-[11px] font-medium text-primary">View all</a>
+                  <div className="rounded-xl border border-border bg-primary/5 p-4">
+                    <div className="flex items-start gap-2">
+                      <ListChecks className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                      <div>
+                        <p className="text-[12px] font-bold text-foreground">Recommended action</p>
+                        <p className="mt-0.5 text-[12px] text-muted-foreground">Turn on Pond 2 aerator and recheck in 15 minutes.</p>
+                        <button className="mt-2 rounded-md bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground">
+                          Mark as done
+                        </button>
                       </div>
-                      <motion.ul
-                        initial="hidden"
-                        whileInView="show"
-                        viewport={{ once: true, amount: 0.3 }}
-                        variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08, delayChildren: 0.2 } } }}
-                        className="mt-3 space-y-2"
-                      >
-                        {alerts.map((a) => (
-                          <motion.li
-                            key={a.title}
-                            variants={{
-                              hidden: { opacity: 0, x: 12 },
-                              show: { opacity: 1, x: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
-                            }}
-                            className="flex items-start gap-3 rounded-lg p-2 transition-colors hover:bg-accent/40"
-                          >
-                            <span className={`mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full ${a.bg}`}>
-                              <a.icon className={`h-3.5 w-3.5 ${a.color}`} />
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center justify-between gap-2">
-                                <p className="truncate text-[12px] font-semibold text-foreground">{a.title}</p>
-                                <span className="shrink-0 text-[10px] text-muted-foreground">{a.time}</span>
-                              </div>
-                              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{a.meta}</p>
-                            </div>
-                          </motion.li>
-                        ))}
-                      </motion.ul>
                     </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border bg-card p-4">
+                    <div className="flex items-center gap-2">
+                      <Activity className="h-4 w-4 text-primary" />
+                      <p className="text-[12px] font-bold text-foreground">Device health</p>
+                    </div>
+                    <ul className="mt-2 space-y-1.5 text-[12px]">
+                      <li className="flex items-center justify-between">
+                        <span className="text-foreground">AQ-204</span>
+                        <span className="inline-flex items-center gap-1 text-status-good">
+                          <Wifi className="h-3 w-3" /> online · <BatteryFull className="h-3 w-3" /> 78%
+                        </span>
+                      </li>
+                      <li className="flex items-center justify-between">
+                        <span className="text-foreground">AQ-211</span>
+                        <span className="inline-flex items-center gap-1 text-status-good">
+                          <Wifi className="h-3 w-3" /> online · <BatteryFull className="h-3 w-3" /> 64%
+                        </span>
+                      </li>
+                      <li className="flex items-center justify-between">
+                        <span className="text-foreground">AQ-188</span>
+                        <span className="inline-flex items-center gap-1 text-status-offline">
+                          offline · 14m
+                        </span>
+                      </li>
+                    </ul>
                   </div>
                 </div>
               </div>
             </div>
-
-            {/* floating tag — bottom right */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.6, duration: 0.6 }}
-              className="absolute -bottom-5 right-6 hidden items-center gap-2 rounded-full border border-border/70 bg-background px-4 py-2 text-[11px] font-medium text-foreground shadow-soft md:inline-flex"
-            >
-              <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-500/15 text-emerald-600">
-                <CheckCheck className="h-3 w-3" />
-              </span>
-              All 12 buoys reporting · Latency 1.2s
-            </motion.div>
           </div>
         </Reveal>
       </div>
