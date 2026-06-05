@@ -123,7 +123,7 @@ function SignupPage() {
   async function activate() {
     setErr(null);
     setBusy(true);
-    const { error } = await signUp(email.trim(), password, fullName.trim(), role);
+    const { error } = await signUp(email.trim(), password, fullName.trim(), "farmer");
     setBusy(false);
     if (error) {
       setErr(error);
@@ -224,26 +224,22 @@ function SignupPage() {
                     </div>
 
                     <Field label={isBn ? "আপনার ভূমিকা" : "Your role"} helper={isBn ? "একটি নির্বাচন করুন" : "Choose what best describes you"}>
-                      <RadioGroup value={role} onValueChange={(v) => setRole(v as AppRole)} className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-3">
                         <RoleCard
-                          value="farmer"
-                          checked={role === "farmer"}
+                          checked={roleKind === "farmer"}
+                          onSelect={() => setRoleKind("farmer")}
                           icon={<Tractor className="h-5 w-5" />}
                           title={isBn ? "কৃষক" : "Farmer"}
                           desc={isBn ? "নিজে পুকুর চালান" : "I run my own ponds"}
                         />
                         <RoleCard
-                          value="farmer"
-                          checked={false}
-                          // Farm manager still maps to farmer role in mock
+                          checked={roleKind === "manager"}
+                          onSelect={() => setRoleKind("manager")}
                           icon={<User className="h-5 w-5" />}
                           title={isBn ? "ফার্ম ম্যানেজার" : "Farm Manager"}
                           desc={isBn ? "অনেকের পুকুর দেখাশোনা করি" : "I manage several farms"}
-                          asManager
-                          onSelect={() => setRole("farmer")}
-                          managerChecked={role === "farmer" && (false)}
                         />
-                      </RadioGroup>
+                      </div>
                     </Field>
                   </div>
                 )}
@@ -327,7 +323,7 @@ function SignupPage() {
                     </p>
                     <div className="space-y-2 rounded-2xl border border-border/60 bg-muted/40 p-4">
                       <Row label={isBn ? "নাম" : "Name"} value={fullName} />
-                      <Row label={isBn ? "ভূমিকা" : "Role"} value={role === "farmer" ? (isBn ? "কৃষক / ম্যানেজার" : "Farmer / Manager") : role} />
+                      <Row label={isBn ? "ভূমিকা" : "Role"} value={roleKind === "manager" ? (isBn ? "ফার্ম ম্যানেজার" : "Farm Manager") : (isBn ? "কৃষক" : "Farmer")} />
                       <Row label={isBn ? "ফোন" : "Phone"} value={normalizeBangladeshPhone(phone)} />
                       <Row label={isBn ? "ইমেইল" : "Email"} value={email} />
                       <Row label={isBn ? "জেলা" : "District"} value={district} />
