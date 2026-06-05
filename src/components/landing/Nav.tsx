@@ -4,7 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const links = ["Product", "Solutions", "Platform", "Shop", "Resources", "Support"];
+const links: { label: string; href: string }[] = [
+  { label: "Product", href: "#" },
+  { label: "Device", href: "#device" },
+  { label: "Platform", href: "#" },
+  { label: "Shop", href: "#" },
+  { label: "Support", href: "#" },
+];
 
 export function Nav() {
   const [open, setOpen] = useState(false);
@@ -14,8 +20,8 @@ export function Nav() {
         <Logo />
         <nav className="hidden items-center gap-8 md:flex">
           {links.map((l) => (
-            <a key={l} href="#" className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary">
-              {l}
+            <a key={l.label} href={l.href} className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary">
+              {l.label}
             </a>
           ))}
         </nav>
@@ -43,12 +49,12 @@ export function Nav() {
             <nav className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-3">
               {links.map((l) => (
                 <a
-                  key={l}
-                  href="#"
+                  key={l.label}
+                  href={l.href}
                   onClick={() => setOpen(false)}
                   className="rounded-md px-3 py-2 text-sm font-medium text-foreground/80 hover:bg-accent hover:text-primary"
                 >
-                  {l}
+                  {l.label}
                 </a>
               ))}
               <a
