@@ -19,30 +19,44 @@ const right = [
 
 export function Rugged() {
   return (
-    <section className="py-20">
+    <section className="relative overflow-hidden py-24">
       <div className="mx-auto grid max-w-7xl gap-10 px-6 lg:grid-cols-[1fr_360px_1fr] lg:items-center">
         <div className="space-y-3">
-          {left.map(({ icon: Icon, title, body }) => (
-            <div key={title} className="flex items-start gap-3 rounded-xl border border-border bg-card p-4">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-primary/10">
-                <Icon className="h-4.5 w-4.5 text-primary" />
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-foreground">{title}</p>
-                <p className="text-xs text-muted-foreground">{body}</p>
+          {left.map(({ icon: Icon, title, body }, i) => (
+            <Reveal key={title} delay={i * 0.08}>
+              <div className="group flex items-start gap-3 rounded-xl border border-border bg-card p-4 transition-all hover:-translate-x-1 hover:border-primary/30 hover:shadow-soft">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary/10 ring-1 ring-primary/15">
+                  <Icon className="h-5 w-5 text-primary" />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{title}</p>
+                  <p className="text-xs text-muted-foreground">{body}</p>
+                </div>
               </div>
-            </div>
+            </Reveal>
           ))}
         </div>
         <div className="relative flex justify-center">
-          <div className="absolute inset-0 -z-10 m-auto h-72 w-72 rounded-full bg-primary/10 blur-2xl" />
-          <img src={buoy} alt="AcquaLence smart monitoring buoy" className="h-[420px] w-auto object-contain drop-shadow-2xl" loading="lazy" width={520} height={520} />
+          <div className="absolute inset-0 -z-10 m-auto h-80 w-80 rounded-full bg-gradient-to-br from-primary/25 to-transparent blur-3xl" />
+          <motion.img
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            animate={{ y: [0, -10, 0] }}
+            transition={{ y: { duration: 6, repeat: Infinity, ease: "easeInOut" }, opacity: { duration: 0.8 } }}
+            src={buoy}
+            alt="AcquaLence smart monitoring buoy"
+            className="h-[460px] w-auto object-contain drop-shadow-2xl"
+            loading="lazy"
+            width={520}
+            height={520}
+          />
         </div>
-        <div>
+        <Reveal>
           <p className="text-xs font-semibold uppercase tracking-wider text-primary">Built for Aquaculture</p>
-          <h2 className="mt-3 font-display text-3xl font-bold text-foreground md:text-4xl">
-            Rugged. Reliable. Ready
-            <br /> for Any Environment.
+          <h2 className="mt-3 font-display text-4xl font-bold text-foreground text-balance md:text-5xl">
+            Rugged. Reliable.
+            <br /> Ready for Any Environment.
           </h2>
           <p className="mt-4 text-sm text-muted-foreground">
             Engineered for harsh aquaculture environments, AcquaLence buoy is durable, low-maintenance and built to deliver accurate data day in and day out.
