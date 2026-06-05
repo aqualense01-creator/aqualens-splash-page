@@ -27,6 +27,8 @@ export function Hero() {
         <div className="absolute inset-0 bg-gradient-to-r from-background via-background/90 to-background/10 md:to-transparent" />
         <div className="absolute inset-0 bg-hero-wash" />
       </div>
+      <GradientMesh />
+
 
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-6 pt-20 pb-28 md:grid-cols-12 md:pt-28 md:pb-40">
         <motion.div
