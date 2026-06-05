@@ -9,6 +9,7 @@ import { Platform } from "@/components/landing/Platform";
 import { Shop } from "@/components/landing/Shop";
 import { Support } from "@/components/landing/Support";
 import { CTA } from "@/components/landing/CTA";
+import ProductAttachments from "@/components/landing/ProductAttachments";
 import { Footer } from "@/components/landing/Footer";
 
 export const Route = createFileRoute("/")({
