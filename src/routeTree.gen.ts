@@ -23,6 +23,7 @@ import { Route as AppDevicesRouteImport } from './routes/app.devices'
 import { Route as AppDashboardRouteImport } from './routes/app.dashboard'
 import { Route as AppAlertsRouteImport } from './routes/app.alerts'
 import { Route as AppPondsPondIdRouteImport } from './routes/app.ponds.$pondId'
+import { Route as AppMaintenanceDeviceIdRouteImport } from './routes/app.maintenance.$deviceId'
 import { Route as AppDevicesDeviceIdRouteImport } from './routes/app.devices.$deviceId'
 import { Route as AppCalibrationDeviceIdRouteImport } from './routes/app.calibration.$deviceId'
 
@@ -96,6 +97,11 @@ const AppPondsPondIdRoute = AppPondsPondIdRouteImport.update({
   path: '/ponds/$pondId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppMaintenanceDeviceIdRoute = AppMaintenanceDeviceIdRouteImport.update({
+  id: '/maintenance/$deviceId',
+  path: '/maintenance/$deviceId',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDevicesDeviceIdRoute = AppDevicesDeviceIdRouteImport.update({
   id: '/$deviceId',
   path: '/$deviceId',
@@ -123,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AppIndexRoute
   '/app/calibration/$deviceId': typeof AppCalibrationDeviceIdRoute
   '/app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
+  '/app/maintenance/$deviceId': typeof AppMaintenanceDeviceIdRoute
   '/app/ponds/$pondId': typeof AppPondsPondIdRoute
 }
 export interface FileRoutesByTo {
@@ -140,6 +147,7 @@ export interface FileRoutesByTo {
   '/app': typeof AppIndexRoute
   '/app/calibration/$deviceId': typeof AppCalibrationDeviceIdRoute
   '/app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
+  '/app/maintenance/$deviceId': typeof AppMaintenanceDeviceIdRoute
   '/app/ponds/$pondId': typeof AppPondsPondIdRoute
 }
 export interface FileRoutesById {
@@ -159,6 +167,7 @@ export interface FileRoutesById {
   '/app/': typeof AppIndexRoute
   '/app/calibration/$deviceId': typeof AppCalibrationDeviceIdRoute
   '/app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
+  '/app/maintenance/$deviceId': typeof AppMaintenanceDeviceIdRoute
   '/app/ponds/$pondId': typeof AppPondsPondIdRoute
 }
 export interface FileRouteTypes {
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/app/calibration/$deviceId'
     | '/app/devices/$deviceId'
+    | '/app/maintenance/$deviceId'
     | '/app/ponds/$pondId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -196,6 +206,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/app/calibration/$deviceId'
     | '/app/devices/$deviceId'
+    | '/app/maintenance/$deviceId'
     | '/app/ponds/$pondId'
   id:
     | '__root__'
@@ -214,6 +225,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/app/calibration/$deviceId'
     | '/app/devices/$deviceId'
+    | '/app/maintenance/$deviceId'
     | '/app/ponds/$pondId'
   fileRoutesById: FileRoutesById
 }
@@ -324,6 +336,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPondsPondIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/maintenance/$deviceId': {
+      id: '/app/maintenance/$deviceId'
+      path: '/maintenance/$deviceId'
+      fullPath: '/app/maintenance/$deviceId'
+      preLoaderRoute: typeof AppMaintenanceDeviceIdRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/devices/$deviceId': {
       id: '/app/devices/$deviceId'
       path: '/$deviceId'
@@ -364,6 +383,7 @@ interface AppRouteChildren {
   AppSetupRoute: typeof AppSetupRoute
   AppIndexRoute: typeof AppIndexRoute
   AppCalibrationDeviceIdRoute: typeof AppCalibrationDeviceIdRoute
+  AppMaintenanceDeviceIdRoute: typeof AppMaintenanceDeviceIdRoute
   AppPondsPondIdRoute: typeof AppPondsPondIdRoute
 }
 
@@ -378,6 +398,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSetupRoute: AppSetupRoute,
   AppIndexRoute: AppIndexRoute,
   AppCalibrationDeviceIdRoute: AppCalibrationDeviceIdRoute,
+  AppMaintenanceDeviceIdRoute: AppMaintenanceDeviceIdRoute,
   AppPondsPondIdRoute: AppPondsPondIdRoute,
 }
 
