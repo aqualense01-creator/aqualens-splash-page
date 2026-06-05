@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Check, ChevronLeft, ChevronRight, Quote, ArrowRight } from "lucide-react";
 import expert from "@/assets/support-expert.jpg";
+import { Reveal } from "./Reveal";
 
 const items = ["24/7 Live Support", "Expert Consultation", "On-site Support", "Training & Resources"];
 
