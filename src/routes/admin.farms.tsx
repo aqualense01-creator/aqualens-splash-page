@@ -1001,14 +1001,14 @@ function FarmDialog({
 
   // Sync local form when opened
   const opened = state.open;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useMemo(() => {
+  useEffect(() => {
     if (opened) {
       setName(state.farm?.name ?? "");
       setDistrict(state.farm?.district ?? "");
       setLocation(state.farm?.location ?? "");
       setStatus(state.farm?.status ?? "active");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opened]);
 
   return (
