@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ShoppingBag } from "lucide-react";
+import { Reveal } from "./Reveal";
 import buoy from "@/assets/buoy-product.png";
 import sensorDo from "@/assets/sensor-do.png";
 import sensorPh from "@/assets/sensor-ph.png";
