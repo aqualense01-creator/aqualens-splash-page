@@ -7,12 +7,12 @@ const items = ["24/7 Live Support", "Expert Consultation", "On-site Support", "T
 
 export function Support() {
   return (
-    <section className="bg-surface py-20">
+    <section className="bg-surface py-24">
       <div className="mx-auto grid max-w-7xl gap-10 px-6 lg:grid-cols-2 lg:items-center">
-        <div className="grid gap-6 sm:grid-cols-[1fr_240px] sm:items-center">
+        <Reveal className="grid gap-6 sm:grid-cols-[1fr_240px] sm:items-center">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-primary">24/7 Expert Support</p>
-            <h2 className="mt-3 font-display text-3xl font-bold text-foreground">We're Here for You, Always</h2>
+            <h2 className="mt-3 font-display text-4xl font-bold text-foreground text-balance">We're Here for You, Always</h2>
             <p className="mt-3 text-sm text-muted-foreground">
               Our team of aquaculture experts is available 24/7 to support you at every step.
             </p>
