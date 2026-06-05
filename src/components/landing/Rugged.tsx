@@ -30,9 +30,9 @@ export function Rugged() {
   const chipsY = useTransform(scrollYProgress, [0, 1], reduced ? [0, 0] : [-30, 30]);
 
   return (
-    <section ref={sectionRef} className="relative overflow-hidden py-16 sm:py-24">
+    <section id="device" ref={sectionRef} className="relative overflow-hidden py-16 sm:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="grid gap-10 lg:grid-cols-[1fr_360px_1fr] lg:items-center">
+        <div className="grid gap-10 lg:grid-cols-[1fr_460px_1fr] lg:items-center">
           {/* Heading — first on mobile, right on desktop */}
           <Reveal className="order-1 lg:order-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-primary">Built for Aquaculture</p>
@@ -59,23 +59,19 @@ export function Rugged() {
             </motion.div>
           </Reveal>
 
-          {/* Image — second on mobile, center on desktop */}
-          <div className="order-2 relative flex justify-center lg:order-2">
+          {/* Scroll-triggered device animation — center on desktop */}
+          <motion.div
+            style={{ y: buoyY, scale: buoyScale }}
+            className="order-2 relative flex justify-center lg:order-2"
+          >
             <div className="absolute inset-0 -z-10 m-auto h-64 w-64 rounded-full bg-gradient-to-br from-primary/25 to-transparent blur-3xl sm:h-80 sm:w-80" />
-            <motion.img
-              style={{ y: buoyY, scale: buoyScale }}
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ opacity: { duration: 0.8 } }}
-              src={buoy}
-              alt="AcquaLence smart monitoring buoy"
-              className="h-72 w-auto object-contain drop-shadow-2xl sm:h-96 lg:h-[460px]"
-              loading="lazy"
-              width={520}
-              height={520}
+            <ScrollSequence
+              frameCount={65}
+              className="relative h-72 w-full sm:h-96 lg:h-[460px]"
+              alt="AcquaLence smart monitoring buoy rotating"
             />
-          </div>
+          </motion.div>
+
 
           {/* Feature list — last on mobile, left on desktop */}
           <div className="order-3 space-y-3 lg:order-1">
