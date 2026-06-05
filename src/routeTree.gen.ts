@@ -15,6 +15,7 @@ import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppLiveRouteImport } from './routes/app.live'
+import { Route as AppFarmsRouteImport } from './routes/app.farms'
 import { Route as AppDashboardRouteImport } from './routes/app.dashboard'
 import { Route as AppPondsPondIdRouteImport } from './routes/app.ponds.$pondId'
 
@@ -48,6 +49,11 @@ const AppLiveRoute = AppLiveRouteImport.update({
   path: '/live',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFarmsRoute = AppFarmsRouteImport.update({
+  id: '/farms',
+  path: '/farms',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/app/dashboard': typeof AppDashboardRoute
+  '/app/farms': typeof AppFarmsRoute
   '/app/live': typeof AppLiveRoute
   '/app/': typeof AppIndexRoute
   '/app/ponds/$pondId': typeof AppPondsPondIdRoute
@@ -74,6 +81,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/app/dashboard': typeof AppDashboardRoute
+  '/app/farms': typeof AppFarmsRoute
   '/app/live': typeof AppLiveRoute
   '/app': typeof AppIndexRoute
   '/app/ponds/$pondId': typeof AppPondsPondIdRoute
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/app/dashboard': typeof AppDashboardRoute
+  '/app/farms': typeof AppFarmsRoute
   '/app/live': typeof AppLiveRoute
   '/app/': typeof AppIndexRoute
   '/app/ponds/$pondId': typeof AppPondsPondIdRoute
@@ -97,6 +106,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/app/dashboard'
+    | '/app/farms'
     | '/app/live'
     | '/app/'
     | '/app/ponds/$pondId'
@@ -106,6 +116,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/app/dashboard'
+    | '/app/farms'
     | '/app/live'
     | '/app'
     | '/app/ponds/$pondId'
@@ -116,6 +127,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/app/dashboard'
+    | '/app/farms'
     | '/app/live'
     | '/app/'
     | '/app/ponds/$pondId'
@@ -172,6 +184,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLiveRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/farms': {
+      id: '/app/farms'
+      path: '/farms'
+      fullPath: '/app/farms'
+      preLoaderRoute: typeof AppFarmsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/dashboard': {
       id: '/app/dashboard'
       path: '/dashboard'
@@ -191,6 +210,7 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
+  AppFarmsRoute: typeof AppFarmsRoute
   AppLiveRoute: typeof AppLiveRoute
   AppIndexRoute: typeof AppIndexRoute
   AppPondsPondIdRoute: typeof AppPondsPondIdRoute
@@ -198,6 +218,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
+  AppFarmsRoute: AppFarmsRoute,
   AppLiveRoute: AppLiveRoute,
   AppIndexRoute: AppIndexRoute,
   AppPondsPondIdRoute: AppPondsPondIdRoute,
@@ -214,3 +235,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
