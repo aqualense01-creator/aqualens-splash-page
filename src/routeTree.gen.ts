@@ -24,6 +24,7 @@ import { Route as AppDashboardRouteImport } from './routes/app.dashboard'
 import { Route as AppAlertsRouteImport } from './routes/app.alerts'
 import { Route as AppPondsPondIdRouteImport } from './routes/app.ponds.$pondId'
 import { Route as AppDevicesDeviceIdRouteImport } from './routes/app.devices.$deviceId'
+import { Route as AppCalibrationDeviceIdRouteImport } from './routes/app.calibration.$deviceId'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -100,6 +101,11 @@ const AppDevicesDeviceIdRoute = AppDevicesDeviceIdRouteImport.update({
   path: '/$deviceId',
   getParentRoute: () => AppDevicesRoute,
 } as any)
+const AppCalibrationDeviceIdRoute = AppCalibrationDeviceIdRouteImport.update({
+  id: '/calibration/$deviceId',
+  path: '/calibration/$deviceId',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -115,6 +121,7 @@ export interface FileRoutesByFullPath {
   '/app/settings': typeof AppSettingsRoute
   '/app/setup': typeof AppSetupRoute
   '/app/': typeof AppIndexRoute
+  '/app/calibration/$deviceId': typeof AppCalibrationDeviceIdRoute
   '/app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/app/ponds/$pondId': typeof AppPondsPondIdRoute
 }
@@ -131,6 +138,7 @@ export interface FileRoutesByTo {
   '/app/settings': typeof AppSettingsRoute
   '/app/setup': typeof AppSetupRoute
   '/app': typeof AppIndexRoute
+  '/app/calibration/$deviceId': typeof AppCalibrationDeviceIdRoute
   '/app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/app/ponds/$pondId': typeof AppPondsPondIdRoute
 }
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/app/settings': typeof AppSettingsRoute
   '/app/setup': typeof AppSetupRoute
   '/app/': typeof AppIndexRoute
+  '/app/calibration/$deviceId': typeof AppCalibrationDeviceIdRoute
   '/app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/app/ponds/$pondId': typeof AppPondsPondIdRoute
 }
@@ -168,6 +177,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/setup'
     | '/app/'
+    | '/app/calibration/$deviceId'
     | '/app/devices/$deviceId'
     | '/app/ponds/$pondId'
   fileRoutesByTo: FileRoutesByTo
@@ -184,6 +194,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/setup'
     | '/app'
+    | '/app/calibration/$deviceId'
     | '/app/devices/$deviceId'
     | '/app/ponds/$pondId'
   id:
@@ -201,6 +212,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/setup'
     | '/app/'
+    | '/app/calibration/$deviceId'
     | '/app/devices/$deviceId'
     | '/app/ponds/$pondId'
   fileRoutesById: FileRoutesById
@@ -319,6 +331,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDevicesDeviceIdRouteImport
       parentRoute: typeof AppDevicesRoute
     }
+    '/app/calibration/$deviceId': {
+      id: '/app/calibration/$deviceId'
+      path: '/calibration/$deviceId'
+      fullPath: '/app/calibration/$deviceId'
+      preLoaderRoute: typeof AppCalibrationDeviceIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -344,6 +363,7 @@ interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRoute
   AppSetupRoute: typeof AppSetupRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppCalibrationDeviceIdRoute: typeof AppCalibrationDeviceIdRoute
   AppPondsPondIdRoute: typeof AppPondsPondIdRoute
 }
 
@@ -357,6 +377,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRoute,
   AppSetupRoute: AppSetupRoute,
   AppIndexRoute: AppIndexRoute,
+  AppCalibrationDeviceIdRoute: AppCalibrationDeviceIdRoute,
   AppPondsPondIdRoute: AppPondsPondIdRoute,
 }
 
