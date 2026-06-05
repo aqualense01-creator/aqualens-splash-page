@@ -263,6 +263,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signIn,
         signInWithOtp,
         sendOtp,
+        sendResetLink,
         signUp,
         signOut,
         refresh: loadSession,
