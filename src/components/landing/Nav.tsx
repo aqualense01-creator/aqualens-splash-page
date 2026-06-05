@@ -20,8 +20,8 @@ export function Nav() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" className="hidden sm:inline-flex">Login</Button>
-          <Button className="bg-primary text-primary-foreground hover:bg-primary/90">Get Started</Button>
+          <a href="/login" className="hidden sm:inline-flex"><Button variant="ghost">Sign in</Button></a>
+          <a href="/signup"><Button className="bg-primary text-primary-foreground hover:bg-primary/90">Get Started</Button></a>
           <button
             aria-label="Toggle menu"
             onClick={() => setOpen((v) => !v)}
