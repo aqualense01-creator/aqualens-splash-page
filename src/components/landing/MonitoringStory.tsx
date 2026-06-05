@@ -4,22 +4,22 @@ import {
   Waves, Activity, LayoutDashboard, AlertOctagon, BellRing, Wrench, CheckCircle2,
 } from "lucide-react";
 import { Reveal } from "./Reveal";
-
-// 7-step pond-monitoring story.
-// FIX FOR SLOW / MISSING-LAST-FRAME ANIMATION:
-//  • Short scroll range (140vh outer, sticky h-screen) → animation completes within a single viewport scroll.
-//  • activeIndex clamped via Math.min(steps.length - 1, ...) so the final card is ALWAYS reachable.
-//  • When progress ≥ 0.98 we lock to the final card (equivalent of GSAP onLeave forcing the last frame).
-//  • prefers-reduced-motion + mobile (<lg) drop the pin entirely and render a static stacked list.
+import step1 from "@/assets/story/step-1.jpg";
+import step2 from "@/assets/story/step-2.jpg";
+import step3 from "@/assets/story/step-3.jpg";
+import step4 from "@/assets/story/step-4.jpg";
+import step5 from "@/assets/story/step-5.jpg";
+import step6 from "@/assets/story/step-6.jpg";
+import step7 from "@/assets/story/step-7.jpg";
 
 const steps = [
-  { icon: Waves,          title: "Pond water is monitored 24/7",   body: "Our buoy floats in your pond and reads water around the clock." },
-  { icon: Activity,       title: "Sensors capture 6 parameters",   body: "DO, pH, temperature, turbidity, salinity and ammonia — second by second." },
-  { icon: LayoutDashboard,title: "Dashboard receives live data",   body: "Readings stream into a calm, farmer-friendly dashboard you can open on any phone." },
-  { icon: AlertOctagon,   title: "Risk detected: oxygen falling",  body: "Acqua Lence spots dangerous patterns early — like dissolved oxygen dropping below 4 mg/L." },
-  { icon: BellRing,       title: "Farmer is alerted instantly",    body: "SMS, WhatsApp, app push and email — in English or বাংলা." },
-  { icon: Wrench,         title: "Clear action: turn on aerator",  body: "Not just a number. A practical next step the farmer can do right now." },
-  { icon: CheckCircle2,   title: "Pond returns to safe levels",    body: "Status flips back to green. You saved the harvest before it became a loss." },
+  { icon: Waves,          image: step1, alt: "Smart sensor buoy floating in a calm aquaculture pond", title: "Pond water is monitored 24/7",   body: "Our buoy floats in your pond and reads water around the clock." },
+  { icon: Activity,       image: step2, alt: "Underwater water-quality sensor probes reading DO and pH", title: "Sensors capture 6 parameters",   body: "DO, pH, temperature, turbidity, salinity and ammonia — second by second." },
+  { icon: LayoutDashboard,image: step3, alt: "Live water-quality dashboard with charts and gauges",      title: "Dashboard receives live data",   body: "Readings stream into a calm, farmer-friendly dashboard you can open on any phone." },
+  { icon: AlertOctagon,   image: step4, alt: "Pond water turning murky — early sign of falling oxygen",  title: "Risk detected: oxygen falling",  body: "Acqua Lence spots dangerous patterns early — like dissolved oxygen dropping below 4 mg/L." },
+  { icon: BellRing,       image: step5, alt: "Farmer checking an alert on a smartphone beside the pond", title: "Farmer is alerted instantly",    body: "SMS, WhatsApp, app push and email — in English or বাংলা." },
+  { icon: Wrench,         image: step6, alt: "Paddle wheel aerator splashing water to add oxygen",       title: "Clear action: turn on aerator",  body: "Not just a number. A practical next step the farmer can do right now." },
+  { icon: CheckCircle2,   image: step7, alt: "Healthy fish and shrimp thriving in clear pond water",     title: "Pond returns to safe levels",    body: "Status flips back to green. You saved the harvest before it became a loss." },
 ];
 
 export function MonitoringStory() {
@@ -63,21 +63,22 @@ export function MonitoringStory() {
               From pond water to farmer action — in seconds.
             </h2>
           </Reveal>
-          <ol className="mt-10 space-y-3">
-            {steps.map(({ icon: Icon, title, body }, i) => (
+          <ol className="mt-10 space-y-4">
+            {steps.map(({ icon: Icon, image, alt, title, body }, i) => (
               <Reveal key={title} delay={i * 0.05}>
-                <li className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
+                <li className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+                  <img src={image} alt={alt} width={1280} height={896} loading="lazy" className="aspect-[16/10] w-full object-cover" />
+                  <div className="flex items-start gap-3 p-4">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0">
                       <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                         Step {i + 1}
                       </span>
+                      <h3 className="mt-0.5 text-[15px] font-semibold text-foreground">{title}</h3>
+                      <p className="mt-1 text-[13px] leading-snug text-muted-foreground">{body}</p>
                     </div>
-                    <h3 className="mt-0.5 text-[15px] font-semibold text-foreground">{title}</h3>
-                    <p className="mt-1 text-[13px] leading-snug text-muted-foreground">{body}</p>
                   </div>
                 </li>
               </Reveal>
@@ -93,7 +94,7 @@ export function MonitoringStory() {
       ref={outerRef}
       className="relative bg-surface"
       aria-labelledby="story-heading"
-      style={{ height: "180vh" }}
+      style={{ height: "240vh" }}
     >
       <div className="sticky top-0 flex h-screen items-center overflow-hidden">
         <div
@@ -147,7 +148,7 @@ export function MonitoringStory() {
 
           {/* right: active step card */}
           <div className="col-span-7 flex justify-center">
-            <div className="relative h-[420px] w-full max-w-xl">
+            <div className="relative h-[560px] w-full max-w-xl">
               {steps.map((s, i) => {
                 const Icon = s.icon;
                 const isActive = i === active;
@@ -177,8 +178,16 @@ export function MonitoringStory() {
                       {s.body}
                     </p>
                     {/* visual frame */}
-                    <div className="mt-6 grid h-44 place-items-center rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent ring-1 ring-border/60">
-                      <Icon className="h-20 w-20 text-primary/40" />
+                    <div className="mt-6 overflow-hidden rounded-2xl ring-1 ring-border/60">
+                      <img
+                        src={s.image}
+                        alt={s.alt}
+                        width={1280}
+                        height={896}
+                        loading={i === 0 ? "eager" : "lazy"}
+                        decoding="async"
+                        className="aspect-[16/10] w-full object-cover"
+                      />
                     </div>
                   </motion.article>
                 );
