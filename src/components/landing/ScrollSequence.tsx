@@ -10,6 +10,7 @@ type Props = {
   /** CSS width/height in px for the canvas backing store math. The canvas always fills its container; these are only used for the DPR-scaled pixel buffer. */
   width?: number;
   height?: number;
+  scrollMode?: "sticky" | "through";
   className?: string;
   alt?: string;
 };
@@ -31,6 +32,7 @@ export function ScrollSequence({
   frameCount,
   pathTemplate = "/device-frames/frame-{n}.webp",
   targetRef,
+  scrollMode = "sticky",
   className,
   alt = "Animated product sequence",
 }: Props) {
@@ -42,26 +44,20 @@ export function ScrollSequence({
   const sizeRef = useRef({ w: 0, h: 0, dpr: 1 });
   const [loaded, setLoaded] = useState(0);
   const [reduced, setReduced] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
 
-  // Detect reduced motion and mobile viewports
+  // Detect reduced motion. Mobile still uses the scroll-driven sequence.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const mqReduced = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const mqMobile = window.matchMedia("(max-width: 1023px)");
 
     setReduced(mqReduced.matches);
-    setIsMobile(mqMobile.matches);
 
     const onReducedChange = () => setReduced(mqReduced.matches);
-    const onMobileChange = () => setIsMobile(mqMobile.matches);
 
     mqReduced.addEventListener("change", onReducedChange);
-    mqMobile.addEventListener("change", onMobileChange);
 
     return () => {
       mqReduced.removeEventListener("change", onReducedChange);
-      mqMobile.removeEventListener("change", onMobileChange);
     };
   }, []);
 
@@ -110,11 +106,11 @@ export function ScrollSequence({
     return true;
   };
 
-  // Preload frames: if in static mode (mobile or reduced motion), only load the middle frame
+  // Preload frames: if in static mode (reduced motion), only load the middle frame.
   useEffect(() => {
     let cancelled = false;
     const imgs: HTMLImageElement[] = [];
-    const isStatic = reduced || isMobile;
+    const isStatic = reduced;
 
     if (isStatic) {
       const mid = Math.floor((frameCount - 1) / 2);
@@ -169,7 +165,7 @@ export function ScrollSequence({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [frameCount, pathTemplate, reduced, isMobile]);
+  }, [frameCount, pathTemplate, reduced]);
 
   // Resize observer
   useEffect(() => {
@@ -190,28 +186,34 @@ export function ScrollSequence({
 
   // Scroll → target frame index (skip if static mode)
   useEffect(() => {
-    if (reduced || isMobile) return;
+    if (reduced) return;
     const compute = () => {
       const el = targetRef.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
       const vh = window.innerHeight || 1;
 
-      // If the top of the element hasn't entered viewport top yet
-      if (rect.top > 0) {
-        targetIndexRef.current = 0;
-        return;
-      }
+      let p: number;
+      if (scrollMode === "through") {
+        const progressRect = canvasRef.current?.getBoundingClientRect() ?? rect;
+        p = (vh - progressRect.top) / (vh + progressRect.height);
+      } else {
+        // If the top of the element hasn't entered viewport top yet
+        if (rect.top > 0) {
+          targetIndexRef.current = 0;
+          return;
+        }
 
-      // If the bottom of the element is above or at the viewport bottom (exit state)
-      if (rect.bottom <= vh) {
-        targetIndexRef.current = frameCount - 1;
-        return;
-      }
+        // If the bottom of the element is above or at the viewport bottom (exit state)
+        if (rect.bottom <= vh) {
+          targetIndexRef.current = frameCount - 1;
+          return;
+        }
 
-      const scrollable = Math.max(1, rect.height - vh);
-      const traveled = -rect.top;
-      let p = traveled / scrollable;
+        const scrollable = Math.max(1, rect.height - vh);
+        const traveled = -rect.top;
+        p = traveled / scrollable;
+      }
 
       p = Math.max(0, Math.min(1, p));
 
@@ -228,11 +230,11 @@ export function ScrollSequence({
       window.removeEventListener("scroll", compute);
       window.removeEventListener("resize", compute);
     };
-  }, [targetRef, frameCount, reduced, isMobile]);
+  }, [targetRef, frameCount, reduced, scrollMode]);
 
   // Smooth animation loop (skip/mock if static mode)
   useEffect(() => {
-    const isStatic = reduced || isMobile;
+    const isStatic = reduced;
     if (isStatic) {
       const mid = Math.floor((frameCount - 1) / 2);
       currentRef.current = mid;
@@ -274,7 +276,7 @@ export function ScrollSequence({
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [frameCount, reduced, isMobile]);
+  }, [frameCount, reduced]);
 
   const pct = Math.round((loaded / frameCount) * 100);
   const showLoader = loaded < frameCount;

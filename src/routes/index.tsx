@@ -10,6 +10,8 @@ import { FarmersSection } from "@/components/landing/FarmersSection";
 import { ReportsTrends } from "@/components/landing/ReportsTrends";
 import { DeviceHealth } from "@/components/landing/DeviceHealth";
 import { Rugged } from "@/components/landing/Rugged";
+import { PricingMarket } from "@/components/landing/PricingMarket";
+import { Testimonials } from "@/components/landing/Testimonials";
 import { CTA } from "@/components/landing/CTA";
 import { Footer } from "@/components/landing/Footer";
 import { Stats } from "@/components/landing/Stats";
@@ -61,6 +63,8 @@ function Index() {
       <ReportsTrends />
       <DeviceHealth />
       <Rugged />
+      <PricingMarket />
+      <Testimonials />
       <CTA />
       <Footer />
     </main>

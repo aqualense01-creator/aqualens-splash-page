@@ -1,0 +1,7 @@
+[auth]
+allowed_redirect_urls = [
+  "http://localhost:5174/login",
+  "http://localhost:5174/app/dashboard",
+  "http://127.0.0.1:5174/login",
+  "http://127.0.0.1:5174/app/dashboard"
+]

@@ -102,7 +102,10 @@ export function MonitoringStory() {
   // Static stacked fallback (mobile / reduced motion).
   if (!usePin) {
     return (
-      <section className="relative bg-surface py-20 sm:py-24" aria-labelledby="story-heading">
+      <section
+        className="relative bg-surface py-14 sm:py-20 lg:py-24"
+        aria-labelledby="story-heading"
+      >
         <div className="mx-auto max-w-3xl px-4 sm:px-6">
           <Reveal className="text-center">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
@@ -115,7 +118,7 @@ export function MonitoringStory() {
               From pond water to farmer action — in seconds.
             </h2>
           </Reveal>
-          <ol className="mt-10 space-y-4">
+          <ol className="mt-8 space-y-4 sm:mt-10">
             {steps.map(({ icon: Icon, image, alt, title, body }, i) => (
               <Reveal key={title} delay={i * 0.05}>
                 <li className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">

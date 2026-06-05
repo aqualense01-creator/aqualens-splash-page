@@ -107,7 +107,10 @@ function Spark({ data, color }: { data: number[]; color: string }) {
 
 export function WaterParameters() {
   return (
-    <section className="relative bg-background py-20 sm:py-24" aria-labelledby="params-heading">
+    <section
+      className="relative bg-background py-14 sm:py-20 lg:py-24"
+      aria-labelledby="params-heading"
+    >
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <Reveal className="mx-auto max-w-2xl text-center">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
@@ -124,7 +127,7 @@ export function WaterParameters() {
           </p>
         </Reveal>
 
-        <div className="mt-12 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-12">
+        <div className="mt-8 grid grid-cols-1 gap-3 sm:mt-10 sm:grid-cols-2 lg:mt-12 lg:grid-cols-12">
           {params.map((p, i) => {
             const m = statusMeta[p.status];
             const Icon = p.icon;
@@ -134,7 +137,7 @@ export function WaterParameters() {
                   color={m.color ? `color-mix(in oklab, ${m.color} 15%, transparent)` : undefined}
                   className="h-full rounded-2xl border border-border/70 bg-card shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
                 >
-                  <article className="group flex h-full flex-col p-5">
+                  <article className="group flex h-full min-h-[190px] flex-col p-5">
                     <div className="flex items-start justify-between gap-3">
                       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
                         <Icon className="h-5 w-5" />

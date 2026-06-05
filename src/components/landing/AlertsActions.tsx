@@ -50,8 +50,11 @@ const items: Array<{
 
 export function AlertsActions() {
   return (
-    <section className="relative bg-surface py-20 sm:py-24" aria-labelledby="alerts-heading">
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-12 px-4 sm:px-6 lg:grid-cols-12">
+    <section
+      className="relative bg-surface py-14 sm:py-20 lg:py-24"
+      aria-labelledby="alerts-heading"
+    >
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 sm:px-6 lg:grid-cols-12 lg:gap-12">
         <Reveal className="lg:col-span-5">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
             Alerts &amp; Actions
@@ -62,7 +65,7 @@ export function AlertsActions() {
           >
             From risk detection to clear action.
           </h2>
-          <p className="mt-4 text-[15px] text-muted-foreground">
+          <p className="mt-4 text-[15px] leading-7 text-muted-foreground">
             Acqua Lence doesn’t only show numbers. It tells farmers what’s wrong, why it matters,
             and what to do next — in English or বাংলা.
           </p>
@@ -94,7 +97,7 @@ export function AlertsActions() {
               return (
                 <Reveal key={a.pond + a.title} delay={i * 0.06}>
                   <li
-                    className={`group flex items-start gap-3 rounded-2xl border bg-card p-4 ring-1 ${m.ring} hover:shadow-soft`}
+                    className={`group flex items-start gap-3 rounded-lg border bg-card p-4 ring-1 ${m.ring} hover:shadow-soft sm:rounded-2xl`}
                     style={{ borderColor: `color-mix(in oklab, ${m.color} 30%, var(--border))` }}
                   >
                     <span
@@ -114,8 +117,10 @@ export function AlertsActions() {
                         <span className="text-[11px] text-muted-foreground">· {a.title}</span>
                       </div>
                       <p className="mt-1 text-[13px] text-muted-foreground">{a.body}</p>
-                      {a.bn && <p className="mt-1 text-[12px] italic text-foreground/70">{a.bn}</p>}
-                      <div className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-semibold text-foreground">
+                      {a.bn && (
+                        <p className="mt-1 text-[12px] leading-5 text-foreground/70">{a.bn}</p>
+                      )}
+                      <div className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12px] font-semibold text-foreground">
                         <span className="text-muted-foreground">Action:</span>
                         {a.cta}
                       </div>

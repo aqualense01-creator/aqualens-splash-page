@@ -97,7 +97,7 @@ function DevicesPage() {
     // Map mock device name/pond_name to mock IDs for consistent filtering
     const mapped = raw.map((d) => {
       if (d.farm_id && d.pond_id) return d;
-      const matchPond = ponds.find((p) => p.name.includes(d.pond_name || ""));
+      const matchPond = ponds.find((p) => p.name.includes((d as any).pond_name || ""));
       return {
         ...d,
         pond_id: matchPond?.id ?? null,

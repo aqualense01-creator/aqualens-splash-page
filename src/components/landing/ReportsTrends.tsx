@@ -45,7 +45,10 @@ const cards = [
 
 export function ReportsTrends() {
   return (
-    <section className="relative bg-surface py-20 sm:py-24" aria-labelledby="reports-heading">
+    <section
+      className="relative bg-surface py-14 sm:py-20 lg:py-24"
+      aria-labelledby="reports-heading"
+    >
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <Reveal className="mx-auto max-w-2xl text-center">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
@@ -62,7 +65,7 @@ export function ReportsTrends() {
           </p>
         </Reveal>
 
-        <div className="mt-12 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="mt-8 grid grid-cols-1 gap-4 sm:mt-10 md:grid-cols-3 lg:mt-12">
           {cards.map((c, i) => {
             const Icon = c.icon;
             return (

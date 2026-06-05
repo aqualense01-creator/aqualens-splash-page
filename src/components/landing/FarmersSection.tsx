@@ -1,115 +1,81 @@
-import { Phone, MessageCircle, AlertCircle, Languages, Smartphone, MapPin } from "lucide-react";
+import { Languages, MapPin, MessageCircle, Smartphone } from "lucide-react";
+import farmerPondApp from "@/assets/farmer-pond-app.webp";
 import { Reveal } from "./Reveal";
 
 const bullets = [
-  { icon: Smartphone, t: "Designed for mobile use in the field" },
-  { icon: Languages, t: "English and বাংলা labels everywhere" },
+  { icon: Smartphone, t: "Designed for mobile use at the pond edge" },
+  { icon: Languages, t: "English and Bangla alerts for daily operations" },
   { icon: MapPin, t: "Works for fish ponds and shrimp farms" },
-  { icon: MessageCircle, t: "Helps farm managers and technicians act faster" },
+  { icon: MessageCircle, t: "Helps managers and technicians act faster" },
 ];
+
+const highlights = ["Critical alerts", "One-tap action", "Field-ready guidance"];
 
 export function FarmersSection() {
   return (
-    <section className="relative bg-background py-20 sm:py-24" aria-labelledby="farmers-heading">
-      <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-4 sm:px-6 lg:grid-cols-12">
-        <Reveal className="lg:col-span-6">
+    <section
+      id="farmers"
+      className="relative bg-background py-12 sm:py-16 lg:py-20"
+      aria-labelledby="farmers-heading"
+    >
+      <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-8 px-4 sm:px-6 lg:grid-cols-12 lg:gap-12">
+        <Reveal className="lg:col-span-5">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
             For Farmers
           </p>
           <h2
             id="farmers-heading"
-            className="mt-3 font-display text-3xl font-bold text-foreground text-balance sm:text-4xl lg:text-5xl"
+            className="mt-3 max-w-xl font-display text-3xl font-bold text-foreground text-balance sm:text-4xl lg:text-5xl"
           >
             Built for fish &amp; shrimp farmers.
           </h2>
-          <p className="mt-4 text-[15px] text-muted-foreground">
+          <p className="mt-4 max-w-xl text-[15px] leading-7 text-muted-foreground">
             Acqua Lence is built to be used standing at the edge of a pond, in sun and rain, with
-            one hand — not from an office desk.
+            one hand - not from an office desk.
           </p>
-          <ul className="mt-6 space-y-3">
+          <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
             {bullets.map(({ icon: Icon, t }) => (
               <li
                 key={t}
-                className="flex items-start gap-3 rounded-xl border border-border/70 bg-card p-3 shadow-sm transition-all duration-300 hover:translate-x-1 hover:border-primary/30 hover:shadow-soft"
+                className="flex min-h-16 items-center gap-3 rounded-lg border border-border/70 bg-card p-3 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-soft"
               >
                 <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
                   <Icon className="h-4 w-4" />
                 </span>
-                <p className="text-[14px] font-semibold text-foreground">{t}</p>
+                <p className="text-[14px] font-semibold leading-6 text-foreground">{t}</p>
               </li>
             ))}
           </ul>
         </Reveal>
 
-        {/* Phone mockup */}
-        <Reveal delay={0.15} className="lg:col-span-6">
-          <div className="relative mx-auto w-full max-w-[300px]">
-            <div
-              aria-hidden
-              className="absolute -inset-8 -z-10 rounded-[60px] bg-gradient-to-br from-primary/25 via-primary/5 to-transparent blur-2xl"
-            />
-            <div className="overflow-hidden rounded-[44px] border-8 border-foreground/90 bg-card shadow-[0_40px_80px_-30px_rgba(15,44,68,0.45)]">
-              {/* notch */}
-              <div className="flex h-6 items-center justify-center bg-foreground/90">
-                <span className="h-1 w-16 rounded-full bg-background/30" />
+        <Reveal delay={0.15} className="lg:col-span-7">
+          <figure className="relative mx-auto w-full max-w-[520px] lg:mr-0">
+            <div className="relative overflow-hidden rounded-lg border border-border bg-card shadow-[0_32px_80px_-44px_rgba(15,44,68,0.55)]">
+              <img
+                src={farmerPondApp}
+                alt="Fish farmer beside a pond holding the Acqua Lence mobile alert screen"
+                width={1122}
+                height={1402}
+                loading="lazy"
+                decoding="async"
+                className="aspect-[4/5] w-full object-cover object-center"
+              />
+              <div className="pointer-events-none absolute inset-0 rounded-lg bg-gradient-to-t from-navy/58 via-navy/5 to-transparent" />
+              <div className="absolute left-4 top-4 rounded-full border border-white/25 bg-white/90 px-3 py-1.5 text-[11px] font-semibold text-foreground shadow-sm backdrop-blur">
+                Field-ready app
               </div>
-              <div className="space-y-3 bg-surface p-4">
-                <div className="flex items-center justify-between text-[10px] font-medium text-muted-foreground">
-                  <span>Mirpur Farm</span>
-                  <span className="inline-flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-status-good" /> live
+              <div className="absolute inset-x-4 bottom-4 flex flex-wrap gap-2">
+                {highlights.map((label) => (
+                  <span
+                    key={label}
+                    className="rounded-full border border-white/25 bg-white/92 px-3 py-1.5 text-[11px] font-semibold text-foreground shadow-sm backdrop-blur"
+                  >
+                    {label}
                   </span>
-                </div>
-                {/* pond cards */}
-                <div className="rounded-xl border border-status-critical/40 bg-status-critical/5 p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[12px] font-semibold text-foreground">
-                      Pond 2 · Shrimp
-                    </span>
-                    <span className="rounded-full bg-status-critical px-2 py-0.5 text-[9px] font-bold text-white">
-                      Critical
-                    </span>
-                  </div>
-                  <div className="mt-2 grid grid-cols-3 gap-1 text-center">
-                    <div>
-                      <div className="text-[9px] text-muted-foreground">DO</div>
-                      <div className="text-sm font-bold text-status-critical">3.1</div>
-                    </div>
-                    <div>
-                      <div className="text-[9px] text-muted-foreground">pH</div>
-                      <div className="text-sm font-bold text-status-warning">8.4</div>
-                    </div>
-                    <div>
-                      <div className="text-[9px] text-muted-foreground">Temp</div>
-                      <div className="text-sm font-bold text-foreground">31.2°</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="rounded-xl border border-status-critical/30 bg-card p-3">
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="h-3.5 w-3.5 shrink-0 text-status-critical" />
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-semibold text-foreground">Low oxygen</p>
-                      <p className="text-[10px] italic text-muted-foreground">
-                        পুকুর ২: এয়ারেটর চালু করুন
-                      </p>
-                    </div>
-                  </div>
-                  <button className="mt-2 w-full rounded-md bg-status-critical py-1.5 text-[11px] font-bold text-white">
-                    Turn on aerator
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <button className="flex items-center justify-center gap-1 rounded-md bg-primary py-1.5 text-[10px] font-semibold text-primary-foreground">
-                    <Phone className="h-3 w-3" /> Call
-                  </button>
-                  <button className="flex items-center justify-center gap-1 rounded-md border border-border bg-background py-1.5 text-[10px] font-semibold text-foreground">
-                    <MessageCircle className="h-3 w-3" /> Support
-                  </button>
-                </div>
+                ))}
               </div>
             </div>
-          </div>
+          </figure>
         </Reveal>
       </div>
     </section>

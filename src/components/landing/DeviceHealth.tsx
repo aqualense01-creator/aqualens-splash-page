@@ -38,7 +38,7 @@ const devices = [
 export function DeviceHealth() {
   return (
     <section
-      className="relative bg-background py-20 sm:py-24"
+      className="relative bg-background py-14 sm:py-20 lg:py-24"
       aria-labelledby="device-health-heading"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
@@ -57,7 +57,7 @@ export function DeviceHealth() {
           </p>
         </Reveal>
 
-        <div className="mt-10 overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+        <div className="mt-8 overflow-hidden rounded-lg border border-border bg-card shadow-soft sm:mt-10 sm:rounded-2xl">
           <div className="grid grid-cols-12 gap-2 border-b border-border bg-surface/60 px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground sm:gap-4">
             <div className="col-span-4 sm:col-span-3">Device</div>
             <div className="col-span-3 sm:col-span-2">Status</div>
@@ -72,7 +72,7 @@ export function DeviceHealth() {
             return (
               <div
                 key={d.id}
-                className="grid grid-cols-12 items-center gap-2 border-b border-border/60 px-4 py-4 text-[13px] last:border-0 sm:gap-4 transition-colors hover:bg-surface/40 cursor-default"
+                className="grid grid-cols-12 items-center gap-2 border-b border-border/60 px-4 py-4 text-[13px] transition-colors last:border-0 hover:bg-surface/40 sm:gap-4 cursor-default"
               >
                 <div className="col-span-4 sm:col-span-3">
                   <div className="font-semibold text-foreground">{d.id}</div>

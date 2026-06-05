@@ -22,7 +22,7 @@ const items: Item[] = [
 
 export function Stats() {
   return (
-    <section className="bg-surface py-16 sm:py-20">
+    <section className="bg-surface py-12 sm:py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <Reveal>
           <div className="flex flex-wrap items-end justify-between gap-4">
@@ -35,12 +35,11 @@ export function Stats() {
           </div>
         </Reveal>
 
-        <div className="mt-10 grid gap-6 lg:grid-cols-[1fr_300px]">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="mt-7 grid gap-5 sm:mt-10 lg:grid-cols-[1fr_300px] lg:gap-6">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
             {items.map(({ icon: Icon, num, prefix, suffix, topText, title, sub }, i) => (
               <Reveal key={title + sub} delay={i * 0.06}>
-                <div className="group relative h-full overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft">
-                  <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-primary/5 transition-transform group-hover:scale-110" />
+                <div className="group relative h-full overflow-hidden rounded-lg border border-border bg-card p-4 transition-all hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft sm:p-5">
                   <Icon className="relative h-5 w-5 text-primary" />
                   <p className="relative mt-4 text-lg font-bold text-foreground">
                     {num !== undefined ? (

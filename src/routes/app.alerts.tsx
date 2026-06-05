@@ -47,6 +47,7 @@ import {
 import { PageHeader, MetricTile, StatusBadge, EmptyState } from "@/components/app/StatusBadge";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { MOCK_PONDS } from "@/lib/mock-farm";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/alerts")({

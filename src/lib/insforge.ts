@@ -108,10 +108,12 @@ export type Alert = {
 // Legacy types kept for existing Shop component
 export type Product = {
   id: string;
+  user_id: string;
   sku: string;
   name: string;
   category: string;
   tagline: string | null;
+  description?: string | null;
   price_cents: number;
   attachment_url: string | null;
   attachment_key: string | null;

@@ -1,73 +1,20 @@
-import { Wrench, Radio, LayoutDashboard, BellRing, ChevronRight } from "lucide-react";
+import { CyberneticBentoGrid } from "@/components/ui/cybernetic-bento-grid";
 import { Reveal } from "./Reveal";
-import { SpotlightCard } from "./SpotlightCard";
-
-const steps = [
-  {
-    icon: Wrench,
-    title: "Install the device",
-    body: "Place the solar-powered Acqua Lence buoy in your pond. Plug and play.",
-  },
-  {
-    icon: Radio,
-    title: "Sensors collect live data",
-    body: "DO, pH, temperature, turbidity, salinity and ammonia — every minute.",
-  },
-  {
-    icon: LayoutDashboard,
-    title: "See pond health",
-    body: "Live readings stream to a calm dashboard you can open from any phone.",
-  },
-  {
-    icon: BellRing,
-    title: "Get alerts &amp; actions",
-    body: "Critical drop? You’ll know — and what to do — in seconds.",
-  },
-];
 
 export function HowItWorks() {
   return (
-    <section className="relative bg-background py-20 sm:py-24" aria-labelledby="how-heading">
-      <div className="absolute inset-0 -z-10 bg-grid opacity-40 [mask-image:radial-gradient(ellipse_at_center,black,transparent_70%)]" />
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <Reveal className="mx-auto max-w-2xl text-center">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
-            How It Works
-          </p>
-          <h2
-            id="how-heading"
-            className="mt-3 font-display text-3xl font-bold text-foreground text-balance sm:text-4xl"
-          >
-            Four steps from install to action.
-          </h2>
-        </Reveal>
-
-        <div className="relative mt-12 grid gap-6 sm:grid-cols-2 md:grid-cols-4">
-          {steps.map(({ icon: Icon, title, body }, i) => (
-            <Reveal key={title} delay={i * 0.08} className="relative flex flex-col items-center">
-              <SpotlightCard className="flex h-full w-full flex-col items-center rounded-2xl border border-border/70 bg-card p-6 text-center shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
-                <div className="relative grid h-16 w-16 place-items-center rounded-2xl bg-primary/10 ring-1 ring-primary/15 shadow-inner">
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/15 to-transparent" />
-                  <Icon className="relative h-6 w-6 text-primary" strokeWidth={1.75} />
-                  <span className="absolute -right-2 -top-2 grid h-6 w-6 place-items-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground shadow-soft">
-                    {i + 1}
-                  </span>
-                </div>
-                <h3 className="mt-5 text-sm font-semibold text-foreground">
-                  {title.replace("&amp;", "&")}
-                </h3>
-                <p
-                  className="mt-2 text-xs leading-relaxed text-muted-foreground"
-                  dangerouslySetInnerHTML={{ __html: body }}
-                />
-              </SpotlightCard>
-              {i < steps.length - 1 && (
-                <ChevronRight className="absolute right-[-14px] top-12 hidden h-5 w-5 text-primary/40 md:block" />
-              )}
-            </Reveal>
-          ))}
-        </div>
-      </div>
+    <section
+      id="features"
+      className="relative overflow-hidden bg-[#061727] py-16 sm:py-20 lg:py-24"
+      aria-labelledby="features-heading"
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_10%,rgba(34,211,238,0.18),transparent_32%),radial-gradient(circle_at_78%_18%,rgba(45,212,191,0.14),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.04),transparent_30%)]" />
+      <div className="absolute inset-0 bg-grid opacity-[0.08]" />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/40 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-cyan-200/30 to-transparent" />
+      <Reveal className="relative">
+        <CyberneticBentoGrid headingId="features-heading" />
+      </Reveal>
     </section>
   );
 }

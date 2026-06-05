@@ -122,6 +122,7 @@ export function Rugged() {
               <ScrollSequence
                 targetRef={outerRef}
                 frameCount={65}
+                scrollMode={isDesktop ? "sticky" : "through"}
                 className="h-[44vh] w-full sm:h-[55vh] lg:h-[68vh]"
                 alt="AcquaLence smart monitoring buoy rotating"
               />

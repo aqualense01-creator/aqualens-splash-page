@@ -131,7 +131,6 @@ function SettingsPage() {
 
   // ----- Security -----
   const [pwd, setPwd] = useState({ current: "", next: "", confirm: "" });
-  const [otpEnabled, setOtpEnabled] = useState(true);
   const [signOutOpen, setSignOutOpen] = useState(false);
 
   const changePassword = () => {
@@ -318,30 +317,24 @@ function SettingsPage() {
           </Card>
 
           <Card
-            title={T("Two-factor authentication", "টু-ফ্যাক্টর প্রমাণীকরণ")}
+            title={T("Email verification", "ইমেইল যাচাই")}
             icon={<ShieldCheck className="h-4 w-4 text-emerald-600" />}
           >
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-sm font-medium">{T("OTP verification", "ওটিপি যাচাই")}</p>
+                <p className="text-sm font-medium">
+                  {T("Email + password + verification code", "ইমেইল + পাসওয়ার্ড + যাচাই কোড")}
+                </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {T(
-                    "Receive a 6-digit code on your phone or email at sign-in.",
-                    "সাইন-ইন করার সময় আপনার ফোন বা ইমেইলে ৬-সংখ্যার কোড পাবেন।",
+                    "New accounts verify their email with a 6-digit code. Profile details stay here in Settings.",
+                    "নতুন অ্যাকাউন্ট ৬-সংখ্যার কোড দিয়ে ইমেইল যাচাই করে। প্রোফাইল তথ্য Settings-এ থাকে।",
                   )}
                 </p>
               </div>
-              <Switch
-                checked={otpEnabled}
-                onCheckedChange={(v) => {
-                  setOtpEnabled(v);
-                  toast.success(
-                    v
-                      ? T("OTP enabled", "ওটিপি চালু করা হয়েছে")
-                      : T("OTP disabled", "ওটিপি বন্ধ করা হয়েছে"),
-                  );
-                }}
-              />
+              <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-700">
+                {T("Simple", "সহজ")}
+              </span>
             </div>
           </Card>
 
