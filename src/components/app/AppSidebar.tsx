@@ -60,7 +60,7 @@ export function AppSidebar() {
     { url: "/admin/users", label: t("nav.users"), icon: Users },
     { url: "/admin/alerts", label: t("nav.alerts"), icon: Bell },
     { url: "/admin/support", label: t("nav.support"), icon: LifeBuoy },
-    { url: "/admin/settings", label: t("nav.system"), icon: ShieldCog },
+    { url: "/admin/settings", label: t("nav.system"), icon: ShieldCheck },
   ];
 
   const isActive = (p: string) => pathname === p || pathname.startsWith(p + "/");
