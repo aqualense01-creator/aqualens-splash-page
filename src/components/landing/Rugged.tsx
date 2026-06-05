@@ -1,5 +1,7 @@
 import { Sun, Gauge, ShieldCheck, Wrench, Waves, Anchor, BatteryFull, Zap, ArrowRight } from "lucide-react";
+import { motion } from "framer-motion";
 import buoy from "@/assets/buoy-product.png";
+import { Reveal } from "./Reveal";
 
 const left = [
   { icon: Sun, title: "Solar Powered", body: "Long lasting & energy efficient" },
