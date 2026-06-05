@@ -172,8 +172,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const sendOtp: AuthCtx["sendOtp"] = async (identifier) => {
     await new Promise((r) => setTimeout(r, 600));
-    const type = isValidIdentifier(identifier);
-    if (!type) return { error: "Enter a valid email or Bangladesh phone number." };
+    const idType = isValidIdentifier(identifier);
+    if (!idType) return { error: "Enter a valid email or Bangladesh phone number." };
     return { error: null };
   };
 
@@ -193,16 +193,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: null };
     }
     // For unknown identifiers, create a farmer account
+    const idType = isValidIdentifier(identifier);
     const newProfile: Profile = {
       id: "mock-" + Math.random().toString(36).slice(2, 10),
       full_name: null,
-      phone: type === "phone" ? normalizeBangladeshPhone(identifier) : null,
+      phone: idType === "phone" ? normalizeBangladeshPhone(identifier) : null,
       district: null,
       language: "bn",
       avatar_url: null,
       created_at: new Date().toISOString(),
     };
-    const u: AuthUser = { id: newProfile.id, email: type === "email" ? key : "", phone: newProfile.phone };
+    const u: AuthUser = { id: newProfile.id, email: idType === "email" ? key : "", phone: newProfile.phone };
     const session = { user: u, profile: newProfile, roles: ["farmer" as AppRole] };
     setMockSession(session);
     setUser(u);
