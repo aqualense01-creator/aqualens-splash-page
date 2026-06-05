@@ -1,41 +1,42 @@
 
-# AcquaLence Landing Page
+## Goal
 
-Build a polished, single-page marketing site for AcquaLence (smart aquaculture water-quality monitoring), closely inspired by the uploaded reference. Clean, trustworthy, aqua/teal palette on white with a deep navy band — modern SaaS-meets-hardware feel.
+Layer four premium, 21st.dev-style animations into the existing landing page without restructuring any sections. All work stays in frontend/presentation code using `framer-motion` (already installed).
 
-## Design tokens (src/styles.css)
-- Primary: teal `oklch(0.62 0.11 210)` (approx #1FA2B8)
-- Deep navy section: `oklch(0.22 0.05 240)` (approx #0F2C44)
-- Background: white; muted surface: `oklch(0.98 0.005 230)`
-- Body font: Inter; Display: Plus Jakarta Sans (bold, slightly tight tracking)
-- Soft rounded cards (`rounded-xl`), subtle borders, light shadows
+## Animations & where they go
 
-## Sections (in order)
-1. **Top nav** — logo + droplet icon, links (Product, Solutions, Platform, Shop, Resources, Support), Login + Get Started CTA.
-2. **Hero** — "Smarter Water. Stronger Harvests." headline, subcopy, Explore Product / Watch Video buttons, generated hero image (buoy on water with fish pen), 4 inline feature chips (Real-time Monitoring, AI Powered Insights, 24/7 Expert Support, Reliable & Rugged).
-3. **All-in-One stats strip** — 5 feature stats (5+ Parameters, Real-time, AI Powered, Cloud Based, IP67) + side blurb with Learn More.
-4. **How AcquaLence Works** — 5-step horizontal flow with icons + arrows (Smart Device → Data Transmission → Cloud Platform → Smart Insights → Better Decisions).
-5. **Dashboard showcase** — "Every Parameter. Every Moment." left copy with checklist; right side a stylized dashboard mockup (built in JSX with mock charts using Recharts).
-6. **Rugged. Reliable.** — center buoy image with 4 spec callouts on left (Solar Powered, 5+ Parameters, Rugged Design, Easy Maintenance) and right copy + 4 mini icon stats.
-7. **Data That Drives Growth** — deep navy band, laptop+phone dashboard image, 5 platform features (Advanced Analytics, Smart Alerts, Reports, Team Access, API Integration).
-8. **Shop** — "Everything You Need" with 5 product cards (Buoy, DO Sensor, pH Sensor, Turbidity Sensor, Solar Panel Kit) with price + Add to Cart.
-9. **24/7 Expert Support + Testimonials** — split: left support list with photo of expert; right testimonial card with quote, author, dots.
-10. **CTA band** — aquaculture water background, "Ready to Transform Your Aquaculture?" with Get Started Today / Request Demo.
-11. **Footer** — logo, columns (Product, Company, Resources, Legal), socials, copyright.
+### 1. Hero — Animated Gradient Mesh + Magnetic CTA
+- Add a new `GradientMesh.tsx` background layer in `Hero.tsx`: three large blurred radial blobs (teal, cyan, navy) animating `x/y/scale` on a 12–18s loop via `motion.div` — sits behind the buoy image, above the wash overlay.
+- Wrap the primary "Get Started" button in a new `MagneticButton.tsx`: tracks pointer position on `mousemove`, applies a spring-eased `translate` (max ~12px) so the button drifts toward the cursor, snaps back on leave. Uses `useMotionValue` + `useSpring`.
 
-## Technical
-- Single route: replace `src/routes/index.tsx` with the landing page.
-- Components split under `src/components/landing/` (Nav, Hero, Stats, HowItWorks, Dashboard, Rugged, Platform, Shop, Support, CTA, Footer).
-- Update `__root.tsx` head defaults + per-route `head()` with title, description, og tags, and hero og:image.
-- Add semantic tokens (primary teal, navy surface, gradient-hero, shadow-soft) to `src/styles.css`. Wire Inter + Plus Jakarta via Google Fonts `<link>` in root head.
-- Generate images with imagegen:
-  - Hero buoy on water (1600x1000)
-  - Standalone buoy product shot, transparent bg (1024x1024)
-  - Expert support portrait (1024x1024)
-  - CTA fish-farm water background (1600x600)
-  - 4 small product shots for shop (DO sensor, pH sensor, turbidity sensor, solar panel)
-- Mock dashboard built with Recharts (line chart) — no real data wiring.
-- Lucide icons throughout. Subtle framer-motion fade/slide on hero + section reveals.
-- Fully responsive (stack columns on mobile, horizontal flow becomes vertical).
+### 2. Stats strip — Animated Number Counters
+- New `CountUp.tsx` component: uses `useInView` + `animate(motionValue, target, { duration: 1.6, ease: "easeOut" })` and renders the rounded value. Supports prefix/suffix (`+`, `%`, `K`).
+- Replace the four static stat numbers in `Stats.tsx` with `<CountUp />`, animating once when scrolled into view.
 
-No backend, auth, or Cloud needed — pure presentation.
+### 3. Trust strip — Infinite Marquee
+- New `Marquee.tsx`: duplicated row of partner/industry labels, animated via `motion.div` with `animate={{ x: ['0%', '-50%'] }}` and a linear 30s loop. Pauses on hover (`whileHover={{ animationPlayState: 'paused' }}` via CSS variable approach).
+- Replace the static trust strip currently rendered at the bottom of `Hero.tsx` with the marquee.
+
+### 4. Rugged section — Scroll-linked Buoy Parallax
+- In `Rugged.tsx`, replace the existing `y: [0,-10,0]` loop with `useScroll` + `useTransform` driven by the section's own ref: buoy translates `y: 80 → -80` and scales `0.95 → 1.05` as the section scrolls through the viewport.
+- Add a subtle counter-parallax on the spec chips (`y: -30 → 30`) for depth.
+
+## Files
+
+**New**
+- `src/components/landing/GradientMesh.tsx`
+- `src/components/landing/MagneticButton.tsx`
+- `src/components/landing/CountUp.tsx`
+- `src/components/landing/Marquee.tsx`
+
+**Edited**
+- `src/components/landing/Hero.tsx` — mount `GradientMesh`, wrap CTA in `MagneticButton`, swap trust strip for `Marquee`
+- `src/components/landing/Stats.tsx` — swap static numbers for `CountUp`
+- `src/components/landing/Rugged.tsx` — replace float loop with scroll-linked parallax
+- `src/styles.css` — add `--gradient-mesh-*` color stops and a `mask-fade-x` utility for the marquee edges
+
+## Notes
+
+- 21st.dev's MCP can't be wired into Lovable, so these patterns are reimplemented by hand in the same style (Aceternity / Magic UI lineage).
+- Respects `prefers-reduced-motion`: each component checks `useReducedMotion()` and falls back to static rendering.
+- No backend, no new dependencies, no section reordering.

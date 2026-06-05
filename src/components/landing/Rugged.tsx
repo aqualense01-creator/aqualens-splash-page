@@ -1,5 +1,6 @@
+import { useRef } from "react";
 import { Sun, Gauge, ShieldCheck, Wrench, Waves, Anchor, BatteryFull, Zap, ArrowRight } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
 import buoy from "@/assets/buoy-product.png";
 import { Reveal } from "./Reveal";
 
@@ -18,8 +19,18 @@ const right = [
 ];
 
 export function Rugged() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const reduced = useReducedMotion();
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start end", "end start"],
+  });
+  const buoyY = useTransform(scrollYProgress, [0, 1], reduced ? [0, 0] : [80, -80]);
+  const buoyScale = useTransform(scrollYProgress, [0, 1], reduced ? [1, 1] : [0.95, 1.05]);
+  const chipsY = useTransform(scrollYProgress, [0, 1], reduced ? [0, 0] : [-30, 30]);
+
   return (
-    <section className="relative overflow-hidden py-24">
+    <section ref={sectionRef} className="relative overflow-hidden py-24">
       <div className="mx-auto grid max-w-7xl gap-10 px-6 lg:grid-cols-[1fr_360px_1fr] lg:items-center">
         <div className="space-y-3">
           {left.map(({ icon: Icon, title, body }, i) => (
@@ -39,11 +50,11 @@ export function Rugged() {
         <div className="relative flex justify-center">
           <div className="absolute inset-0 -z-10 m-auto h-80 w-80 rounded-full bg-gradient-to-br from-primary/25 to-transparent blur-3xl" />
           <motion.img
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            style={{ y: buoyY, scale: buoyScale }}
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
             viewport={{ once: true, amount: 0.3 }}
-            animate={{ y: [0, -10, 0] }}
-            transition={{ y: { duration: 6, repeat: Infinity, ease: "easeInOut" }, opacity: { duration: 0.8 } }}
+            transition={{ opacity: { duration: 0.8 } }}
             src={buoy}
             alt="AcquaLence smart monitoring buoy"
             className="h-[460px] w-auto object-contain drop-shadow-2xl"
@@ -52,6 +63,7 @@ export function Rugged() {
             height={520}
           />
         </div>
+
         <Reveal>
           <p className="text-xs font-semibold uppercase tracking-wider text-primary">Built for Aquaculture</p>
           <h2 className="mt-3 font-display text-4xl font-bold text-foreground text-balance md:text-5xl">
@@ -64,7 +76,7 @@ export function Rugged() {
           <a href="#" className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary">
             Learn More <ArrowRight className="h-4 w-4" />
           </a>
-          <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <motion.div style={{ y: chipsY }} className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
             {right.map(({ icon: Icon, title, sub }) => (
               <div key={title} className="text-center">
                 <span className="mx-auto grid h-9 w-9 place-items-center rounded-full bg-primary/10">
@@ -74,7 +86,8 @@ export function Rugged() {
                 <p className="text-[11px] text-muted-foreground">{sub}</p>
               </div>
             ))}
-          </div>
+          </motion.div>
+
         </Reveal>
       </div>
     </section>

@@ -1,12 +1,23 @@
 import { Gauge, Clock, Sparkles, Cloud, ShieldCheck, ArrowRight } from "lucide-react";
 import { Reveal } from "./Reveal";
+import { CountUp } from "./CountUp";
 
-const items = [
-  { icon: Gauge, top: "5+", title: "Water Quality", sub: "Parameters" },
-  { icon: Clock, top: "Real-time", title: "Continuous", sub: "Monitoring" },
-  { icon: Sparkles, top: "AI Powered", title: "Smart Alerts &", sub: "Recommendations" },
-  { icon: Cloud, top: "Cloud Based", title: "Secure Data", sub: "Anywhere" },
-  { icon: ShieldCheck, top: "IP67", title: "Waterproof &", sub: "Built to Last" },
+type Item = {
+  icon: typeof Gauge;
+  num?: number;
+  prefix?: string;
+  suffix?: string;
+  topText?: string;
+  title: string;
+  sub: string;
+};
+
+const items: Item[] = [
+  { icon: Gauge, num: 5, suffix: "+", title: "Water Quality", sub: "Parameters" },
+  { icon: Clock, num: 24, suffix: "/7", title: "Continuous", sub: "Monitoring" },
+  { icon: Sparkles, num: 99.9, suffix: "%", title: "Smart Alerts", sub: "Uptime SLA" },
+  { icon: Cloud, num: 365, suffix: " days", title: "Secure Data", sub: "Anywhere" },
+  { icon: ShieldCheck, topText: "IP67", title: "Waterproof &", sub: "Built to Last" },
 ];
 
 export function Stats() {
@@ -26,12 +37,23 @@ export function Stats() {
 
         <div className="mt-10 grid gap-6 lg:grid-cols-[1fr_300px]">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-            {items.map(({ icon: Icon, top, title, sub }, i) => (
-              <Reveal key={top + title} delay={i * 0.06}>
+            {items.map(({ icon: Icon, num, prefix, suffix, topText, title, sub }, i) => (
+              <Reveal key={title + sub} delay={i * 0.06}>
                 <div className="group relative h-full overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft">
                   <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-primary/5 transition-transform group-hover:scale-110" />
                   <Icon className="relative h-5 w-5 text-primary" />
-                  <p className="relative mt-4 text-lg font-bold text-foreground">{top}</p>
+                  <p className="relative mt-4 text-lg font-bold text-foreground">
+                    {num !== undefined ? (
+                      <CountUp
+                        to={num}
+                        prefix={prefix}
+                        suffix={suffix}
+                        decimals={Number.isInteger(num) ? 0 : 1}
+                      />
+                    ) : (
+                      topText
+                    )}
+                  </p>
                   <p className="relative mt-1 text-xs leading-snug text-muted-foreground">
                     {title}
                     <br />
