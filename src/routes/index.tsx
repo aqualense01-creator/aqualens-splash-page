@@ -1,30 +1,31 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Nav } from "@/components/landing/Nav";
 import { Hero } from "@/components/landing/Hero";
-import { Stats } from "@/components/landing/Stats";
-import { HowItWorks } from "@/components/landing/HowItWorks";
 import { Dashboard } from "@/components/landing/Dashboard";
+import { MonitoringStory } from "@/components/landing/MonitoringStory";
+import { WaterParameters } from "@/components/landing/WaterParameters";
+import { AlertsActions } from "@/components/landing/AlertsActions";
+import { HowItWorks } from "@/components/landing/HowItWorks";
+import { FarmersSection } from "@/components/landing/FarmersSection";
+import { ReportsTrends } from "@/components/landing/ReportsTrends";
+import { DeviceHealth } from "@/components/landing/DeviceHealth";
 import { Rugged } from "@/components/landing/Rugged";
-import { Platform } from "@/components/landing/Platform";
-import { Shop } from "@/components/landing/Shop";
-import { Support } from "@/components/landing/Support";
 import { CTA } from "@/components/landing/CTA";
-import ProductAttachments from "@/components/landing/ProductAttachments";
 import { Footer } from "@/components/landing/Footer";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "AcquaLence — Smart Aquaculture Water Quality Monitoring" },
+      { title: "Acqua Lence — Real-time Pond Water Monitoring for Fish & Shrimp Farms" },
       {
         name: "description",
         content:
-          "AcquaLence is an all-in-one smart aquaculture solution that monitors water quality in real time, helps you make better decisions, and maximizes your yield.",
+          "Acqua Lence monitors dissolved oxygen, pH, temperature, turbidity, salinity, ammonia and device health in real time — with clear alerts and practical actions for fish and shrimp farmers.",
       },
-      { property: "og:title", content: "AcquaLence — Smarter Water. Stronger Harvests." },
+      { property: "og:title", content: "Acqua Lence — Crystal clear water insights for healthier fish farming" },
       {
         property: "og:description",
-        content: "Real-time water quality monitoring, AI insights, and 24/7 expert support for modern aquaculture.",
+        content: "Real-time pond water monitoring, critical alerts, and clear next-step recommendations for fish and shrimp farms.",
       },
       { property: "og:type", content: "website" },
     ],
@@ -33,7 +34,7 @@ export const Route = createFileRoute("/")({
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&family=Instrument+Serif:ital@0;1&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&family=Instrument+Serif:ital@0;1&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap",
       },
     ],
   }),
@@ -45,14 +46,15 @@ function Index() {
     <main className="min-h-screen overflow-x-hidden bg-background font-sans">
       <Nav />
       <Hero />
-      <Stats />
-      <HowItWorks />
       <Dashboard />
+      <MonitoringStory />
+      <WaterParameters />
+      <AlertsActions />
+      <HowItWorks />
+      <FarmersSection />
+      <ReportsTrends />
+      <DeviceHealth />
       <Rugged />
-      <Platform />
-      <Shop />
-      <ProductAttachments />
-      <Support />
       <CTA />
       <Footer />
     </main>
