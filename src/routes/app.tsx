@@ -29,11 +29,11 @@ function AppLayout() {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-surface">
+      <div className="relative isolate flex min-h-screen w-full overflow-x-clip bg-surface">
         <AppSidebar />
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col overflow-x-clip">
           <AppTopbar />
-          <main className="flex-1 p-4 sm:p-6 pb-24 md:pb-6">
+          <main className="min-w-0 flex-1 overflow-x-clip p-4 pb-24 sm:p-6 md:pb-6">
             <Outlet />
           </main>
           <MobileBottomNav />

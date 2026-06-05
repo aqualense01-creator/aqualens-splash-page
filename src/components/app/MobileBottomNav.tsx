@@ -33,8 +33,8 @@ export function MobileBottomNav({ isAdmin = false }: { isAdmin?: boolean }) {
   const isActive = (url: string) => pathname === url || pathname.startsWith(url + "/");
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 block border-t border-border/60 bg-background/90 px-2 pt-2 pb-safe-bottom backdrop-blur-md md:hidden shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-      <nav className="flex items-center justify-around">
+    <div className="fixed inset-x-0 bottom-0 z-30 block border-t border-border/60 bg-background px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] backdrop-blur-md md:hidden">
+      <nav className="flex min-w-0 items-center justify-around">
         {items.map((item) => {
           const active = isActive(item.url);
           const Icon = item.icon;
@@ -43,7 +43,7 @@ export function MobileBottomNav({ isAdmin = false }: { isAdmin?: boolean }) {
               key={item.url}
               href={item.url}
               className={cn(
-                "flex flex-col items-center justify-center gap-0.5 rounded-xl py-1 px-3 text-center transition-colors min-h-[44px] min-w-[48px]",
+                "flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 text-center transition-colors",
                 active ? "text-primary" : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -53,7 +53,7 @@ export function MobileBottomNav({ isAdmin = false }: { isAdmin?: boolean }) {
                   active ? "scale-110 stroke-[2.5]" : "scale-100 stroke-[2]",
                 )}
               />
-              <span className="text-[10px] font-semibold tracking-tight leading-none">
+              <span className="max-w-full truncate text-[10px] font-semibold leading-none tracking-tight">
                 {item.label}
               </span>
             </a>

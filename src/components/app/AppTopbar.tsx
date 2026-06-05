@@ -41,8 +41,8 @@ export function AppTopbar() {
   };
 
   return (
-    <header className="sticky top-0 z-40 flex h-14 items-center gap-2 border-b border-border/60 bg-background/85 px-3 backdrop-blur sm:px-4">
-      <SidebarTrigger className="-ml-1" />
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border/60 bg-background/95 px-3 shadow-[0_1px_0_rgba(15,44,68,0.03)] backdrop-blur sm:px-4">
+      <SidebarTrigger className="-ml-1 h-9 w-9 shrink-0 rounded-xl border border-border/60 bg-background/80 text-foreground hover:bg-muted md:h-8 md:w-8" />
 
       {/* Farm Selector (Only for Farmer app /app routes) */}
       {isAppRoute && (
@@ -52,10 +52,10 @@ export function AppTopbar() {
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-1.5 h-9 border-border/70 hover:border-primary/40 text-xs font-semibold px-2.5 bg-card/50 backdrop-blur rounded-xl cursor-pointer"
+                className="h-9 gap-1.5 rounded-xl border-border/70 bg-card/70 px-2.5 text-xs font-semibold backdrop-blur hover:border-primary/40"
               >
                 <Waves className="h-3.5 w-3.5 text-primary shrink-0" />
-                <span className="max-w-[120px] truncate">{activeFarm.name}</span>
+                <span className="max-w-[104px] truncate sm:max-w-[160px]">{activeFarm.name}</span>
                 <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />
               </Button>
             </DropdownMenuTrigger>
