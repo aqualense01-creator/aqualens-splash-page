@@ -521,54 +521,32 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 function RoleCard({
-  value,
   checked,
+  onSelect,
   icon,
   title,
   desc,
-  asManager,
-  onSelect,
-  managerChecked,
 }: {
-  value: string;
   checked: boolean;
+  onSelect: () => void;
   icon: React.ReactNode;
   title: string;
   desc: string;
-  asManager?: boolean;
-  onSelect?: () => void;
-  managerChecked?: boolean;
 }) {
-  // Manager option uses a plain button (still stored as "farmer" role in mock data)
-  if (asManager) {
-    return (
-      <button
-        type="button"
-        onClick={onSelect}
-        className={`flex flex-col items-start gap-2 rounded-2xl border-2 p-3 text-left transition-all ${
-          managerChecked ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/40"
-        }`}
-      >
-        <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary">{icon}</div>
-        <div>
-          <p className="text-sm font-semibold text-foreground">{title}</p>
-          <p className="text-xs text-muted-foreground">{desc}</p>
-        </div>
-      </button>
-    );
-  }
   return (
-    <label
-      className={`flex cursor-pointer flex-col items-start gap-2 rounded-2xl border-2 p-3 transition-all ${
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={checked}
+      className={`flex flex-col items-start gap-2 rounded-2xl border-2 p-3 text-left transition-all ${
         checked ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/40"
       }`}
     >
-      <RadioGroupItem value={value} className="sr-only" />
       <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary">{icon}</div>
       <div>
         <p className="text-sm font-semibold text-foreground">{title}</p>
         <p className="text-xs text-muted-foreground">{desc}</p>
       </div>
-    </label>
+    </button>
   );
 }
