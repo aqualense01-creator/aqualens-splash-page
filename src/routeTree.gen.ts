@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VerifyOtpRouteImport } from './routes/verify-otp'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
@@ -36,6 +37,11 @@ import { Route as AppMaintenanceDeviceIdRouteImport } from './routes/app.mainten
 import { Route as AppDevicesDeviceIdRouteImport } from './routes/app.devices.$deviceId'
 import { Route as AppCalibrationDeviceIdRouteImport } from './routes/app.calibration.$deviceId'
 
+const VerifyOtpRoute = VerifyOtpRouteImport.update({
+  id: '/verify-otp',
+  path: '/verify-otp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -173,6 +179,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/verify-otp': typeof VerifyOtpRoute
   '/admin/alerts': typeof AdminAlertsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/devices': typeof AdminDevicesRoute
@@ -199,6 +206,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/verify-otp': typeof VerifyOtpRoute
   '/admin/alerts': typeof AdminAlertsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/devices': typeof AdminDevicesRoute
@@ -228,6 +236,7 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/verify-otp': typeof VerifyOtpRoute
   '/admin/alerts': typeof AdminAlertsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/devices': typeof AdminDevicesRoute
@@ -258,6 +267,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/login'
     | '/signup'
+    | '/verify-otp'
     | '/admin/alerts'
     | '/admin/dashboard'
     | '/admin/devices'
@@ -284,6 +294,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/signup'
+    | '/verify-otp'
     | '/admin/alerts'
     | '/admin/dashboard'
     | '/admin/devices'
@@ -312,6 +323,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/login'
     | '/signup'
+    | '/verify-otp'
     | '/admin/alerts'
     | '/admin/dashboard'
     | '/admin/devices'
@@ -341,10 +353,18 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
+  VerifyOtpRoute: typeof VerifyOtpRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/verify-otp': {
+      id: '/verify-otp'
+      path: '/verify-otp'
+      fullPath: '/verify-otp'
+      preLoaderRoute: typeof VerifyOtpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
@@ -604,6 +624,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
+  VerifyOtpRoute: VerifyOtpRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

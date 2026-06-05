@@ -14,16 +14,14 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { signIn, sendOtp, signInWithOtp, user, loading, isAdmin, isTechnician } = useAuth();
+  const { signIn, sendOtp, user, loading, isAdmin, isTechnician } = useAuth();
   const navigate = useNavigate();
-  const { lang, setLang, t } = useI18n();
+  const { lang, setLang } = useI18n();
 
-  const [mode, setMode] = useState<"password" | "otp-request" | "otp-verify">("password");
+  const [mode, setMode] = useState<"password" | "otp">("password");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
-  const [otp, setOtp] = useState("");
   const [err, setErr] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   /* Redirect if already logged in */
@@ -39,7 +37,6 @@ function LoginPage() {
   async function onPasswordLogin(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
-    setInfo(null);
     if (!identifier.trim()) { setErr("Enter your email or phone number."); return; }
     if (password.length < 8) { setErr("Password must be at least 8 characters."); return; }
     const idType = isValidIdentifier(identifier);
@@ -48,39 +45,19 @@ function LoginPage() {
     const { error } = await signIn(identifier, password);
     setBusy(false);
     if (error) setErr(error);
-    else {
-      // navigate happens in useEffect via role check
-    }
   }
 
-  /* Request OTP */
+  /* Request OTP — navigate to dedicated verify page */
   async function onRequestOtp(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
-    setInfo(null);
     const idType = isValidIdentifier(identifier);
     if (!idType) { setErr("Enter a valid email or Bangladesh phone number."); return; }
     setBusy(true);
     const { error } = await sendOtp(identifier);
     setBusy(false);
-    if (error) setErr(error);
-    else {
-      setMode("otp-verify");
-      setInfo("A 6-digit code has been sent. Use 123456 for demo accounts.");
-    }
-  }
-
-  /* Verify OTP */
-  async function onVerifyOtp(e: React.FormEvent) {
-    e.preventDefault();
-    setErr(null);
-    setInfo(null);
-    if (!/^\d{6}$/.test(otp)) { setErr("Enter the 6-digit code."); return; }
-    setBusy(true);
-    const { error } = await signInWithOtp(identifier, otp);
-    setBusy(false);
-    if (error) setErr(error);
-    // navigate happens in useEffect
+    if (error) { setErr(error); return; }
+    navigate({ to: "/verify-otp", search: { identifier } });
   }
 
   const isBn = lang === "bn";
@@ -92,15 +69,14 @@ function LoginPage() {
         <div className="absolute -top-[30%] -left-[20%] h-[80vh] w-[80vh] rounded-full bg-[oklch(0.72_0.12_195)] opacity-[0.18] blur-[120px]" />
         <div className="absolute top-[20%] -right-[10%] h-[60vh] w-[60vh] rounded-full bg-[oklch(0.68_0.10_210)] opacity-[0.14] blur-[100px]" />
         <div className="absolute -bottom-[20%] left-[10%] h-[70vh] w-[70vh] rounded-full bg-[oklch(0.60_0.08_200)] opacity-[0.12] blur-[110px]" />
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='20' viewBox='0 0 100 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 10 Q25 20 50 10 T100 10' fill='none' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E")`,
+            backgroundSize: "120px 24px",
+          }}
+        />
       </div>
-
-      {/* Subtle wave pattern overlay */}
-      <div className="pointer-events-none absolute inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='20' viewBox='0 0 100 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 10 Q25 20 50 10 T100 10' fill='none' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E")`,
-          backgroundSize: "120px 24px"
-        }}
-      />
 
       <div className="relative z-10 w-full max-w-[420px]">
         {/* Card */}
@@ -122,7 +98,7 @@ function LoginPage() {
           <div className="mt-5 flex rounded-xl bg-muted p-1">
             <button
               type="button"
-              onClick={() => { setMode("password"); setErr(null); setInfo(null); }}
+              onClick={() => { setMode("password"); setErr(null); }}
               className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
                 mode === "password"
                   ? "bg-white text-foreground shadow-sm"
@@ -136,9 +112,9 @@ function LoginPage() {
             </button>
             <button
               type="button"
-              onClick={() => { setMode("otp-request"); setErr(null); setInfo(null); }}
+              onClick={() => { setMode("otp"); setErr(null); }}
               className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                mode !== "password"
+                mode === "otp"
                   ? "bg-white text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               }`}
@@ -218,7 +194,7 @@ function LoginPage() {
           )}
 
           {/* OTP request form */}
-          {mode === "otp-request" && (
+          {mode === "otp" && (
             <form onSubmit={onRequestOtp} className="mt-5 space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="otp-id" className="text-sm font-medium">
@@ -254,63 +230,6 @@ function LoginPage() {
                     {isBn ? "ওটিপি কোড পাঠান" : "Send OTP code"}
                   </span>
                 )}
-              </Button>
-            </form>
-          )}
-
-          {/* OTP verify form */}
-          {mode === "otp-verify" && (
-            <form onSubmit={onVerifyOtp} className="mt-5 space-y-4">
-              <p className="text-center text-sm text-muted-foreground">
-                {isBn
-                  ? `আমরা একটি কোড পাঠিয়েছি ${identifier} এ।`
-                  : `We sent a code to ${identifier}.`}
-              </p>
-              <div className="space-y-1.5">
-                <Label htmlFor="otp" className="text-sm font-medium">
-                  {isBn ? "৬-সংখ্যার কোড" : "6-digit code"}
-                </Label>
-                <Input
-                  id="otp"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={6}
-                  required
-                  placeholder="123456"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                  className="h-11 text-center text-lg tracking-[0.5em]"
-                />
-              </div>
-
-              {info && (
-                <p className="rounded-lg bg-primary/10 px-3 py-2.5 text-sm text-primary">{info}</p>
-              )}
-              {err && (
-                <p className="rounded-lg bg-destructive/10 px-3 py-2.5 text-sm text-destructive">{err}</p>
-              )}
-
-              <Button type="submit" className="h-11 w-full text-base font-semibold" disabled={busy || otp.length < 6}>
-                {busy ? (
-                  <span className="flex items-center gap-2">
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" />
-                    {isBn ? "যাচাই হচ্ছে…" : "Verifying…"}
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    {isBn ? "যাচাই করুন ও সাইন ইন করুন" : "Verify & sign in"}
-                    <ArrowRight className="h-4 w-4" />
-                  </span>
-                )}
-              </Button>
-
-              <Button
-                type="button"
-                variant="ghost"
-                className="h-10 w-full text-sm"
-                onClick={() => { setMode("otp-request"); setOtp(""); setErr(null); setInfo(null); }}
-              >
-                {isBn ? "← ফিরে যান" : "← Go back"}
               </Button>
             </form>
           )}
