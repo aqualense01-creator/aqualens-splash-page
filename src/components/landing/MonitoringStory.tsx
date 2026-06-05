@@ -4,22 +4,22 @@ import {
   Waves, Activity, LayoutDashboard, AlertOctagon, BellRing, Wrench, CheckCircle2,
 } from "lucide-react";
 import { Reveal } from "./Reveal";
-
-// 7-step pond-monitoring story.
-// FIX FOR SLOW / MISSING-LAST-FRAME ANIMATION:
-//  • Short scroll range (140vh outer, sticky h-screen) → animation completes within a single viewport scroll.
-//  • activeIndex clamped via Math.min(steps.length - 1, ...) so the final card is ALWAYS reachable.
-//  • When progress ≥ 0.98 we lock to the final card (equivalent of GSAP onLeave forcing the last frame).
-//  • prefers-reduced-motion + mobile (<lg) drop the pin entirely and render a static stacked list.
+import step1 from "@/assets/story/step-1.jpg";
+import step2 from "@/assets/story/step-2.jpg";
+import step3 from "@/assets/story/step-3.jpg";
+import step4 from "@/assets/story/step-4.jpg";
+import step5 from "@/assets/story/step-5.jpg";
+import step6 from "@/assets/story/step-6.jpg";
+import step7 from "@/assets/story/step-7.jpg";
 
 const steps = [
-  { icon: Waves,          title: "Pond water is monitored 24/7",   body: "Our buoy floats in your pond and reads water around the clock." },
-  { icon: Activity,       title: "Sensors capture 6 parameters",   body: "DO, pH, temperature, turbidity, salinity and ammonia — second by second." },
-  { icon: LayoutDashboard,title: "Dashboard receives live data",   body: "Readings stream into a calm, farmer-friendly dashboard you can open on any phone." },
-  { icon: AlertOctagon,   title: "Risk detected: oxygen falling",  body: "Acqua Lence spots dangerous patterns early — like dissolved oxygen dropping below 4 mg/L." },
-  { icon: BellRing,       title: "Farmer is alerted instantly",    body: "SMS, WhatsApp, app push and email — in English or বাংলা." },
-  { icon: Wrench,         title: "Clear action: turn on aerator",  body: "Not just a number. A practical next step the farmer can do right now." },
-  { icon: CheckCircle2,   title: "Pond returns to safe levels",    body: "Status flips back to green. You saved the harvest before it became a loss." },
+  { icon: Waves,          image: step1, alt: "Smart sensor buoy floating in a calm aquaculture pond", title: "Pond water is monitored 24/7",   body: "Our buoy floats in your pond and reads water around the clock." },
+  { icon: Activity,       image: step2, alt: "Underwater water-quality sensor probes reading DO and pH", title: "Sensors capture 6 parameters",   body: "DO, pH, temperature, turbidity, salinity and ammonia — second by second." },
+  { icon: LayoutDashboard,image: step3, alt: "Live water-quality dashboard with charts and gauges",      title: "Dashboard receives live data",   body: "Readings stream into a calm, farmer-friendly dashboard you can open on any phone." },
+  { icon: AlertOctagon,   image: step4, alt: "Pond water turning murky — early sign of falling oxygen",  title: "Risk detected: oxygen falling",  body: "Acqua Lence spots dangerous patterns early — like dissolved oxygen dropping below 4 mg/L." },
+  { icon: BellRing,       image: step5, alt: "Farmer checking an alert on a smartphone beside the pond", title: "Farmer is alerted instantly",    body: "SMS, WhatsApp, app push and email — in English or বাংলা." },
+  { icon: Wrench,         image: step6, alt: "Paddle wheel aerator splashing water to add oxygen",       title: "Clear action: turn on aerator",  body: "Not just a number. A practical next step the farmer can do right now." },
+  { icon: CheckCircle2,   image: step7, alt: "Healthy fish and shrimp thriving in clear pond water",     title: "Pond returns to safe levels",    body: "Status flips back to green. You saved the harvest before it became a loss." },
 ];
 
 export function MonitoringStory() {
