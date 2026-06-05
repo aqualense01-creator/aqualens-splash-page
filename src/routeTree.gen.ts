@@ -14,6 +14,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppSettingsRouteImport } from './routes/app.settings'
 import { Route as AppReportsRouteImport } from './routes/app.reports'
 import { Route as AppLiveRouteImport } from './routes/app.live'
 import { Route as AppFarmsRouteImport } from './routes/app.farms'
@@ -46,6 +47,11 @@ const IndexRoute = IndexRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
 const AppReportsRoute = AppReportsRouteImport.update({
@@ -100,6 +106,7 @@ export interface FileRoutesByFullPath {
   '/app/farms': typeof AppFarmsRoute
   '/app/live': typeof AppLiveRoute
   '/app/reports': typeof AppReportsRoute
+  '/app/settings': typeof AppSettingsRoute
   '/app/': typeof AppIndexRoute
   '/app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/app/ponds/$pondId': typeof AppPondsPondIdRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByTo {
   '/app/farms': typeof AppFarmsRoute
   '/app/live': typeof AppLiveRoute
   '/app/reports': typeof AppReportsRoute
+  '/app/settings': typeof AppSettingsRoute
   '/app': typeof AppIndexRoute
   '/app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/app/ponds/$pondId': typeof AppPondsPondIdRoute
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/app/farms': typeof AppFarmsRoute
   '/app/live': typeof AppLiveRoute
   '/app/reports': typeof AppReportsRoute
+  '/app/settings': typeof AppSettingsRoute
   '/app/': typeof AppIndexRoute
   '/app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/app/ponds/$pondId': typeof AppPondsPondIdRoute
@@ -147,6 +156,7 @@ export interface FileRouteTypes {
     | '/app/farms'
     | '/app/live'
     | '/app/reports'
+    | '/app/settings'
     | '/app/'
     | '/app/devices/$deviceId'
     | '/app/ponds/$pondId'
@@ -161,6 +171,7 @@ export interface FileRouteTypes {
     | '/app/farms'
     | '/app/live'
     | '/app/reports'
+    | '/app/settings'
     | '/app'
     | '/app/devices/$deviceId'
     | '/app/ponds/$pondId'
@@ -176,6 +187,7 @@ export interface FileRouteTypes {
     | '/app/farms'
     | '/app/live'
     | '/app/reports'
+    | '/app/settings'
     | '/app/'
     | '/app/devices/$deviceId'
     | '/app/ponds/$pondId'
@@ -223,6 +235,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/app/'
       preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/settings': {
+      id: '/app/settings'
+      path: '/settings'
+      fullPath: '/app/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/reports': {
@@ -303,6 +322,7 @@ interface AppRouteChildren {
   AppFarmsRoute: typeof AppFarmsRoute
   AppLiveRoute: typeof AppLiveRoute
   AppReportsRoute: typeof AppReportsRoute
+  AppSettingsRoute: typeof AppSettingsRoute
   AppIndexRoute: typeof AppIndexRoute
   AppPondsPondIdRoute: typeof AppPondsPondIdRoute
 }
@@ -314,6 +334,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppFarmsRoute: AppFarmsRoute,
   AppLiveRoute: AppLiveRoute,
   AppReportsRoute: AppReportsRoute,
+  AppSettingsRoute: AppSettingsRoute,
   AppIndexRoute: AppIndexRoute,
   AppPondsPondIdRoute: AppPondsPondIdRoute,
 }
