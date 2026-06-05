@@ -63,7 +63,7 @@ export function Support() {
               </div>
             </div>
           </div>
-        </div>
+        </Reveal>
       </div>
     </section>
   );
