@@ -99,12 +99,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "stylesheet", href: appCss },
       {
         rel: "icon",
-        type: "image/png",
-        href: "/__l5e/assets-v1/6bfdaa75-47e9-4a78-b207-9bc76e2def32/acqua-lence-logo.png",
+        type: "image/jpeg",
+        href: "/favicon.jpg",
       },
       {
         rel: "apple-touch-icon",
-        href: "/__l5e/assets-v1/6bfdaa75-47e9-4a78-b207-9bc76e2def32/acqua-lence-logo.png",
+        href: "/favicon.jpg",
       },
     ],
   }),
