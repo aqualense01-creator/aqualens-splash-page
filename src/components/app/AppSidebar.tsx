@@ -12,7 +12,7 @@ import {
   ClipboardList,
   Users,
   LifeBuoy,
-  ShieldCog,
+  ShieldCheck,
 } from "lucide-react";
 import {
   Sidebar,
