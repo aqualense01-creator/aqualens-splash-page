@@ -1,81 +1,93 @@
-# Acqua Lence — Complete MVP Build Plan
+## Goal
 
-Building on what already exists (auth, dashboard, live view, pond detail, sidebar/topbar shell, i18n, insforge client), this plan finishes every remaining farmer, technician, and admin route from the PRD with pixel-perfect UI.
+Two passes on the landing page:
 
-## What already exists
-- Auth: `/login`, `/signup` with email OTP verification, `/auth` context
-- Shell: `AppSidebar`, `AppTopbar`, `/app` layout, i18n (EN/BN)
-- Farmer pages: `/app/dashboard`, `/app/live`, `/app/ponds/:pondId`
-- Schema: farms, ponds, devices, readings, alerts (insforge)
-- Logo + branding wired
+1. **Fix the scroll-trigger section** so the frame sequence plays start-to-finish exactly in sync with scroll position, with smooth easing and proper preloading.
+2. **Polish the rest of the landing page** for consistency, spacing, motion, and mobile behavior.
 
-## What to build
+---
 
-### 1. Farmer pages (complete the set)
-- `/app/farms` — Farm + Pond management. Farm list (cards), add/edit farm dialog, expandable pond list per farm, add/edit pond dialog with all required fields (name, type, species, area, depth, water type, stocking date, density, device, threshold preset), assign device action.
-- `/app/alerts` — Summary cards (critical/warning/device/calibration/resolved), tabbed table (All/Critical/Warning/Device/Calibration/Resolved), filters, row click → detail drawer with parameter, value, threshold, recommended action, history sparkline, acknowledge + resolve + add note actions.
-- `/app/reports` — Date range + farm/pond/parameter selectors, summary KPI cards (water quality score, % in safe range, total alerts, device uptime), trend charts (DO, pH, temp, salinity, alert trend, pond comparison), report type tabs (daily/weekly/monthly/device/custom), export CSV/PDF buttons.
-- `/app/devices` — Summary cards (total/online/offline/low battery/cal due/maint due), filterable device table with status/battery/signal/firmware/last-seen.
-- `/app/devices/:deviceId` — Tabs: Overview, Sensors, History, Settings. Restart + run-diagnostics actions; sampling interval, threshold profile.
-- `/app/settings` — Profile, Security (change password, sessions), Notifications (channels × types matrix), Language selector.
+## Part 1 — Rewrite the device scroll sequence (Apple-style pinned playback)
 
-### 2. Technician pages
-- `/app/setup` — 6-step wizard (Installation checklist → Connectivity test → Registration/QR → Assign to pond → Sensor calibration → Finalize). Stepper UI, validation per step, completion summary.
-- `/app/calibration/:deviceId` — Per-sensor calibration cards (pH, DO, temp, turbidity, salinity, ammonia) with calibration value, date, technician name, result status; saves log.
-- `/app/maintenance/:deviceId` — Maintenance log table + add-entry form (visit date, technician, issue, action, photos, notes).
+Today the canvas lives inside a normal-height section. Progress is mapped to "section travels across viewport," so the animation also plays while the section is half off-screen and the playback never feels locked to scroll. The user explicitly wants "start to finish with perfect visual" and "accurate scroll time."
 
-### 3. Admin shell + pages
-- New `/admin` layout with `AdminSidebar` (Dashboard, Farms, Devices, Users, Alerts, Support, System Settings) reusing `AppTopbar`. Role-gated: only `admin` users can access (check `auth.users` role via insforge profile/role; redirect otherwise).
-- `/admin/dashboard` — Platform metrics (customers, farms, ponds, devices online/offline, active+critical alerts, cal due, support tickets), charts (device status, alert trends, farm distribution, uptime trend).
-- `/admin/farms` — Customer search, customer profile drawer (farms, ponds, devices, activity, suspend/reactivate), farm/pond CRUD, assign device.
-- `/admin/devices` — Full inventory table with firmware/SIM/warranty/maintenance columns, filters, bulk actions (mark maint due, assign technician, export CSV, deactivate, flag).
-- `/admin/users` — User table with role filter, create/edit user dialog (role: farmer/manager/technician/admin/support), suspend, reset password, assign org/farm.
-- `/admin/alerts` — Cross-platform alert monitoring, filters (farm/district/device/severity), detail drawer with assign-technician, internal note, escalate, resolve.
-- `/admin/support` — Ticket table with status filter, create ticket, ticket detail drawer (issue type, farmer, pond, device, priority, photos, assigned tech), status transitions.
-- `/admin/settings` — Tabs: Sensor types, Default safe ranges, Alert thresholds, Alert templates (EN/BN), Device packages, Roles, Notification channels, Report templates, Language strings. Changes logged.
+**New structure** (in `src/components/landing/Rugged.tsx` + `ScrollSequence.tsx`)
 
-### 4. Backend additions (insforge migration)
-New tables + RLS:
-- `profiles` (id → auth.users, full_name, phone, role enum: farmer|manager|technician|admin|support, district, language, suspended)
-- `alerts` extra cols if missing: severity, status (open/ack/resolved), recommended_action, acknowledged_at/by, resolved_at/by, notes[]
-- `calibrations` (device_id, sensor_type, value, calibrated_at, technician_id, result)
-- `maintenance_logs` (device_id, technician_id, visit_date, issue, action, photos[], notes)
-- `support_tickets` (farmer_id, farm_id, pond_id, device_id, issue_type, priority, description, photos[], assigned_to, status)
-- `system_settings` (key, value jsonb) for thresholds/templates/sensor types
-- `audit_logs` (actor_id, action, entity, entity_id, diff, created_at)
-- `device_assignments` history (optional)
-- RLS: farmers see own farms/ponds/devices/alerts; admin/support see all; technicians see assigned.
+```text
+<section id="device">                  ← tall outer (≈ 220vh on desktop, 180vh mobile)
+  <div class="sticky top-0 h-screen">  ← pinned stage
+    grid: [features | canvas | copy]   ← same 3-column layout, vertically centered
+  </div>
+</section>
+```
 
-### 5. Shared components to add
-- `StatusBadge` (good/watch/warning/critical/offline/cal-due) — colors from semantic tokens
-- `ParameterCard` (value, unit, status, safe range, sparkline)
-- `BatteryIndicator`, `SignalIndicator`
-- `AlertDrawer`, `DeviceCard`, `FarmCard`, `PondCard`
-- `Stepper` for technician wizard
-- `EmptyState`, `LoadingSkeleton`, `StaleDataChip`
-- `RoleGuard` wrapper
+- Progress = `clamp(0..1, -outerRect.top / (outerRect.height - vh))` → 0 the moment the sticky stage locks, 1 the moment it unlocks. Frame index = `progress * (frameCount-1)`, rounded.
+- Drop the framer-motion `y` / `scale` on the canvas wrapper (it competes with the scroll mapping and makes timing feel off). The features chips can keep a tiny parallax tied to the same progress.
+- Tighten the smoothing loop: smoothing factor 0.35 (was 0.18) so the canvas tracks scroll closely without jitter. Snap to target when `|diff| < 0.5`.
+- DPR-aware canvas: set `canvas.width = cssW * dpr`, `canvas.height = cssH * dpr`, `ctx.scale(dpr, dpr)` once, and resize on viewport change. Eliminates the blurry look on retina.
+- Preload pipeline:
+  - Kick off all 65 `Image()` fetches in parallel, but draw frame 1 the moment its `decode()` resolves so the section is never empty.
+  - Show a subtle 1-line progress bar (not the floating pill) only while < 100 % loaded; hide once decoded.
+  - Honor `prefers-reduced-motion`: show the middle frame statically, skip the scroll mapping.
 
-### 6. Design tokens (extend src/styles.css)
-Add semantic colors for: `--status-good`, `--status-watch`, `--status-warning`, `--status-critical`, `--status-offline`, `--status-calibration`, plus gradients and shadows for cards. Keep current Acqua palette (calm aquatic blues/teals with warm coral for critical).
+**Acceptance for this part**
 
-### 7. Mobile
-All pages responsive at 360px. Sidebar collapses; farmer pages get a bottom-tab feel via existing sidebar in mobile drawer mode. Cards stack, charts simplified.
+- At the moment the section's top reaches the nav, frame 1 is showing.
+- Scrolling through the full sticky window plays frames 1 → 65 monotonically.
+- Reversing scroll plays 65 → 1 with no skips.
+- Last frame holds until the user scrolls past the outer section.
+- No layout shift on load; no blurry canvas on retina.
 
-## Technical notes
-- Routes use file-based TanStack flat names: `app.farms.tsx`, `app.alerts.tsx`, `app.reports.tsx`, `app.devices.tsx`, `app.devices.$deviceId.tsx`, `app.settings.tsx`, `app.setup.tsx`, `app.calibration.$deviceId.tsx`, `app.maintenance.$deviceId.tsx`, `admin.tsx` (layout), `admin.dashboard.tsx`, `admin.farms.tsx`, `admin.devices.tsx`, `admin.users.tsx`, `admin.alerts.tsx`, `admin.support.tsx`, `admin.settings.tsx`.
-- Data: TanStack Query (`useQuery`/`useMutation`) against `insforge` SDK with array-form `insert([...])`.
-- Charts: Recharts (already installed) with threshold `ReferenceArea`s.
-- i18n: extend `useI18n` dictionary with new keys for every page (EN + BN).
-- Admin gate: read role from `profiles` table; redirect non-admins to `/app/dashboard`.
+---
 
-## Execution order
-1. Migration: profiles + role, calibrations, maintenance_logs, support_tickets, system_settings, audit_logs, alert columns; insert default system_settings (sensor types + thresholds).
-2. Shared components + status tokens.
-3. Farmer pages: farms → alerts → devices → device detail → reports → settings.
-4. Technician pages: setup wizard → calibration → maintenance.
-5. Admin shell + role guard.
-6. Admin pages: dashboard → farms → devices → users → alerts → support → settings.
-7. i18n strings (EN + BN) pass.
-8. Mobile QA + polish.
+## Part 2 — Landing page polish
 
-This is a large build (~20 new route files + ~15 shared components + 1 migration). After approval I'll execute in the order above, batching parallel file writes per phase.
+Scoped, deterministic fixes — no redesign:
+
+**Global**
+- Add `scroll-behavior: smooth` and `scroll-padding-top: 4rem` to `html` in `styles.css` so `#device` (and any future anchor) lands below the sticky nav.
+- Make `Reveal` fire with `viewport={{ once: true, amount: 0.15 }}` and a faster default (240 ms) so above-the-fold elements aren't stuck at opacity-0 on first paint.
+- Reduce default section vertical padding from `py-24` to `py-20` on `<lg`, keep `py-24` on `lg+`, to tighten mobile rhythm.
+
+**Nav**
+- Highlight the active section link as the user scrolls (IntersectionObserver on `#device`, `#platform`, `#shop`, `#support`).
+- Add hover underline (`story-link`) and a 1 px translucent bottom border that solidifies after 8 px of scroll.
+
+**Hero**
+- Tighten headline leading on mobile (`leading-[1.05]` → keep but add `text-pretty`).
+- Constrain the right-side preview card to `max-w-[560px]`, centered, so it doesn't crowd the headline on 1024–1280 widths.
+
+**Stats / HowItWorks / Dashboard / Platform / Shop / Support / CTA / Footer**
+- Unify section heading kicker style (uppercase 12px, primary, `tracking-[0.18em]`).
+- Use one shared section wrapper class (`section-wrap` in `styles.css`) for max-width + padding so all sections line up.
+- Add subtle `bg-gradient-to-b from-background to-surface` alternation between sections so the page reads as connected, not stacked rectangles.
+
+**Mobile**
+- Stack the Rugged grid as `copy → canvas → chips` (current order is correct on mobile, just verify after the sticky rewrite).
+- Reduce the device sticky outer to ~180vh on `<lg` so the section doesn't dominate mobile scroll.
+- Ensure nav mobile menu uses real `#device` anchor (already wired, verify).
+
+---
+
+## Verification step (I will run before finishing)
+
+1. Open preview at 1280×800: scroll slowly through `#device`, screenshot at 0 %, 25 %, 50 %, 75 %, 100 % of section progress. Confirm distinct frames each time and monotonic playback.
+2. Same at 390×844 mobile viewport.
+3. Scroll the full page top-to-bottom, screenshot every section, confirm no opacity-0 sections, no overflow, no overlapping text.
+4. Check console + network: all 65 frames load with 200, no 404s, no React warnings.
+
+If any of those fail, fix and re-verify before reporting done.
+
+---
+
+## Files touched
+
+- `src/components/landing/ScrollSequence.tsx` (rewrite)
+- `src/components/landing/Rugged.tsx` (sticky stage structure)
+- `src/components/landing/Nav.tsx` (active link + scroll border)
+- `src/components/landing/Reveal.tsx` (defaults)
+- `src/components/landing/Hero.tsx` (preview card max-width)
+- `src/styles.css` (smooth scroll, section-wrap utility, reduced-motion guard)
+- Light touch-ups in Stats / HowItWorks / Dashboard / Platform / Shop / Support / CTA / Footer to apply shared section wrapper and kicker class.
+
+No new dependencies. No backend or routing changes.
