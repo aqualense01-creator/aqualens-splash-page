@@ -152,13 +152,13 @@ function LoginPage() {
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between">
                   <Label htmlFor="password" className="text-sm font-medium">
                     {isBn ? "পাসওয়ার্ড" : "Password"}
                   </Label>
-                  <button type="button" className="text-xs font-medium text-primary hover:underline">
+                  <Link to="/forgot-password" className="text-xs font-medium text-primary hover:underline">
                     {isBn ? "পাসওয়ার্ড ভুলে গেছেন?" : "Forgot password?"}
-                  </button>
+                  </Link>
                 </div>
                 <Input
                   id="password"
