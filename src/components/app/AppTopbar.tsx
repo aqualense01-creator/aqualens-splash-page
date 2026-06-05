@@ -11,12 +11,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
-import { useNavigate } from "@tanstack/react-router";
+
 
 export function AppTopbar() {
   const { lang, setLang } = useI18n();
   const { user, profile, signOut } = useAuth();
-  const navigate = useNavigate();
 
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center gap-2 border-b border-border/60 bg-background/85 px-3 backdrop-blur sm:px-4">
@@ -62,13 +61,13 @@ export function AppTopbar() {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel className="truncate">{user?.email}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate({ to: "/app/settings" })}>
+            <DropdownMenuItem onClick={() => window.location.assign("/app/settings")}>
               <UserIcon className="mr-2 h-4 w-4" /> Profile
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={async () => {
                 await signOut();
-                navigate({ to: "/login" });
+                window.location.assign("/login");
               }}
             >
               <LogOut className="mr-2 h-4 w-4" /> Sign out
