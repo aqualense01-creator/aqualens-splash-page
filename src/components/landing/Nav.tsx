@@ -49,12 +49,12 @@ export function Nav() {
             <nav className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-3">
               {links.map((l) => (
                 <a
-                  key={l}
-                  href="#"
+                  key={l.label}
+                  href={l.href}
                   onClick={() => setOpen(false)}
                   className="rounded-md px-3 py-2 text-sm font-medium text-foreground/80 hover:bg-accent hover:text-primary"
                 >
-                  {l}
+                  {l.label}
                 </a>
               ))}
               <a
