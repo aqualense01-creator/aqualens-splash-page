@@ -10,8 +10,10 @@ type AuthCtx = {
   roles: AppRole[];
   isAdmin: boolean;
   isTechnician: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: string | null; needsVerification?: boolean }>;
+  signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null; needsVerification?: boolean }>;
+  verifyEmail: (email: string, otp: string) => Promise<{ error: string | null }>;
+  resendVerification: (email: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
 };
@@ -59,17 +61,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn: AuthCtx["signIn"] = async (email, password) => {
     const { error } = await insforge.auth.signInWithPassword({ email, password });
-    if (error) return { error: error.message ?? "Sign-in failed" };
+    if (error) {
+      const msg = error.message ?? "Sign-in failed";
+      const needsVerification = /verif/i.test(msg) || (error as { statusCode?: number }).statusCode === 403;
+      return { error: msg, needsVerification };
+    }
     await loadSession();
     return { error: null };
   };
 
   const signUp: AuthCtx["signUp"] = async (email, password, fullName) => {
-    const { error } = await insforge.auth.signUp({ email, password, name: fullName });
+    const { data, error } = await insforge.auth.signUp({ email, password, name: fullName });
     if (error) return { error: error.message ?? "Sign-up failed" };
-    // Try to sign in immediately (works if email verification is disabled)
-    await insforge.auth.signInWithPassword({ email, password }).catch(() => null);
+    const needsVerification = !data?.accessToken;
+    if (!needsVerification) await loadSession();
+    return { error: null, needsVerification };
+  };
+
+  const verifyEmail: AuthCtx["verifyEmail"] = async (email, otp) => {
+    const { error } = await insforge.auth.verifyEmail({ email, otp });
+    if (error) return { error: error.message ?? "Verification failed" };
+    await insforge.auth.signInWithPassword({ email, password: "" }).catch(() => null);
     await loadSession();
+    return { error: null };
+  };
+
+  const resendVerification: AuthCtx["resendVerification"] = async (email) => {
+    const { error } = await insforge.auth.resendVerificationEmail({ email });
+    if (error) return { error: error.message ?? "Could not resend code" };
     return { error: null };
   };
 
@@ -91,6 +110,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isTechnician: roles.includes("technician"),
         signIn,
         signUp,
+        verifyEmail,
+        resendVerification,
         signOut,
         refresh: loadSession,
       }}
