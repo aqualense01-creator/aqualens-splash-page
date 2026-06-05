@@ -135,7 +135,7 @@ export function Dashboard() {
               </div>
             </div>
           </div>
-        </div>
+        </Reveal>
       </div>
     </section>
   );
