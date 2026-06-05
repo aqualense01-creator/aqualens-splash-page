@@ -1,8 +1,8 @@
 import { useRef } from "react";
 import { Sun, Gauge, ShieldCheck, Wrench, Waves, Anchor, BatteryFull, Zap, ArrowRight } from "lucide-react";
 import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
-import buoy from "@/assets/buoy-product.png";
 import { Reveal } from "./Reveal";
+import { ScrollSequence } from "./ScrollSequence";
 
 const left = [
   { icon: Sun, title: "Solar Powered", body: "Long lasting & energy efficient" },
