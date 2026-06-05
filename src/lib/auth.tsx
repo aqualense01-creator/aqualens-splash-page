@@ -178,6 +178,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: null };
   };
 
+  const sendResetLink: AuthCtx["sendResetLink"] = async (identifier) => {
+    await new Promise((r) => setTimeout(r, 800));
+    const idType = isValidIdentifier(identifier);
+    if (!idType) return { error: "Enter a valid email or Bangladesh phone number." };
+    return { error: null };
+  };
+
   const signInWithOtp: AuthCtx["signInWithOtp"] = async (identifier, otp) => {
     await new Promise((r) => setTimeout(r, 800));
     if (!/^\d{6}$/.test(otp)) return { error: "Enter the 6-digit code." };
