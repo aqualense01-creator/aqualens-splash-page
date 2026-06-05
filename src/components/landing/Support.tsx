@@ -1,17 +1,18 @@
 import { Button } from "@/components/ui/button";
 import { Check, ChevronLeft, ChevronRight, Quote, ArrowRight } from "lucide-react";
 import expert from "@/assets/support-expert.jpg";
+import { Reveal } from "./Reveal";
 
 const items = ["24/7 Live Support", "Expert Consultation", "On-site Support", "Training & Resources"];
 
 export function Support() {
   return (
-    <section className="bg-surface py-20">
+    <section className="bg-surface py-24">
       <div className="mx-auto grid max-w-7xl gap-10 px-6 lg:grid-cols-2 lg:items-center">
-        <div className="grid gap-6 sm:grid-cols-[1fr_240px] sm:items-center">
+        <Reveal className="grid gap-6 sm:grid-cols-[1fr_240px] sm:items-center">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-primary">24/7 Expert Support</p>
-            <h2 className="mt-3 font-display text-3xl font-bold text-foreground">We're Here for You, Always</h2>
+            <h2 className="mt-3 font-display text-4xl font-bold text-foreground text-balance">We're Here for You, Always</h2>
             <p className="mt-3 text-sm text-muted-foreground">
               Our team of aquaculture experts is available 24/7 to support you at every step.
             </p>
@@ -29,11 +30,11 @@ export function Support() {
           <div className="overflow-hidden rounded-xl">
             <img src={expert} alt="AcquaLence support specialist" className="h-72 w-full object-cover" loading="lazy" width={400} height={500} />
           </div>
-        </div>
+        </Reveal>
 
-        <div>
+        <Reveal delay={0.1}>
           <p className="text-xs font-semibold uppercase tracking-wider text-primary">Trusted by Aquaculture Farmers</p>
-          <h2 className="mt-3 font-display text-3xl font-bold text-foreground">What Our Customers Say</h2>
+          <h2 className="mt-3 font-display text-4xl font-bold text-foreground text-balance">What Our Customers Say</h2>
           <div className="mt-6 rounded-xl border border-border bg-card p-6">
             <Quote className="h-6 w-6 text-primary/40" />
             <p className="mt-3 text-sm leading-relaxed text-foreground">
@@ -62,7 +63,7 @@ export function Support() {
               </div>
             </div>
           </div>
-        </div>
+        </Reveal>
       </div>
     </section>
   );

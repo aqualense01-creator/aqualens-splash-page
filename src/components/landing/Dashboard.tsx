@@ -1,6 +1,7 @@
 import { CheckCircle2, ArrowRight, LayoutDashboard, Waves, Cpu, Bell, FileText, BarChart, Settings, AlertTriangle } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { Logo } from "./Logo";
+import { Reveal } from "./Reveal";
 
 const data = Array.from({ length: 12 }, (_, i) => ({
   t: `${i * 2}:00`,
@@ -43,11 +44,12 @@ const alerts = [
 
 export function Dashboard() {
   return (
-    <section className="bg-surface py-20">
+    <section className="relative overflow-hidden bg-surface py-24">
+      <div className="absolute -left-32 top-1/2 -z-10 h-72 w-72 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl" />
       <div className="mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-[340px_1fr] lg:items-center">
-        <div>
+        <Reveal>
           <p className="text-xs font-semibold uppercase tracking-wider text-primary">Real-time Monitoring</p>
-          <h2 className="mt-3 font-display text-3xl font-bold text-foreground md:text-4xl">
+          <h2 className="mt-3 font-display text-4xl font-bold text-foreground text-balance md:text-5xl">
             Every Parameter.
             <br />
             Every Moment.
@@ -62,12 +64,12 @@ export function Dashboard() {
               </li>
             ))}
           </ul>
-          <a href="#" className="mt-6 inline-flex items-center gap-1 text-sm font-medium text-primary">
+          <a href="#" className="mt-6 inline-flex items-center gap-1 text-sm font-semibold text-primary">
             Learn More <ArrowRight className="h-4 w-4" />
           </a>
-        </div>
+        </Reveal>
 
-        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-[0_30px_80px_-30px_rgba(15,44,68,0.25)]">
+        <Reveal delay={0.1} className="overflow-hidden rounded-2xl border border-border bg-card shadow-[0_40px_100px_-30px_rgba(15,44,68,0.35)]">
           <div className="grid grid-cols-[180px_1fr]">
             <aside className="border-r border-border bg-surface p-4">
               <Logo />
@@ -133,7 +135,7 @@ export function Dashboard() {
               </div>
             </div>
           </div>
-        </div>
+        </Reveal>
       </div>
     </section>
   );
