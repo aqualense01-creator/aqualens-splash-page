@@ -76,7 +76,7 @@ export function Rugged() {
           <a href="#" className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary">
             Learn More <ArrowRight className="h-4 w-4" />
           </a>
-          <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <motion.div style={{ y: chipsY }} className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
             {right.map(({ icon: Icon, title, sub }) => (
               <div key={title} className="text-center">
                 <span className="mx-auto grid h-9 w-9 place-items-center rounded-full bg-primary/10">
@@ -86,7 +86,8 @@ export function Rugged() {
                 <p className="text-[11px] text-muted-foreground">{sub}</p>
               </div>
             ))}
-          </div>
+          </motion.div>
+
         </Reveal>
       </div>
     </section>
