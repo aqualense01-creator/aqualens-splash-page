@@ -177,7 +177,7 @@ function DeviceDetailPage() {
               {d.last_seen ? timeAgo(new Date(d.last_seen)) : "—"}
             </span>
             <StatusBadge status={d.status} />
-          </span> as unknown as string
+          </span>
         }
         actions={
           <div className="flex flex-wrap gap-2">
