@@ -24,6 +24,13 @@ import { Route as AppFarmsRouteImport } from './routes/app.farms'
 import { Route as AppDevicesRouteImport } from './routes/app.devices'
 import { Route as AppDashboardRouteImport } from './routes/app.dashboard'
 import { Route as AppAlertsRouteImport } from './routes/app.alerts'
+import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AdminSupportRouteImport } from './routes/admin.support'
+import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
+import { Route as AdminFarmsRouteImport } from './routes/admin.farms'
+import { Route as AdminDevicesRouteImport } from './routes/admin.devices'
+import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
+import { Route as AdminAlertsRouteImport } from './routes/admin.alerts'
 import { Route as AppPondsPondIdRouteImport } from './routes/app.ponds.$pondId'
 import { Route as AppMaintenanceDeviceIdRouteImport } from './routes/app.maintenance.$deviceId'
 import { Route as AppDevicesDeviceIdRouteImport } from './routes/app.devices.$deviceId'
@@ -104,6 +111,41 @@ const AppAlertsRoute = AppAlertsRouteImport.update({
   path: '/alerts',
   getParentRoute: () => AppRoute,
 } as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSupportRoute = AdminSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminFarmsRoute = AdminFarmsRouteImport.update({
+  id: '/farms',
+  path: '/farms',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDevicesRoute = AdminDevicesRouteImport.update({
+  id: '/devices',
+  path: '/devices',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDashboardRoute = AdminDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAlertsRoute = AdminAlertsRouteImport.update({
+  id: '/alerts',
+  path: '/alerts',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AppPondsPondIdRoute = AppPondsPondIdRouteImport.update({
   id: '/ponds/$pondId',
   path: '/ponds/$pondId',
@@ -131,6 +173,13 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/admin/alerts': typeof AdminAlertsRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/devices': typeof AdminDevicesRoute
+  '/admin/farms': typeof AdminFarmsRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/support': typeof AdminSupportRoute
+  '/admin/users': typeof AdminUsersRoute
   '/app/alerts': typeof AppAlertsRoute
   '/app/dashboard': typeof AppDashboardRoute
   '/app/devices': typeof AppDevicesRouteWithChildren
@@ -150,6 +199,13 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/admin/alerts': typeof AdminAlertsRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/devices': typeof AdminDevicesRoute
+  '/admin/farms': typeof AdminFarmsRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/support': typeof AdminSupportRoute
+  '/admin/users': typeof AdminUsersRoute
   '/app/alerts': typeof AppAlertsRoute
   '/app/dashboard': typeof AppDashboardRoute
   '/app/devices': typeof AppDevicesRouteWithChildren
@@ -172,6 +228,13 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/admin/alerts': typeof AdminAlertsRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/devices': typeof AdminDevicesRoute
+  '/admin/farms': typeof AdminFarmsRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/support': typeof AdminSupportRoute
+  '/admin/users': typeof AdminUsersRoute
   '/app/alerts': typeof AppAlertsRoute
   '/app/dashboard': typeof AppDashboardRoute
   '/app/devices': typeof AppDevicesRouteWithChildren
@@ -195,6 +258,13 @@ export interface FileRouteTypes {
     | '/app'
     | '/login'
     | '/signup'
+    | '/admin/alerts'
+    | '/admin/dashboard'
+    | '/admin/devices'
+    | '/admin/farms'
+    | '/admin/settings'
+    | '/admin/support'
+    | '/admin/users'
     | '/app/alerts'
     | '/app/dashboard'
     | '/app/devices'
@@ -214,6 +284,13 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/signup'
+    | '/admin/alerts'
+    | '/admin/dashboard'
+    | '/admin/devices'
+    | '/admin/farms'
+    | '/admin/settings'
+    | '/admin/support'
+    | '/admin/users'
     | '/app/alerts'
     | '/app/dashboard'
     | '/app/devices'
@@ -235,6 +312,13 @@ export interface FileRouteTypes {
     | '/app'
     | '/login'
     | '/signup'
+    | '/admin/alerts'
+    | '/admin/dashboard'
+    | '/admin/devices'
+    | '/admin/farms'
+    | '/admin/settings'
+    | '/admin/support'
+    | '/admin/users'
     | '/app/alerts'
     | '/app/dashboard'
     | '/app/devices'
@@ -366,6 +450,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAlertsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/support': {
+      id: '/admin/support'
+      path: '/support'
+      fullPath: '/admin/support'
+      preLoaderRoute: typeof AdminSupportRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/farms': {
+      id: '/admin/farms'
+      path: '/farms'
+      fullPath: '/admin/farms'
+      preLoaderRoute: typeof AdminFarmsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/devices': {
+      id: '/admin/devices'
+      path: '/devices'
+      fullPath: '/admin/devices'
+      preLoaderRoute: typeof AdminDevicesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/dashboard': {
+      id: '/admin/dashboard'
+      path: '/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AdminDashboardRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/alerts': {
+      id: '/admin/alerts'
+      path: '/alerts'
+      fullPath: '/admin/alerts'
+      preLoaderRoute: typeof AdminAlertsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/app/ponds/$pondId': {
       id: '/app/ponds/$pondId'
       path: '/ponds/$pondId'
@@ -398,10 +531,24 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
+  AdminAlertsRoute: typeof AdminAlertsRoute
+  AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminDevicesRoute: typeof AdminDevicesRoute
+  AdminFarmsRoute: typeof AdminFarmsRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminSupportRoute: typeof AdminSupportRoute
+  AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAlertsRoute: AdminAlertsRoute,
+  AdminDashboardRoute: AdminDashboardRoute,
+  AdminDevicesRoute: AdminDevicesRoute,
+  AdminFarmsRoute: AdminFarmsRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
+  AdminSupportRoute: AdminSupportRoute,
+  AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 
@@ -461,3 +608,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
