@@ -39,7 +39,7 @@ export function Rugged() {
       ref={outerRef}
       className="relative bg-background"
       // Tall outer drives the sticky stage. ~220vh desktop, 180vh mobile.
-      style={{ height: "200vh" }}
+      style={{ height: "150vh" }}
     >
       {/* Pinned stage */}
       <div className="sticky top-0 flex h-screen items-center overflow-hidden">
