@@ -110,6 +110,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isTechnician: roles.includes("technician"),
         signIn,
         signUp,
+        verifyEmail,
+        resendVerification,
         signOut,
         refresh: loadSession,
       }}
