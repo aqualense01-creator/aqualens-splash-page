@@ -75,7 +75,7 @@ export function Rugged() {
               </div>
             ))}
           </div>
-        </div>
+        </Reveal>
       </div>
     </section>
   );
