@@ -20,8 +20,8 @@ export function Nav() {
         <Logo />
         <nav className="hidden items-center gap-8 md:flex">
           {links.map((l) => (
-            <a key={l} href="#" className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary">
-              {l}
+            <a key={l.label} href={l.href} className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary">
+              {l.label}
             </a>
           ))}
         </nav>
