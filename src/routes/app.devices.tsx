@@ -515,7 +515,7 @@ function DevicesPage() {
                     value={selectedPond?.name ?? "—"}
                   />
                   <DrawerRow
-                    icon={<Firmware className="h-4 w-4 text-muted-foreground" />}
+                    icon={<HardDrive className="h-4 w-4 text-muted-foreground" />}
                     label={t("devices.firmware") ?? "Firmware"}
                     value={selectedDevice.firmware_version ?? "—"}
                   />
