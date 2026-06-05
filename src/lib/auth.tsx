@@ -10,8 +10,10 @@ type AuthCtx = {
   roles: AppRole[];
   isAdmin: boolean;
   isTechnician: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: string | null; needsVerification?: boolean }>;
+  signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null; needsVerification?: boolean }>;
+  verifyEmail: (email: string, otp: string) => Promise<{ error: string | null }>;
+  resendVerification: (email: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
 };
