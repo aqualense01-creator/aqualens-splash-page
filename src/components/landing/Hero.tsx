@@ -2,6 +2,9 @@ import { Button } from "@/components/ui/button";
 import { Activity, Brain, Headphones, ShieldCheck, Play, Sparkles, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import heroImg from "@/assets/hero-buoy.jpg";
+import { GradientMesh } from "./GradientMesh";
+import { MagneticButton } from "./MagneticButton";
+import { Marquee } from "./Marquee";
 
 const chips = [
   { icon: Activity, label: "Real-time", sub: "Monitoring" },
