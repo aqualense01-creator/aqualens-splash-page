@@ -148,7 +148,7 @@ export function MonitoringStory() {
 
           {/* right: active step card */}
           <div className="col-span-7 flex justify-center">
-            <div className="relative h-[420px] w-full max-w-xl">
+            <div className="relative h-[560px] w-full max-w-xl">
               {steps.map((s, i) => {
                 const Icon = s.icon;
                 const isActive = i === active;
