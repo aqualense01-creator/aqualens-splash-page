@@ -68,11 +68,7 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-border/60 px-3 py-3">
-        {collapsed ? (
-          <div className="grid h-8 w-8 place-items-center rounded-md bg-primary/10 text-primary font-bold">A</div>
-        ) : (
-          <Logo />
-        )}
+        {collapsed ? <Logo iconOnly /> : <Logo />}
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
