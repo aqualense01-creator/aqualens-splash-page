@@ -51,6 +51,7 @@ function Index() {
       <Rugged />
       <Platform />
       <Shop />
+      <ProductAttachments />
       <Support />
       <CTA />
       <Footer />
