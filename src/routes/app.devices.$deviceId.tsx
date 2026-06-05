@@ -302,6 +302,8 @@ function DeviceDetailPage() {
                     (d as { created_at?: string }).created_at
                       ? new Date((d as { created_at?: string }).created_at!).toLocaleDateString()
                       : "—"
+                  }
+                />
               </Card>
             </div>
           </div>
