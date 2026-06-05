@@ -1109,8 +1109,7 @@ function PondDialog({
   const [status, setStatus] = useState("good");
 
   const opened = state.open;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useMemo(() => {
+  useEffect(() => {
     if (opened) {
       setName(state.pond?.name ?? "");
       setSpecies(state.pond?.species ?? "");
@@ -1118,6 +1117,7 @@ function PondDialog({
       setArea(state.pond?.area_m2 != null ? String(state.pond.area_m2) : "");
       setStatus(state.pond?.status ?? "good");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opened]);
 
   return (
