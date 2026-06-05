@@ -63,21 +63,22 @@ export function MonitoringStory() {
               From pond water to farmer action — in seconds.
             </h2>
           </Reveal>
-          <ol className="mt-10 space-y-3">
-            {steps.map(({ icon: Icon, title, body }, i) => (
+          <ol className="mt-10 space-y-4">
+            {steps.map(({ icon: Icon, image, alt, title, body }, i) => (
               <Reveal key={title} delay={i * 0.05}>
-                <li className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
+                <li className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+                  <img src={image} alt={alt} width={1280} height={896} loading="lazy" className="aspect-[16/10] w-full object-cover" />
+                  <div className="flex items-start gap-3 p-4">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0">
                       <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                         Step {i + 1}
                       </span>
+                      <h3 className="mt-0.5 text-[15px] font-semibold text-foreground">{title}</h3>
+                      <p className="mt-1 text-[13px] leading-snug text-muted-foreground">{body}</p>
                     </div>
-                    <h3 className="mt-0.5 text-[15px] font-semibold text-foreground">{title}</h3>
-                    <p className="mt-1 text-[13px] leading-snug text-muted-foreground">{body}</p>
                   </div>
                 </li>
               </Reveal>
@@ -93,7 +94,7 @@ export function MonitoringStory() {
       ref={outerRef}
       className="relative bg-surface"
       aria-labelledby="story-heading"
-      style={{ height: "180vh" }}
+      style={{ height: "240vh" }}
     >
       <div className="sticky top-0 flex h-screen items-center overflow-hidden">
         <div
