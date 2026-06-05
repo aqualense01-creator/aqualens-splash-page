@@ -178,8 +178,16 @@ export function MonitoringStory() {
                       {s.body}
                     </p>
                     {/* visual frame */}
-                    <div className="mt-6 grid h-44 place-items-center rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent ring-1 ring-border/60">
-                      <Icon className="h-20 w-20 text-primary/40" />
+                    <div className="mt-6 overflow-hidden rounded-2xl ring-1 ring-border/60">
+                      <img
+                        src={s.image}
+                        alt={s.alt}
+                        width={1280}
+                        height={896}
+                        loading={i === 0 ? "eager" : "lazy"}
+                        decoding="async"
+                        className="aspect-[16/10] w-full object-cover"
+                      />
                     </div>
                   </motion.article>
                 );
