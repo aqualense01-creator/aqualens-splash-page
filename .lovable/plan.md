@@ -1,42 +1,70 @@
+# Acqua Lence MVP — Build Plan
 
-## Goal
+InsForge is already connected (`@insforge/sdk`, anon key in `.env`, API key as secret). The current `/` is the marketing landing — we'll keep it as a public entry and move the app under `/app/*`, technician under `/app/setup`, `/app/calibration`, `/app/maintenance`, and admin under `/admin/*`.
 
-Layer four premium, 21st.dev-style animations into the existing landing page without restructuring any sections. All work stays in frontend/presentation code using `framer-motion` (already installed).
+## Phasing (each phase is a separate user turn so you can review)
 
-## Animations & where they go
+### Phase 1 — Foundation (this phase)
 
-### 1. Hero — Animated Gradient Mesh + Magnetic CTA
-- Add a new `GradientMesh.tsx` background layer in `Hero.tsx`: three large blurred radial blobs (teal, cyan, navy) animating `x/y/scale` on a 12–18s loop via `motion.div` — sits behind the buoy image, above the wash overlay.
-- Wrap the primary "Get Started" button in a new `MagneticButton.tsx`: tracks pointer position on `mousemove`, applies a spring-eased `translate` (max ~12px) so the button drifts toward the cursor, snaps back on leave. Uses `useMotionValue` + `useSpring`.
+**Backend schema (InsForge migrations)**
+- `profiles` — id (→ auth.users), full_name, phone, district, language ('en'|'bn'), role enum
+- `app_role` enum: `farmer | farm_manager | technician | admin | support`
+- `user_roles` table (separate from profiles, for RLS)
+- `farms` — id, owner_id, name, district, location, status
+- `ponds` — id, farm_id, name, type, water_type, species, area_m2, depth_m, stocking_date, stocking_density, device_id, threshold_preset
+- `devices` — id, serial, hardware_version, firmware_version, farm_id, pond_id, status, battery, signal, last_seen
+- `sensors` — id, device_id, type (do/ph/temp/turbidity/salinity/ammonia), status, last_calibrated, calibration_due
+- `readings` — id, pond_id, device_id, recorded_at, do, ph, temp, turbidity, salinity, ammonia, water_level
+- `alerts` — id, pond_id, device_id, type, severity (good/watch/warning/critical/offline/calibration_due), parameter, value, threshold, message, recommended_action, status, acknowledged_at, resolved_at
+- `thresholds` — id, scope (global/farm/pond), pond_id?, parameter, safe_min, safe_max, warn_min, warn_max, crit_min, crit_max
+- `maintenance_logs`, `calibration_logs`, `support_tickets`
+- RLS via `has_role()` security-definer fn; farmers see only their owned farms/ponds; admins see everything
 
-### 2. Stats strip — Animated Number Counters
-- New `CountUp.tsx` component: uses `useInView` + `animate(motionValue, target, { duration: 1.6, ease: "easeOut" })` and renders the rounded value. Supports prefix/suffix (`+`, `%`, `K`).
-- Replace the four static stat numbers in `Stats.tsx` with `<CountUp />`, animating once when scrolled into view.
+**Auth + app shell**
+- `/login` (phone+OTP scaffold; password fallback) using InsForge SDK
+- `/app/_layout` — sidebar (Dashboard/Live/Farms&Ponds/Alerts/Reports/Devices/Settings), topbar (farm selector, lang toggle EN/BN, notifications, profile)
+- Auth guard: redirect unauth → `/login`
+- Role-based sidebar (farmer/technician/admin variants)
+- i18n scaffold (simple `t()` keyed strings, EN + BN)
+- Design tokens: status colors in `styles.css` (good/watch/warning/critical/offline/calibration)
+- Status badge, parameter card, pond status card primitives
 
-### 3. Trust strip — Infinite Marquee
-- New `Marquee.tsx`: duplicated row of partner/industry labels, animated via `motion.div` with `animate={{ x: ['0%', '-50%'] }}` and a linear 30s loop. Pauses on hover (`whileHover={{ animationPlayState: 'paused' }}` via CSS variable approach).
-- Replace the static trust strip currently rendered at the bottom of `Hero.tsx` with the marquee.
+**Seed data** — 1 farm, 3 ponds, 1 device, sample readings + 1 critical alert so screens aren't empty.
 
-### 4. Rugged section — Scroll-linked Buoy Parallax
-- In `Rugged.tsx`, replace the existing `y: [0,-10,0]` loop with `useScroll` + `useTransform` driven by the section's own ref: buoy translates `y: 80 → -80` and scales `0.95 → 1.05` as the section scrolls through the viewport.
-- Add a subtle counter-parallax on the spec chips (`y: -30 → 30`) for depth.
+### Phase 2 — Farmer core
+- `/app/dashboard` (farm health summary, pond cards, today's alerts, recommended action, device health, empty state)
+- `/app/live` (live grid, filters, auto-refresh, stale indicator)
+- `/app/ponds/:pondId` (live cards, chart with thresholds, timeline, sensor history table, export)
 
-## Files
+### Phase 3 — Farm/pond/device management + alerts
+- `/app/farms` (farm + pond CRUD, assign device, threshold preset)
+- `/app/alerts` (tabs, table, detail drawer, ack/resolve/note actions)
+- `/app/devices` + `/app/devices/:deviceId` (overview/sensors/history/settings tabs)
 
-**New**
-- `src/components/landing/GradientMesh.tsx`
-- `src/components/landing/MagneticButton.tsx`
-- `src/components/landing/CountUp.tsx`
-- `src/components/landing/Marquee.tsx`
+### Phase 4 — Technician + Settings + Reports
+- `/app/setup` 6-step wizard, `/app/calibration/:deviceId`, `/app/maintenance/:deviceId`
+- `/app/reports` (charts, export PDF/CSV)
+- `/app/settings` (profile, security, notifications)
 
-**Edited**
-- `src/components/landing/Hero.tsx` — mount `GradientMesh`, wrap CTA in `MagneticButton`, swap trust strip for `Marquee`
-- `src/components/landing/Stats.tsx` — swap static numbers for `CountUp`
-- `src/components/landing/Rugged.tsx` — replace float loop with scroll-linked parallax
-- `src/styles.css` — add `--gradient-mesh-*` color stops and a `mask-fade-x` utility for the marquee edges
+### Phase 5 — Admin panel
+- `/admin/*` — dashboard, farms, devices, users, alerts, support, system settings
 
-## Notes
+### Phase 6 — Polish
+- Mobile bottom-tab nav for farmer
+- Full BN translations pass
+- All UI states (loading skeletons, empty, error, offline, stale, no-permission)
+- Analytics event hooks
 
-- 21st.dev's MCP can't be wired into Lovable, so these patterns are reimplemented by hand in the same style (Aceternity / Magic UI lineage).
-- Respects `prefers-reduced-motion`: each component checks `useReducedMotion()` and falls back to static rendering.
-- No backend, no new dependencies, no section reordering.
+## Technical notes
+- Stack: TanStack Start + InsForge SDK (already wired). Charts: Recharts. State: TanStack Query.
+- The existing landing page stays at `/` with a "Sign in" button → `/login`.
+- Readings table is the hot path; insert via device API later — Phase 1 seeds rows + provides a "simulate reading" dev button so the UI is testable without hardware.
+- Auth: email/password to start (InsForge supports it out of the box); add phone+OTP in Phase 4 once we wire the SMS provider.
+- Bangla typography: add Noto Sans Bengali via Google Fonts and wire to `--font-body`.
+
+## Confirm before I start
+
+1. **OK to start with Phase 1** (schema + auth + shell + seed) in this turn, then iterate? Each phase ≈ one back-and-forth.
+2. **Keep the existing marketing landing at `/`** with a "Sign in" CTA, or replace it with the login screen as the root?
+3. **Auth method for v1**: email/password now, phone-OTP later — OK? (Phone-OTP needs a paid SMS provider on InsForge.)
+4. **Bangla strings**: I'll set up the i18n scaffold and translate critical alert/action strings. Full BN translation of every label can land in Phase 6 — OK?
