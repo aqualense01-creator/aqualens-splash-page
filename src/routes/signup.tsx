@@ -78,7 +78,7 @@ function SignupPage() {
   const [email, setEmail] = useState("");
   const [district, setDistrict] = useState("");
   const [prefLang, setPrefLang] = useState<"en" | "bn">(lang);
-  const [role, setRole] = useState<AppRole>("farmer");
+  const [roleKind, setRoleKind] = useState<"farmer" | "manager">("farmer");
 
   // security
   const [password, setPassword] = useState("");
