@@ -18,7 +18,7 @@ import {
   Activity,
   Clock,
   MapPin,
-  Firmware,
+  HardDrive,
 } from "lucide-react";
 import { insforge, type Device, type Farm, type Pond } from "@/lib/insforge";
 import { useAuth } from "@/lib/auth";
