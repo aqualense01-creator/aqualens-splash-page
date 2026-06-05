@@ -30,7 +30,7 @@ export function Hero() {
       <GradientMesh />
 
 
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-6 pt-20 pb-28 md:grid-cols-12 md:pt-28 md:pb-40">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-4 pt-16 pb-20 sm:px-6 sm:pt-20 sm:pb-28 md:grid-cols-12 md:pt-28 md:pb-40">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -93,7 +93,8 @@ export function Hero() {
 
       {/* trust strip */}
       <div className="border-y border-border/60 bg-background/70 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center gap-8 px-6 py-5">
+        <div className="mx-auto flex max-w-7xl items-center gap-6 px-4 py-4 sm:gap-8 sm:px-6 sm:py-5">
+
           <span className="hidden shrink-0 text-xs font-medium uppercase tracking-wider text-muted-foreground md:inline">
             Trusted by aquaculture leaders
           </span>
