@@ -30,11 +30,11 @@ export function Support() {
           <div className="overflow-hidden rounded-xl">
             <img src={expert} alt="AcquaLence support specialist" className="h-72 w-full object-cover" loading="lazy" width={400} height={500} />
           </div>
-        </div>
+        </Reveal>
 
-        <div>
+        <Reveal delay={0.1}>
           <p className="text-xs font-semibold uppercase tracking-wider text-primary">Trusted by Aquaculture Farmers</p>
-          <h2 className="mt-3 font-display text-3xl font-bold text-foreground">What Our Customers Say</h2>
+          <h2 className="mt-3 font-display text-4xl font-bold text-foreground text-balance">What Our Customers Say</h2>
           <div className="mt-6 rounded-xl border border-border bg-card p-6">
             <Quote className="h-6 w-6 text-primary/40" />
             <p className="mt-3 text-sm leading-relaxed text-foreground">
