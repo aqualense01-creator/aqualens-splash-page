@@ -474,7 +474,7 @@ function HistoryTimeline({
         kind: "firmware",
         title: `Firmware ${device.firmware_version} active`,
         description: "Current device firmware",
-        at: device.created_at ?? new Date().toISOString(),
+        at: (device as { created_at?: string }).created_at ?? device.last_seen ?? new Date().toISOString(),
       });
     }
 
