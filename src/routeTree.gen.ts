@@ -12,11 +12,22 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AppSetupRouteImport } from './routes/app.setup'
+import { Route as AppSettingsRouteImport } from './routes/app.settings'
+import { Route as AppReportsRouteImport } from './routes/app.reports'
 import { Route as AppLiveRouteImport } from './routes/app.live'
+import { Route as AppFarmsRouteImport } from './routes/app.farms'
+import { Route as AppDevicesRouteImport } from './routes/app.devices'
 import { Route as AppDashboardRouteImport } from './routes/app.dashboard'
+import { Route as AppAlertsRouteImport } from './routes/app.alerts'
 import { Route as AppPondsPondIdRouteImport } from './routes/app.ponds.$pondId'
+import { Route as AppMaintenanceDeviceIdRouteImport } from './routes/app.maintenance.$deviceId'
+import { Route as AppDevicesDeviceIdRouteImport } from './routes/app.devices.$deviceId'
+import { Route as AppCalibrationDeviceIdRouteImport } from './routes/app.calibration.$deviceId'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -33,6 +44,11 @@ const AppRoute = AppRouteImport.update({
   path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -43,9 +59,39 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AppSetupRoute = AppSetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReportsRoute = AppReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppLiveRoute = AppLiveRouteImport.update({
   id: '/live',
   path: '/live',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFarmsRoute = AppFarmsRouteImport.update({
+  id: '/farms',
+  path: '/farms',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDevicesRoute = AppDevicesRouteImport.update({
+  id: '/devices',
+  path: '/devices',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
@@ -53,76 +99,161 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAlertsRoute = AppAlertsRouteImport.update({
+  id: '/alerts',
+  path: '/alerts',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppPondsPondIdRoute = AppPondsPondIdRouteImport.update({
   id: '/ponds/$pondId',
   path: '/ponds/$pondId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppMaintenanceDeviceIdRoute = AppMaintenanceDeviceIdRouteImport.update({
+  id: '/maintenance/$deviceId',
+  path: '/maintenance/$deviceId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDevicesDeviceIdRoute = AppDevicesDeviceIdRouteImport.update({
+  id: '/$deviceId',
+  path: '/$deviceId',
+  getParentRoute: () => AppDevicesRoute,
+} as any)
+const AppCalibrationDeviceIdRoute = AppCalibrationDeviceIdRouteImport.update({
+  id: '/calibration/$deviceId',
+  path: '/calibration/$deviceId',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/app/alerts': typeof AppAlertsRoute
   '/app/dashboard': typeof AppDashboardRoute
+  '/app/devices': typeof AppDevicesRouteWithChildren
+  '/app/farms': typeof AppFarmsRoute
   '/app/live': typeof AppLiveRoute
+  '/app/reports': typeof AppReportsRoute
+  '/app/settings': typeof AppSettingsRoute
+  '/app/setup': typeof AppSetupRoute
+  '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
+  '/app/calibration/$deviceId': typeof AppCalibrationDeviceIdRoute
+  '/app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
+  '/app/maintenance/$deviceId': typeof AppMaintenanceDeviceIdRoute
   '/app/ponds/$pondId': typeof AppPondsPondIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/app/alerts': typeof AppAlertsRoute
   '/app/dashboard': typeof AppDashboardRoute
+  '/app/devices': typeof AppDevicesRouteWithChildren
+  '/app/farms': typeof AppFarmsRoute
   '/app/live': typeof AppLiveRoute
+  '/app/reports': typeof AppReportsRoute
+  '/app/settings': typeof AppSettingsRoute
+  '/app/setup': typeof AppSetupRoute
+  '/admin': typeof AdminIndexRoute
   '/app': typeof AppIndexRoute
+  '/app/calibration/$deviceId': typeof AppCalibrationDeviceIdRoute
+  '/app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
+  '/app/maintenance/$deviceId': typeof AppMaintenanceDeviceIdRoute
   '/app/ponds/$pondId': typeof AppPondsPondIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/app/alerts': typeof AppAlertsRoute
   '/app/dashboard': typeof AppDashboardRoute
+  '/app/devices': typeof AppDevicesRouteWithChildren
+  '/app/farms': typeof AppFarmsRoute
   '/app/live': typeof AppLiveRoute
+  '/app/reports': typeof AppReportsRoute
+  '/app/settings': typeof AppSettingsRoute
+  '/app/setup': typeof AppSetupRoute
+  '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
+  '/app/calibration/$deviceId': typeof AppCalibrationDeviceIdRoute
+  '/app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
+  '/app/maintenance/$deviceId': typeof AppMaintenanceDeviceIdRoute
   '/app/ponds/$pondId': typeof AppPondsPondIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/app'
     | '/login'
     | '/signup'
+    | '/app/alerts'
     | '/app/dashboard'
+    | '/app/devices'
+    | '/app/farms'
     | '/app/live'
+    | '/app/reports'
+    | '/app/settings'
+    | '/app/setup'
+    | '/admin/'
     | '/app/'
+    | '/app/calibration/$deviceId'
+    | '/app/devices/$deviceId'
+    | '/app/maintenance/$deviceId'
     | '/app/ponds/$pondId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
     | '/signup'
+    | '/app/alerts'
     | '/app/dashboard'
+    | '/app/devices'
+    | '/app/farms'
     | '/app/live'
+    | '/app/reports'
+    | '/app/settings'
+    | '/app/setup'
+    | '/admin'
     | '/app'
+    | '/app/calibration/$deviceId'
+    | '/app/devices/$deviceId'
+    | '/app/maintenance/$deviceId'
     | '/app/ponds/$pondId'
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/app'
     | '/login'
     | '/signup'
+    | '/app/alerts'
     | '/app/dashboard'
+    | '/app/devices'
+    | '/app/farms'
     | '/app/live'
+    | '/app/reports'
+    | '/app/settings'
+    | '/app/setup'
+    | '/admin/'
     | '/app/'
+    | '/app/calibration/$deviceId'
+    | '/app/devices/$deviceId'
+    | '/app/maintenance/$deviceId'
     | '/app/ponds/$pondId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
@@ -151,6 +282,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -165,11 +303,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/app/setup': {
+      id: '/app/setup'
+      path: '/setup'
+      fullPath: '/app/setup'
+      preLoaderRoute: typeof AppSetupRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/settings': {
+      id: '/app/settings'
+      path: '/settings'
+      fullPath: '/app/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/reports': {
+      id: '/app/reports'
+      path: '/reports'
+      fullPath: '/app/reports'
+      preLoaderRoute: typeof AppReportsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/live': {
       id: '/app/live'
       path: '/live'
       fullPath: '/app/live'
       preLoaderRoute: typeof AppLiveRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/farms': {
+      id: '/app/farms'
+      path: '/farms'
+      fullPath: '/app/farms'
+      preLoaderRoute: typeof AppFarmsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/devices': {
+      id: '/app/devices'
+      path: '/devices'
+      fullPath: '/app/devices'
+      preLoaderRoute: typeof AppDevicesRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/dashboard': {
@@ -179,6 +359,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/alerts': {
+      id: '/app/alerts'
+      path: '/alerts'
+      fullPath: '/app/alerts'
+      preLoaderRoute: typeof AppAlertsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/ponds/$pondId': {
       id: '/app/ponds/$pondId'
       path: '/ponds/$pondId'
@@ -186,20 +373,79 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPondsPondIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/maintenance/$deviceId': {
+      id: '/app/maintenance/$deviceId'
+      path: '/maintenance/$deviceId'
+      fullPath: '/app/maintenance/$deviceId'
+      preLoaderRoute: typeof AppMaintenanceDeviceIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/devices/$deviceId': {
+      id: '/app/devices/$deviceId'
+      path: '/$deviceId'
+      fullPath: '/app/devices/$deviceId'
+      preLoaderRoute: typeof AppDevicesDeviceIdRouteImport
+      parentRoute: typeof AppDevicesRoute
+    }
+    '/app/calibration/$deviceId': {
+      id: '/app/calibration/$deviceId'
+      path: '/calibration/$deviceId'
+      fullPath: '/app/calibration/$deviceId'
+      preLoaderRoute: typeof AppCalibrationDeviceIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
+interface AdminRouteChildren {
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
+interface AppDevicesRouteChildren {
+  AppDevicesDeviceIdRoute: typeof AppDevicesDeviceIdRoute
+}
+
+const AppDevicesRouteChildren: AppDevicesRouteChildren = {
+  AppDevicesDeviceIdRoute: AppDevicesDeviceIdRoute,
+}
+
+const AppDevicesRouteWithChildren = AppDevicesRoute._addFileChildren(
+  AppDevicesRouteChildren,
+)
+
 interface AppRouteChildren {
+  AppAlertsRoute: typeof AppAlertsRoute
   AppDashboardRoute: typeof AppDashboardRoute
+  AppDevicesRoute: typeof AppDevicesRouteWithChildren
+  AppFarmsRoute: typeof AppFarmsRoute
   AppLiveRoute: typeof AppLiveRoute
+  AppReportsRoute: typeof AppReportsRoute
+  AppSettingsRoute: typeof AppSettingsRoute
+  AppSetupRoute: typeof AppSetupRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppCalibrationDeviceIdRoute: typeof AppCalibrationDeviceIdRoute
+  AppMaintenanceDeviceIdRoute: typeof AppMaintenanceDeviceIdRoute
   AppPondsPondIdRoute: typeof AppPondsPondIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAlertsRoute: AppAlertsRoute,
   AppDashboardRoute: AppDashboardRoute,
+  AppDevicesRoute: AppDevicesRouteWithChildren,
+  AppFarmsRoute: AppFarmsRoute,
   AppLiveRoute: AppLiveRoute,
+  AppReportsRoute: AppReportsRoute,
+  AppSettingsRoute: AppSettingsRoute,
+  AppSetupRoute: AppSetupRoute,
   AppIndexRoute: AppIndexRoute,
+  AppCalibrationDeviceIdRoute: AppCalibrationDeviceIdRoute,
+  AppMaintenanceDeviceIdRoute: AppMaintenanceDeviceIdRoute,
   AppPondsPondIdRoute: AppPondsPondIdRoute,
 }
 
@@ -207,6 +453,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
