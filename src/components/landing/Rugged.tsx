@@ -1,5 +1,6 @@
+import { useRef } from "react";
 import { Sun, Gauge, ShieldCheck, Wrench, Waves, Anchor, BatteryFull, Zap, ArrowRight } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
 import buoy from "@/assets/buoy-product.png";
 import { Reveal } from "./Reveal";
 
