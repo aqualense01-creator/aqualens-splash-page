@@ -1,6 +1,7 @@
 import { CheckCircle2, ArrowRight, LayoutDashboard, Waves, Cpu, Bell, FileText, BarChart, Settings, AlertTriangle } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { Logo } from "./Logo";
+import { Reveal } from "./Reveal";
 
 const data = Array.from({ length: 12 }, (_, i) => ({
   t: `${i * 2}:00`,
