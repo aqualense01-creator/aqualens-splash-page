@@ -21,6 +21,7 @@ import { Route as AppDevicesRouteImport } from './routes/app.devices'
 import { Route as AppDashboardRouteImport } from './routes/app.dashboard'
 import { Route as AppAlertsRouteImport } from './routes/app.alerts'
 import { Route as AppPondsPondIdRouteImport } from './routes/app.ponds.$pondId'
+import { Route as AppDevicesDeviceIdRouteImport } from './routes/app.devices.$deviceId'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -82,6 +83,11 @@ const AppPondsPondIdRoute = AppPondsPondIdRouteImport.update({
   path: '/ponds/$pondId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDevicesDeviceIdRoute = AppDevicesDeviceIdRouteImport.update({
+  id: '/$deviceId',
+  path: '/$deviceId',
+  getParentRoute: () => AppDevicesRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -90,11 +96,12 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/app/alerts': typeof AppAlertsRoute
   '/app/dashboard': typeof AppDashboardRoute
-  '/app/devices': typeof AppDevicesRoute
+  '/app/devices': typeof AppDevicesRouteWithChildren
   '/app/farms': typeof AppFarmsRoute
   '/app/live': typeof AppLiveRoute
   '/app/reports': typeof AppReportsRoute
   '/app/': typeof AppIndexRoute
+  '/app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/app/ponds/$pondId': typeof AppPondsPondIdRoute
 }
 export interface FileRoutesByTo {
@@ -103,11 +110,12 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/app/alerts': typeof AppAlertsRoute
   '/app/dashboard': typeof AppDashboardRoute
-  '/app/devices': typeof AppDevicesRoute
+  '/app/devices': typeof AppDevicesRouteWithChildren
   '/app/farms': typeof AppFarmsRoute
   '/app/live': typeof AppLiveRoute
   '/app/reports': typeof AppReportsRoute
   '/app': typeof AppIndexRoute
+  '/app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/app/ponds/$pondId': typeof AppPondsPondIdRoute
 }
 export interface FileRoutesById {
@@ -118,11 +126,12 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/app/alerts': typeof AppAlertsRoute
   '/app/dashboard': typeof AppDashboardRoute
-  '/app/devices': typeof AppDevicesRoute
+  '/app/devices': typeof AppDevicesRouteWithChildren
   '/app/farms': typeof AppFarmsRoute
   '/app/live': typeof AppLiveRoute
   '/app/reports': typeof AppReportsRoute
   '/app/': typeof AppIndexRoute
+  '/app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/app/ponds/$pondId': typeof AppPondsPondIdRoute
 }
 export interface FileRouteTypes {
@@ -139,6 +148,7 @@ export interface FileRouteTypes {
     | '/app/live'
     | '/app/reports'
     | '/app/'
+    | '/app/devices/$deviceId'
     | '/app/ponds/$pondId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -152,6 +162,7 @@ export interface FileRouteTypes {
     | '/app/live'
     | '/app/reports'
     | '/app'
+    | '/app/devices/$deviceId'
     | '/app/ponds/$pondId'
   id:
     | '__root__'
@@ -166,6 +177,7 @@ export interface FileRouteTypes {
     | '/app/live'
     | '/app/reports'
     | '/app/'
+    | '/app/devices/$deviceId'
     | '/app/ponds/$pondId'
   fileRoutesById: FileRoutesById
 }
@@ -262,13 +274,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPondsPondIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/devices/$deviceId': {
+      id: '/app/devices/$deviceId'
+      path: '/$deviceId'
+      fullPath: '/app/devices/$deviceId'
+      preLoaderRoute: typeof AppDevicesDeviceIdRouteImport
+      parentRoute: typeof AppDevicesRoute
+    }
   }
 }
+
+interface AppDevicesRouteChildren {
+  AppDevicesDeviceIdRoute: typeof AppDevicesDeviceIdRoute
+}
+
+const AppDevicesRouteChildren: AppDevicesRouteChildren = {
+  AppDevicesDeviceIdRoute: AppDevicesDeviceIdRoute,
+}
+
+const AppDevicesRouteWithChildren = AppDevicesRoute._addFileChildren(
+  AppDevicesRouteChildren,
+)
 
 interface AppRouteChildren {
   AppAlertsRoute: typeof AppAlertsRoute
   AppDashboardRoute: typeof AppDashboardRoute
-  AppDevicesRoute: typeof AppDevicesRoute
+  AppDevicesRoute: typeof AppDevicesRouteWithChildren
   AppFarmsRoute: typeof AppFarmsRoute
   AppLiveRoute: typeof AppLiveRoute
   AppReportsRoute: typeof AppReportsRoute
@@ -279,7 +310,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppAlertsRoute: AppAlertsRoute,
   AppDashboardRoute: AppDashboardRoute,
-  AppDevicesRoute: AppDevicesRoute,
+  AppDevicesRoute: AppDevicesRouteWithChildren,
   AppFarmsRoute: AppFarmsRoute,
   AppLiveRoute: AppLiveRoute,
   AppReportsRoute: AppReportsRoute,
