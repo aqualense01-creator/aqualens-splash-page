@@ -14,7 +14,9 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppLiveRouteImport } from './routes/app.live'
 import { Route as AppDashboardRouteImport } from './routes/app.dashboard'
+import { Route as AppPondsPondIdRouteImport } from './routes/app.ponds.$pondId'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -41,9 +43,19 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppLiveRoute = AppLiveRouteImport.update({
+  id: '/live',
+  path: '/live',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPondsPondIdRoute = AppPondsPondIdRouteImport.update({
+  id: '/ponds/$pondId',
+  path: '/ponds/$pondId',
   getParentRoute: () => AppRoute,
 } as any)
 
@@ -53,14 +65,18 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/app/dashboard': typeof AppDashboardRoute
+  '/app/live': typeof AppLiveRoute
   '/app/': typeof AppIndexRoute
+  '/app/ponds/$pondId': typeof AppPondsPondIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/app/dashboard': typeof AppDashboardRoute
+  '/app/live': typeof AppLiveRoute
   '/app': typeof AppIndexRoute
+  '/app/ponds/$pondId': typeof AppPondsPondIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -69,13 +85,30 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/app/dashboard': typeof AppDashboardRoute
+  '/app/live': typeof AppLiveRoute
   '/app/': typeof AppIndexRoute
+  '/app/ponds/$pondId': typeof AppPondsPondIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/app' | '/login' | '/signup' | '/app/dashboard' | '/app/'
+  fullPaths:
+    | '/'
+    | '/app'
+    | '/login'
+    | '/signup'
+    | '/app/dashboard'
+    | '/app/live'
+    | '/app/'
+    | '/app/ponds/$pondId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/signup' | '/app/dashboard' | '/app'
+  to:
+    | '/'
+    | '/login'
+    | '/signup'
+    | '/app/dashboard'
+    | '/app/live'
+    | '/app'
+    | '/app/ponds/$pondId'
   id:
     | '__root__'
     | '/'
@@ -83,7 +116,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/app/dashboard'
+    | '/app/live'
     | '/app/'
+    | '/app/ponds/$pondId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -130,6 +165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/live': {
+      id: '/app/live'
+      path: '/live'
+      fullPath: '/app/live'
+      preLoaderRoute: typeof AppLiveRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/dashboard': {
       id: '/app/dashboard'
       path: '/dashboard'
@@ -137,17 +179,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/ponds/$pondId': {
+      id: '/app/ponds/$pondId'
+      path: '/ponds/$pondId'
+      fullPath: '/app/ponds/$pondId'
+      preLoaderRoute: typeof AppPondsPondIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
+  AppLiveRoute: typeof AppLiveRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppPondsPondIdRoute: typeof AppPondsPondIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
+  AppLiveRoute: AppLiveRoute,
   AppIndexRoute: AppIndexRoute,
+  AppPondsPondIdRoute: AppPondsPondIdRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
