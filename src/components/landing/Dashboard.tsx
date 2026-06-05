@@ -44,12 +44,13 @@ const alerts = [
 
 export function Dashboard() {
   return (
-    <section className="relative overflow-hidden bg-surface py-24">
+    <section className="relative overflow-hidden bg-surface py-20 sm:py-24">
       <div className="absolute -left-32 top-1/2 -z-10 h-72 w-72 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl" />
-      <div className="mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-[340px_1fr] lg:items-center">
+      <div className="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-[340px_1fr] lg:items-center">
         <Reveal>
           <p className="text-xs font-semibold uppercase tracking-wider text-primary">Real-time Monitoring</p>
-          <h2 className="mt-3 font-display text-4xl font-bold text-foreground text-balance md:text-5xl">
+          <h2 className="mt-3 font-display text-3xl font-bold text-foreground text-balance sm:text-4xl md:text-5xl">
+
             Every Parameter.
             <br />
             Every Moment.

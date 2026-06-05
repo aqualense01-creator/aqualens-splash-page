@@ -18,12 +18,13 @@ const products = [
 
 export function Shop() {
   return (
-    <section className="py-24">
-      <div className="mx-auto max-w-7xl px-6">
+    <section className="py-20 sm:py-24">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="grid gap-10 lg:grid-cols-[280px_1fr]">
           <Reveal>
             <p className="text-xs font-semibold uppercase tracking-wider text-primary">Shop</p>
-            <h2 className="mt-3 font-display text-4xl font-bold text-foreground text-balance">Everything You Need</h2>
+            <h2 className="mt-3 font-display text-3xl font-bold text-foreground text-balance sm:text-4xl">Everything You Need</h2>
+
             <p className="mt-3 text-sm text-muted-foreground">
               Explore our range of smart devices, sensors and accessories — built for the demands of modern aquaculture.
             </p>

@@ -30,8 +30,9 @@ export function Rugged() {
   const chipsY = useTransform(scrollYProgress, [0, 1], reduced ? [0, 0] : [-30, 30]);
 
   return (
-    <section ref={sectionRef} className="relative overflow-hidden py-24">
-      <div className="mx-auto grid max-w-7xl gap-10 px-6 lg:grid-cols-[1fr_360px_1fr] lg:items-center">
+    <section ref={sectionRef} className="relative overflow-hidden py-20 sm:py-24">
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[1fr_360px_1fr] lg:items-center">
+
         <div className="space-y-3">
           {left.map(({ icon: Icon, title, body }, i) => (
             <Reveal key={title} delay={i * 0.08}>

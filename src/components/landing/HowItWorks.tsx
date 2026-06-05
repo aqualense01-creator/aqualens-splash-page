@@ -11,9 +11,10 @@ const steps = [
 
 export function HowItWorks() {
   return (
-    <section className="relative overflow-hidden py-24">
+    <section className="relative overflow-hidden py-20 sm:py-24">
       <div className="absolute inset-0 -z-10 bg-grid opacity-40 [mask-image:radial-gradient(ellipse_at_center,black,transparent_70%)]" />
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+
         <Reveal className="mx-auto max-w-2xl text-center">
           <p className="text-xs font-semibold uppercase tracking-wider text-primary">How it works</p>
           <h2 className="mt-3 font-display text-3xl font-bold text-foreground text-balance md:text-4xl">
@@ -21,7 +22,7 @@ export function HowItWorks() {
           </h2>
         </Reveal>
 
-        <div className="relative mt-16 grid gap-10 md:grid-cols-5">
+        <div className="relative mt-12 grid gap-8 sm:grid-cols-2 sm:gap-10 md:mt-16 md:grid-cols-5">
           {/* connecting line */}
           <div className="absolute left-[8%] right-[8%] top-8 hidden h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent md:block" />
           {steps.map(({ icon: Icon, title, body }, i) => (
