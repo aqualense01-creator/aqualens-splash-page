@@ -38,7 +38,7 @@ export function Hero() {
             Smart Aquaculture · Est. 2024
           </div>
 
-          <h1 className="mt-6 font-display text-[2.5rem] font-bold leading-[1.02] tracking-tight text-foreground text-balance sm:text-5xl md:text-6xl lg:text-[4.25rem]">
+          <h1 className="mt-6 font-display text-[2.1rem] font-bold leading-[1.05] tracking-tight text-foreground text-balance sm:text-5xl md:text-6xl lg:text-[4.25rem]">
             Read the water.{" "}
             <span className="italic font-normal text-primary" style={{ fontFamily: "'Instrument Serif', 'Times New Roman', serif" }}>
               Raise

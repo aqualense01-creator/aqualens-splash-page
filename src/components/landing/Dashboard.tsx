@@ -261,12 +261,12 @@ export function Dashboard() {
         </div>
 
         {/* dashboard mock */}
-        <Reveal delay={0.2} className="mt-12">
+        <Reveal delay={0.2} className="mt-10 sm:mt-12">
           <div className="relative">
             {/* outer glow */}
             <div
               aria-hidden
-              className="absolute -inset-x-8 -inset-y-6 -z-10 rounded-[40px] bg-gradient-to-b from-primary/10 via-transparent to-transparent blur-2xl"
+              className="pointer-events-none absolute inset-0 -z-10 rounded-[40px] bg-gradient-to-b from-primary/10 via-transparent to-transparent blur-2xl"
             />
 
             <div className="overflow-hidden rounded-[20px] border border-border/70 bg-background shadow-[0_60px_120px_-40px_rgba(15,44,68,0.35)]">
