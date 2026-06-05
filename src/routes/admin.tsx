@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/app/AdminSidebar";
 import { AppTopbar } from "@/components/app/AppTopbar";
+import { MobileBottomNav } from "@/components/app/MobileBottomNav";
 import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/admin")({ component: AdminLayout });
@@ -28,9 +29,10 @@ function AdminLayout() {
         <AdminSidebar />
         <div className="flex min-w-0 flex-1 flex-col">
           <AppTopbar />
-          <main className="flex-1 p-4 sm:p-6">
+          <main className="flex-1 p-4 sm:p-6 pb-24 md:pb-6">
             <Outlet />
           </main>
+          <MobileBottomNav isAdmin />
         </div>
       </div>
     </SidebarProvider>

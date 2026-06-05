@@ -54,7 +54,7 @@ export function Rugged() {
       id="device"
       ref={outerRef}
       className="relative bg-background"
-      style={{ height: isDesktop ? "150vh" : "auto" }}
+      style={{ height: isDesktop ? "130vh" : "auto" }}
     >
       <div
         className={cn(

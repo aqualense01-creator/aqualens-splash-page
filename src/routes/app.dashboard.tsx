@@ -572,8 +572,44 @@ function DashboardPage() {
 
       {/* Bento grid */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        {/* Farm Health Summary — full width */}
-        <section className="lg:col-span-12">
+        {/* Recommended Action (order-1 on mobile, 3 on desktop) */}
+        {recommended && (
+          <section className="order-1 lg:order-3 lg:col-span-4 relative overflow-hidden rounded-2xl border border-[oklch(0.72_0.12_195)]/30 bg-gradient-to-br from-[oklch(0.72_0.12_195)]/10 via-card to-card p-4 shadow-soft">
+            <div className="absolute -right-6 -bottom-6 h-28 w-28 rounded-full bg-[oklch(0.72_0.12_195)]/15 blur-2xl" />
+            <div className="relative">
+              <div className="flex items-center gap-2">
+                <span className="grid h-7 w-7 place-items-center rounded-full bg-[oklch(0.72_0.12_195)]/20 text-[oklch(0.40_0.10_200)]">
+                  <Zap className="h-4 w-4" />
+                </span>
+                <h2 className="font-display text-sm font-bold uppercase tracking-wider text-[oklch(0.40_0.10_200)]">
+                  {t("dashboard.recommended")}
+                </h2>
+              </div>
+              <p className="mt-3 font-display text-base font-semibold leading-snug text-foreground">
+                {recommended.message}
+              </p>
+              {recommended.recommended_action && (
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  {recommended.recommended_action}
+                </p>
+              )}
+              <div className="mt-4 flex gap-2">
+                <Button asChild size="sm" className="flex-1">
+                  <Link to="/app/alerts">
+                    {isBn ? "এখনই করুন" : "Do it now"}
+                    <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+                <Button variant="outline" size="sm">
+                  {isBn ? "পরে" : "Later"}
+                </Button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Farm Health Summary — full width (order-2 on mobile, 1 on desktop) */}
+        <section className="order-2 lg:order-1 lg:col-span-12">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="font-display text-sm font-bold uppercase tracking-wider text-muted-foreground">
               {isBn ? "খামারের স্বাস্থ্য" : "Farm health"}
@@ -632,8 +668,8 @@ function DashboardPage() {
           </div>
         </section>
 
-        {/* Ponds — left big bento */}
-        <section className="rounded-2xl border border-border/60 bg-card p-4 shadow-soft lg:col-span-8">
+        {/* Ponds — left big bento (order-3 on mobile, 2 on desktop) */}
+        <section className="order-3 lg:order-2 lg:col-span-8 rounded-2xl border border-border/60 bg-card p-4 shadow-soft">
           <div className="mb-3 flex items-center justify-between">
             <div>
               <h2 className="font-display text-lg font-bold">{isBn ? "পুকুরসমূহ" : "Ponds"}</h2>
@@ -655,123 +691,84 @@ function DashboardPage() {
           </div>
         </section>
 
-        {/* Right column: Recommended + Alerts */}
-        <div className="space-y-4 lg:col-span-4">
-          {/* Recommended Action */}
-          {recommended && (
-            <section className="relative overflow-hidden rounded-2xl border border-[oklch(0.72_0.12_195)]/30 bg-gradient-to-br from-[oklch(0.72_0.12_195)]/10 via-card to-card p-4 shadow-soft">
-              <div className="absolute -right-6 -bottom-6 h-28 w-28 rounded-full bg-[oklch(0.72_0.12_195)]/15 blur-2xl" />
-              <div className="relative">
-                <div className="flex items-center gap-2">
-                  <span className="grid h-7 w-7 place-items-center rounded-full bg-[oklch(0.72_0.12_195)]/20 text-[oklch(0.40_0.10_200)]">
-                    <Zap className="h-4 w-4" />
-                  </span>
-                  <h2 className="font-display text-sm font-bold uppercase tracking-wider text-[oklch(0.40_0.10_200)]">
-                    {t("dashboard.recommended")}
-                  </h2>
-                </div>
-                <p className="mt-3 font-display text-base font-semibold leading-snug text-foreground">
-                  {recommended.message}
-                </p>
-                {recommended.recommended_action && (
-                  <p className="mt-1.5 text-sm text-muted-foreground">
-                    {recommended.recommended_action}
-                  </p>
-                )}
-                <div className="mt-4 flex gap-2">
-                  <Button asChild size="sm" className="flex-1">
-                    <Link to="/app/alerts">
-                      {isBn ? "এখনই করুন" : "Do it now"}
-                      <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                    </Link>
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    {isBn ? "পরে" : "Later"}
-                  </Button>
-                </div>
-              </div>
-            </section>
-          )}
+        {/* Today's Alerts (order-4 on mobile, 4 on desktop) */}
+        <section className="order-4 lg:order-4 lg:col-span-4 rounded-2xl border border-border/60 bg-card p-4 shadow-soft">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-display text-lg font-bold">{t("dashboard.todaysAlerts")}</h2>
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/app/alerts">{t("common.viewAll")}</Link>
+            </Button>
+          </div>
 
-          {/* Today's Alerts */}
-          <section className="rounded-2xl border border-border/60 bg-card p-4 shadow-soft">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="font-display text-lg font-bold">{t("dashboard.todaysAlerts")}</h2>
-              <Button asChild variant="ghost" size="sm">
-                <Link to="/app/alerts">{t("common.viewAll")}</Link>
-              </Button>
-            </div>
+          <div className="mb-3 grid grid-cols-2 gap-2">
+            <AlertCountPill
+              label={isBn ? "জরুরি" : "Critical"}
+              count={alertCounts.critical}
+              tone="critical"
+              icon={<AlertCircle className="h-3 w-3" />}
+            />
+            <AlertCountPill
+              label={isBn ? "সতর্কতা" : "Warning"}
+              count={alertCounts.warning}
+              tone="warning"
+              icon={<AlertTriangle className="h-3 w-3" />}
+            />
+            <AlertCountPill
+              label={isBn ? "ডিভাইস অফ" : "Device off"}
+              count={alertCounts.deviceOffline}
+              tone="muted"
+              icon={<WifiOff className="h-3 w-3" />}
+            />
+            <AlertCountPill
+              label={isBn ? "ক্যালি." : "Calibration"}
+              count={alertCounts.calibration}
+              tone="violet"
+              icon={<Wrench className="h-3 w-3" />}
+            />
+          </div>
 
-            <div className="mb-3 grid grid-cols-2 gap-2">
-              <AlertCountPill
-                label={isBn ? "জরুরি" : "Critical"}
-                count={alertCounts.critical}
-                tone="critical"
-                icon={<AlertCircle className="h-3 w-3" />}
-              />
-              <AlertCountPill
-                label={isBn ? "সতর্কতা" : "Warning"}
-                count={alertCounts.warning}
-                tone="warning"
-                icon={<AlertTriangle className="h-3 w-3" />}
-              />
-              <AlertCountPill
-                label={isBn ? "ডিভাইস অফ" : "Device off"}
-                count={alertCounts.deviceOffline}
-                tone="muted"
-                icon={<WifiOff className="h-3 w-3" />}
-              />
-              <AlertCountPill
-                label={isBn ? "ক্যালি." : "Calibration"}
-                count={alertCounts.calibration}
-                tone="violet"
-                icon={<Wrench className="h-3 w-3" />}
-              />
-            </div>
-
-            <ul className="space-y-2">
-              {sortedAlerts.length === 0 && (
-                <li className="flex items-center gap-2 rounded-lg bg-emerald-500/10 px-3 py-2.5 text-sm text-emerald-700">
-                  <CheckCircle2 className="h-4 w-4" /> {isBn ? "সব ঠিক আছে।" : "All clear."}
-                </li>
-              )}
-              {sortedAlerts.slice(0, 4).map((a) => {
-                const Icon = alertIcon(a.alert_type);
-                const tone = alertTone(a.alert_type);
-                const ts = timeAgo(a.detected_at, isBn);
-                return (
-                  <li
-                    key={a.id}
+          <ul className="space-y-2">
+            {sortedAlerts.length === 0 && (
+              <li className="flex items-center gap-2 rounded-lg bg-emerald-500/10 px-3 py-2.5 text-sm text-emerald-700">
+                <CheckCircle2 className="h-4 w-4" /> {isBn ? "সব ঠিক আছে।" : "All clear."}
+              </li>
+            )}
+            {sortedAlerts.slice(0, 4).map((a) => {
+              const Icon = alertIcon(a.alert_type);
+              const tone = alertTone(a.alert_type);
+              const ts = timeAgo(a.detected_at, isBn);
+              return (
+                <li
+                  key={a.id}
+                  className={cn(
+                    "flex items-start gap-2.5 rounded-xl ring-1 p-2.5",
+                    tone.ring,
+                    tone.bg,
+                  )}
+                >
+                  <span
                     className={cn(
-                      "flex items-start gap-2.5 rounded-xl ring-1 p-2.5",
-                      tone.ring,
-                      tone.bg,
+                      "mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full text-white",
+                      tone.dot,
                     )}
                   >
-                    <span
-                      className={cn(
-                        "mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full text-white",
-                        tone.dot,
-                      )}
-                    >
-                      <Icon className="h-3.5 w-3.5" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-semibold text-foreground">
-                        {a.pond_name ?? a.device_name}
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">{a.message}</p>
-                    </div>
-                    <span className="shrink-0 text-[10px] text-muted-foreground">{ts.label}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        </div>
+                    <Icon className="h-3.5 w-3.5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-semibold text-foreground">
+                      {a.pond_name ?? a.device_name}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">{a.message}</p>
+                  </div>
+                  <span className="shrink-0 text-[10px] text-muted-foreground">{ts.label}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
 
-        {/* Device Health Summary — full width */}
-        <section className="rounded-2xl border border-border/60 bg-card p-4 shadow-soft lg:col-span-12">
+        {/* Device Health Summary — full width (order-5 on mobile, 5 on desktop) */}
+        <section className="order-5 lg:order-5 lg:col-span-12 rounded-2xl border border-border/60 bg-card p-4 shadow-soft">
           <div className="mb-3 flex items-center justify-between">
             <div>
               <h2 className="font-display text-lg font-bold">{t("dashboard.deviceHealth")}</h2>

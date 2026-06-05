@@ -2,23 +2,19 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Play, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { HeroDashboardCard } from "./HeroDashboardCard";
+import { GradientMesh } from "./GradientMesh";
+import { MagneticButton } from "./MagneticButton";
+import { Marquee } from "./Marquee";
 
 const trust = ["Real-time readings", "Critical alerts", "Farmer-friendly", "English & বাংলা"];
 
 export function Hero() {
   return (
     <section
-      className="relative isolate overflow-hidden bg-background"
+      className="relative isolate overflow-hidden bg-background animate-fade-in"
       aria-labelledby="hero-heading"
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10"
-        style={{
-          background:
-            "radial-gradient(900px 500px at 88% 10%, color-mix(in oklab, var(--primary) 12%, transparent), transparent 60%), radial-gradient(700px 400px at 0% 100%, color-mix(in oklab, var(--status-good) 8%, transparent), transparent 60%)",
-        }}
-      />
+      <GradientMesh />
 
       <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-4 pt-12 pb-16 sm:px-6 sm:pt-16 sm:pb-20 lg:grid-cols-12 lg:gap-10 lg:pt-24 lg:pb-28">
         {/* LEFT */}
@@ -54,25 +50,29 @@ export function Hero() {
           </p>
 
           <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-            <a href="/app/live" className="block w-full sm:w-auto">
-              <Button
-                size="lg"
-                className="group h-12 w-full gap-2 rounded-full bg-primary px-6 text-[15px] text-primary-foreground shadow-glow hover:bg-primary/90 sm:w-auto"
-              >
-                <Play className="h-4 w-4 fill-current" />
-                View Live Demo
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Button>
-            </a>
-            <a href="/app/setup" className="block w-full sm:w-auto">
-              <Button
-                size="lg"
-                variant="outline"
-                className="h-12 w-full gap-2 rounded-full border-border bg-background/60 px-6 text-[15px] text-foreground backdrop-blur hover:bg-accent sm:w-auto"
-              >
-                Request Setup
-              </Button>
-            </a>
+            <MagneticButton className="block w-full sm:w-auto">
+              <a href="/app/live" className="block w-full sm:w-auto">
+                <Button
+                  size="lg"
+                  className="group h-12 w-full gap-2 rounded-full bg-primary px-6 text-[15px] text-primary-foreground shadow-glow hover:bg-primary/90 sm:w-auto"
+                >
+                  <Play className="h-4 w-4 fill-current" />
+                  View Live Demo
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Button>
+              </a>
+            </MagneticButton>
+            <MagneticButton className="block w-full sm:w-auto">
+              <a href="/app/setup" className="block w-full sm:w-auto">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-12 w-full gap-2 rounded-full border-border bg-background/60 px-6 text-[15px] text-foreground backdrop-blur hover:bg-accent sm:w-auto"
+                >
+                  Request Setup
+                </Button>
+              </a>
+            </MagneticButton>
           </div>
 
           {/* trust chips */}
@@ -93,6 +93,23 @@ export function Hero() {
         <div className="lg:col-span-6">
           <HeroDashboardCard />
         </div>
+      </div>
+
+      {/* Marquee parameter highlights */}
+      <div className="mt-8 border-y border-border/40 bg-card/25 py-3 backdrop-blur-sm sm:mt-12">
+        <Marquee
+          items={[
+            "Real-time Dissolved Oxygen Monitoring",
+            "Continuous pH Tracking",
+            "Solar Powered Hardware buoy",
+            "Instant Alerts via SMS & WhatsApp",
+            "Turbidity, Salinity, Ammonia & Temperature",
+            "IP67 Waterproof & UV-Resistant",
+            "Offline Device Warnings",
+            "Practical Farmer Recommendations",
+          ]}
+          speed={40}
+        />
       </div>
     </section>
   );

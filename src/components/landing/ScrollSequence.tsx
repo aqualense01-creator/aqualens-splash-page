@@ -143,7 +143,7 @@ export function ScrollSequence({
       if (cancelled) return;
       count += 1;
       setLoaded(count);
-      if (i === 0) {
+      if (i === 0 || count === frameCount) {
         resizeCanvas();
       }
     };
@@ -196,10 +196,29 @@ export function ScrollSequence({
       if (!el) return;
       const rect = el.getBoundingClientRect();
       const vh = window.innerHeight || 1;
+
+      // If the top of the element hasn't entered viewport top yet
+      if (rect.top > 0) {
+        targetIndexRef.current = 0;
+        return;
+      }
+
+      // If the bottom of the element is above or at the viewport bottom (exit state)
+      if (rect.bottom <= vh) {
+        targetIndexRef.current = frameCount - 1;
+        return;
+      }
+
       const scrollable = Math.max(1, rect.height - vh);
-      const traveled = Math.max(0, -rect.top);
-      let p = Math.max(0, Math.min(1, traveled / scrollable));
-      if (p >= 0.95) p = 1;
+      const traveled = -rect.top;
+      let p = traveled / scrollable;
+
+      p = Math.max(0, Math.min(1, p));
+
+      // Crisp snapping at start and finish
+      if (p < 0.04) p = 0;
+      if (p > 0.88) p = 1;
+
       targetIndexRef.current = p * (frameCount - 1);
     };
     compute();
@@ -236,8 +255,8 @@ export function ScrollSequence({
     const tick = () => {
       const target = targetIndexRef.current;
       const diff = target - currentRef.current;
-      if (Math.abs(diff) > 0.5) {
-        currentRef.current += diff * 0.6;
+      if (Math.abs(diff) > 0.1) {
+        currentRef.current += diff * 0.85; // Faster interpolation speed for crisper movement
       } else {
         currentRef.current = target;
       }

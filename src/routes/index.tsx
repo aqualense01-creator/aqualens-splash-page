@@ -12,6 +12,7 @@ import { DeviceHealth } from "@/components/landing/DeviceHealth";
 import { Rugged } from "@/components/landing/Rugged";
 import { CTA } from "@/components/landing/CTA";
 import { Footer } from "@/components/landing/Footer";
+import { Stats } from "@/components/landing/Stats";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -51,6 +52,7 @@ function Index() {
       <Nav />
       <Hero />
       <Dashboard />
+      <Stats />
       <MonitoringStory />
       <WaterParameters />
       <AlertsActions />
