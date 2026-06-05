@@ -29,6 +29,7 @@ type AuthCtx = {
   signIn: (email: string, password: string) => Promise<{ error: string | null; needsVerification?: boolean }>;
   signInWithOtp: (identifier: string, otp: string) => Promise<{ error: string | null }>;
   sendOtp: (identifier: string) => Promise<{ error: string | null }>;
+  sendResetLink: (identifier: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, fullName: string, role?: AppRole) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -177,6 +178,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: null };
   };
 
+  const sendResetLink: AuthCtx["sendResetLink"] = async (identifier) => {
+    await new Promise((r) => setTimeout(r, 800));
+    const idType = isValidIdentifier(identifier);
+    if (!idType) return { error: "Enter a valid email or Bangladesh phone number." };
+    return { error: null };
+  };
+
   const signInWithOtp: AuthCtx["signInWithOtp"] = async (identifier, otp) => {
     await new Promise((r) => setTimeout(r, 800));
     if (!/^\d{6}$/.test(otp)) return { error: "Enter the 6-digit code." };
@@ -255,6 +263,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signIn,
         signInWithOtp,
         sendOtp,
+        sendResetLink,
         signUp,
         signOut,
         refresh: loadSession,
