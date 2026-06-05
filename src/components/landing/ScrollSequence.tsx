@@ -42,15 +42,27 @@ export function ScrollSequence({
   const sizeRef = useRef({ w: 0, h: 0, dpr: 1 });
   const [loaded, setLoaded] = useState(0);
   const [reduced, setReduced] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Detect reduced motion
+  // Detect reduced motion and mobile viewports
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduced(mq.matches);
-    const onChange = () => setReduced(mq.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
+    const mqReduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const mqMobile = window.matchMedia("(max-width: 1023px)");
+
+    setReduced(mqReduced.matches);
+    setIsMobile(mqMobile.matches);
+
+    const onReducedChange = () => setReduced(mqReduced.matches);
+    const onMobileChange = () => setIsMobile(mqMobile.matches);
+
+    mqReduced.addEventListener("change", onReducedChange);
+    mqMobile.addEventListener("change", onMobileChange);
+
+    return () => {
+      mqReduced.removeEventListener("change", onReducedChange);
+      mqMobile.removeEventListener("change", onMobileChange);
+    };
   }, []);
 
   // Resize canvas backing store to match its CSS box × devicePixelRatio
@@ -98,17 +110,40 @@ export function ScrollSequence({
     return true;
   };
 
-  // Preload all frames in parallel
+  // Preload frames: if in static mode (mobile or reduced motion), only load the middle frame
   useEffect(() => {
     let cancelled = false;
     const imgs: HTMLImageElement[] = [];
+    const isStatic = reduced || isMobile;
+
+    if (isStatic) {
+      const mid = Math.floor((frameCount - 1) / 2);
+      const img = new Image();
+      img.decoding = "async";
+      img.src = pathTemplate.replace("{n}", String(mid + 1).padStart(3, "0"));
+      img.onload = () => {
+        if (cancelled) return;
+        imgs[mid] = img;
+        framesRef.current = imgs;
+        setLoaded(frameCount); // set load progress to 100%
+        resizeCanvas();
+      };
+      img.onerror = () => {
+        if (cancelled) return;
+        setLoaded(frameCount);
+      };
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    // Otherwise preload all in parallel for desktop animation
     let count = 0;
     const finish = (i: number) => {
       if (cancelled) return;
       count += 1;
       setLoaded(count);
       if (i === 0) {
-        // Draw first frame as soon as it's available so the canvas isn't empty
         resizeCanvas();
       }
     };
@@ -117,7 +152,6 @@ export function ScrollSequence({
       img.decoding = "async";
       img.src = pathTemplate.replace("{n}", String(i + 1).padStart(3, "0"));
       img.onload = () => {
-        // Prefer decode() for smoother first paint
         if (typeof img.decode === "function") {
           img
             .decode()
@@ -135,7 +169,7 @@ export function ScrollSequence({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [frameCount, pathTemplate]);
+  }, [frameCount, pathTemplate, reduced, isMobile]);
 
   // Resize observer
   useEffect(() => {
@@ -154,8 +188,9 @@ export function ScrollSequence({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Scroll → target frame index
+  // Scroll → target frame index (skip if static mode)
   useEffect(() => {
+    if (reduced || isMobile) return;
     const compute = () => {
       const el = targetRef.current;
       if (!el) return;
@@ -164,7 +199,6 @@ export function ScrollSequence({
       const scrollable = Math.max(1, rect.height - vh);
       const traveled = Math.max(0, -rect.top);
       let p = Math.max(0, Math.min(1, traveled / scrollable));
-      // Force final frame when near end — guards against rounding skipping the last frame
       if (p >= 0.95) p = 1;
       targetIndexRef.current = p * (frameCount - 1);
     };
@@ -175,12 +209,12 @@ export function ScrollSequence({
       window.removeEventListener("scroll", compute);
       window.removeEventListener("resize", compute);
     };
-  }, [targetRef, frameCount]);
+  }, [targetRef, frameCount, reduced, isMobile]);
 
-  // Smooth animation loop — only paints when the rounded frame changes or was not successfully drawn
+  // Smooth animation loop (skip/mock if static mode)
   useEffect(() => {
-    if (reduced) {
-      // Reduced motion: hold the middle frame
+    const isStatic = reduced || isMobile;
+    if (isStatic) {
       const mid = Math.floor((frameCount - 1) / 2);
       currentRef.current = mid;
       targetIndexRef.current = mid;
@@ -203,7 +237,6 @@ export function ScrollSequence({
       const target = targetIndexRef.current;
       const diff = target - currentRef.current;
       if (Math.abs(diff) > 0.5) {
-        // Smoothly approach target — high factor so we track scroll closely
         currentRef.current += diff * 0.6;
       } else {
         currentRef.current = target;
@@ -222,7 +255,7 @@ export function ScrollSequence({
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [frameCount, reduced]);
+  }, [frameCount, reduced, isMobile]);
 
   const pct = Math.round((loaded / frameCount) * 100);
   const showLoader = loaded < frameCount;

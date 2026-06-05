@@ -23,6 +23,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Sheet,
@@ -251,6 +261,7 @@ function FarmsPage() {
   const [pondDrawer, setPondDrawer] = useState<{ mode: "add" | "edit"; pond?: Pond } | null>(null);
   const [assignDrawer, setAssignDrawer] = useState<Pond | null>(null);
   const [thresholdDrawer, setThresholdDrawer] = useState<Pond | null>(null);
+  const [archiveConfirmFarm, setArchiveConfirmFarm] = useState<Farm | null>(null);
 
   const filteredFarms = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -493,7 +504,11 @@ function FarmsPage() {
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => archiveFarm(f)}>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setArchiveConfirmFarm(f)}
+                            >
                               <Archive className="h-3.5 w-3.5" />
                             </Button>
                           </TableCell>
@@ -535,7 +550,11 @@ function FarmsPage() {
                             <Pencil className="mr-1.5 h-3.5 w-3.5" />
                             {t("Edit", "এডিট")}
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => archiveFarm(f)}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setArchiveConfirmFarm(f)}
+                          >
                             <Archive className="h-3.5 w-3.5" />
                           </Button>
                         </div>
@@ -757,6 +776,48 @@ function FarmsPage() {
           t={t}
         />
       )}
+
+      <AlertDialog
+        open={!!archiveConfirmFarm}
+        onOpenChange={(o) => !o && setArchiveConfirmFarm(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {archiveConfirmFarm?.status === "active"
+                ? t("Archive farm?", "ফার্মটি কি আর্কাইভ করবেন?")
+                : t("Restore farm?", "ফার্মটি কি পুনরুদ্ধার করবেন?")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {archiveConfirmFarm?.status === "active"
+                ? t(
+                    "Archiving this farm will suspend its operations. You can restore it later.",
+                    "এই খামারটি আর্কাইভ করলে এর কার্যক্রম স্থগিত হবে। আপনি পরে এটি পুনরুদ্ধার করতে পারবেন।",
+                  )
+                : t(
+                    "Restoring this farm will reactivate its operations.",
+                    "এই খামারটি পুনরুদ্ধার করলে এর কার্যক্রম পুনরায় সক্রিয় হবে।",
+                  )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("Cancel", "বাতিল")}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (archiveConfirmFarm) {
+                  archiveFarm(archiveConfirmFarm);
+                  setArchiveConfirmFarm(null);
+                }
+              }}
+            >
+              {archiveConfirmFarm?.status === "active"
+                ? t("Archive", "আর্কাইভ")
+                : t("Restore", "পুনরুদ্ধার")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { insforge, type AppRole, type Farm, type Profile } from "@/lib/insforge";
+import { isBangladeshPhone, isValidEmail, normalizeBangladeshPhone } from "@/lib/auth";
 import { PageHeader, StatusBadge, EmptyState } from "@/components/app/StatusBadge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -805,12 +806,24 @@ function AdminUsers() {
                   toast.error("Full name is required");
                   return;
                 }
+                if (form.phone.trim() && !isBangladeshPhone(form.phone)) {
+                  toast.error("Enter a valid Bangladesh phone number (+880 or 01 format)");
+                  return;
+                }
+                if (form.email.trim() && !isValidEmail(form.email)) {
+                  toast.error("Enter a valid email address");
+                  return;
+                }
+                const normalizedForm = {
+                  ...form,
+                  phone: form.phone.trim() ? normalizeBangladeshPhone(form.phone) : "",
+                };
                 if (!editingId) {
                   toast.success("Invitation queued. The user will appear once they accept.");
                   setEditorOpen(false);
                   return;
                 }
-                upsertMut.mutate({ id: editingId, form });
+                upsertMut.mutate({ id: editingId, form: normalizedForm });
               }}
             >
               {editingId ? "Save changes" : "Send invite"}

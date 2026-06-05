@@ -95,7 +95,7 @@ export function MonitoringStory() {
     if (!usePin) return;
     // Lock to final step when nearly done — guards against rounding skipping it.
     const idx =
-      p >= 0.98 ? steps.length - 1 : Math.min(steps.length - 1, Math.floor(p * steps.length));
+      p >= 0.94 ? steps.length - 1 : Math.min(steps.length - 1, Math.floor(p * steps.length));
     setActive(idx);
   });
 
@@ -153,7 +153,7 @@ export function MonitoringStory() {
       ref={outerRef}
       className="relative bg-surface"
       aria-labelledby="story-heading"
-      style={{ height: "240vh" }}
+      style={{ height: "210vh" }}
     >
       <div className="sticky top-0 flex h-screen items-center overflow-hidden">
         <div
