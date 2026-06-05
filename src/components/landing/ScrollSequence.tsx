@@ -160,11 +160,11 @@ export function ScrollSequence({
       if (!el) return;
       const rect = el.getBoundingClientRect();
       const vh = window.innerHeight || 1;
-      // The outer section scrolls (rect.height - vh) px while the sticky stage
-      // is locked. Progress is how far we are through that window.
       const scrollable = Math.max(1, rect.height - vh);
       const traveled = Math.max(0, -rect.top);
-      const p = Math.max(0, Math.min(1, traveled / scrollable));
+      let p = Math.max(0, Math.min(1, traveled / scrollable));
+      // Force final frame when near end — guards against rounding skipping the last frame
+      if (p >= 0.98) p = 1;
       targetIndexRef.current = p * (frameCount - 1);
     };
     compute();

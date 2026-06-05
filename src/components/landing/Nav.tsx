@@ -5,11 +5,11 @@ import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const links: { label: string; href: string }[] = [
-  { label: "Product", href: "#" },
+  { label: "Dashboard", href: "#dashboard-heading" },
+  { label: "Parameters", href: "#params-heading" },
+  { label: "Alerts", href: "#alerts-heading" },
   { label: "Device", href: "#device" },
-  { label: "Platform", href: "#" },
-  { label: "Shop", href: "#" },
-  { label: "Support", href: "#" },
+  { label: "Reports", href: "#reports-heading" },
 ];
 
 export function Nav() {
