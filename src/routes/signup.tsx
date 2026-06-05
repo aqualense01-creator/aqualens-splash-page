@@ -3,7 +3,6 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -11,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAuth, isBangladeshPhone, isValidEmail, normalizeBangladeshPhone, type AppRole } from "@/lib/auth";
+import { useAuth, isBangladeshPhone, isValidEmail, normalizeBangladeshPhone } from "@/lib/auth";
 import { Logo } from "@/components/landing/Logo";
 import { useI18n } from "@/lib/i18n";
 import {
