@@ -1,70 +1,81 @@
-# Acqua Lence MVP — Build Plan
+# Acqua Lence — Complete MVP Build Plan
 
-InsForge is already connected (`@insforge/sdk`, anon key in `.env`, API key as secret). The current `/` is the marketing landing — we'll keep it as a public entry and move the app under `/app/*`, technician under `/app/setup`, `/app/calibration`, `/app/maintenance`, and admin under `/admin/*`.
+Building on what already exists (auth, dashboard, live view, pond detail, sidebar/topbar shell, i18n, insforge client), this plan finishes every remaining farmer, technician, and admin route from the PRD with pixel-perfect UI.
 
-## Phasing (each phase is a separate user turn so you can review)
+## What already exists
+- Auth: `/login`, `/signup` with email OTP verification, `/auth` context
+- Shell: `AppSidebar`, `AppTopbar`, `/app` layout, i18n (EN/BN)
+- Farmer pages: `/app/dashboard`, `/app/live`, `/app/ponds/:pondId`
+- Schema: farms, ponds, devices, readings, alerts (insforge)
+- Logo + branding wired
 
-### Phase 1 — Foundation (this phase)
+## What to build
 
-**Backend schema (InsForge migrations)**
-- `profiles` — id (→ auth.users), full_name, phone, district, language ('en'|'bn'), role enum
-- `app_role` enum: `farmer | farm_manager | technician | admin | support`
-- `user_roles` table (separate from profiles, for RLS)
-- `farms` — id, owner_id, name, district, location, status
-- `ponds` — id, farm_id, name, type, water_type, species, area_m2, depth_m, stocking_date, stocking_density, device_id, threshold_preset
-- `devices` — id, serial, hardware_version, firmware_version, farm_id, pond_id, status, battery, signal, last_seen
-- `sensors` — id, device_id, type (do/ph/temp/turbidity/salinity/ammonia), status, last_calibrated, calibration_due
-- `readings` — id, pond_id, device_id, recorded_at, do, ph, temp, turbidity, salinity, ammonia, water_level
-- `alerts` — id, pond_id, device_id, type, severity (good/watch/warning/critical/offline/calibration_due), parameter, value, threshold, message, recommended_action, status, acknowledged_at, resolved_at
-- `thresholds` — id, scope (global/farm/pond), pond_id?, parameter, safe_min, safe_max, warn_min, warn_max, crit_min, crit_max
-- `maintenance_logs`, `calibration_logs`, `support_tickets`
-- RLS via `has_role()` security-definer fn; farmers see only their owned farms/ponds; admins see everything
+### 1. Farmer pages (complete the set)
+- `/app/farms` — Farm + Pond management. Farm list (cards), add/edit farm dialog, expandable pond list per farm, add/edit pond dialog with all required fields (name, type, species, area, depth, water type, stocking date, density, device, threshold preset), assign device action.
+- `/app/alerts` — Summary cards (critical/warning/device/calibration/resolved), tabbed table (All/Critical/Warning/Device/Calibration/Resolved), filters, row click → detail drawer with parameter, value, threshold, recommended action, history sparkline, acknowledge + resolve + add note actions.
+- `/app/reports` — Date range + farm/pond/parameter selectors, summary KPI cards (water quality score, % in safe range, total alerts, device uptime), trend charts (DO, pH, temp, salinity, alert trend, pond comparison), report type tabs (daily/weekly/monthly/device/custom), export CSV/PDF buttons.
+- `/app/devices` — Summary cards (total/online/offline/low battery/cal due/maint due), filterable device table with status/battery/signal/firmware/last-seen.
+- `/app/devices/:deviceId` — Tabs: Overview, Sensors, History, Settings. Restart + run-diagnostics actions; sampling interval, threshold profile.
+- `/app/settings` — Profile, Security (change password, sessions), Notifications (channels × types matrix), Language selector.
 
-**Auth + app shell**
-- `/login` (phone+OTP scaffold; password fallback) using InsForge SDK
-- `/app/_layout` — sidebar (Dashboard/Live/Farms&Ponds/Alerts/Reports/Devices/Settings), topbar (farm selector, lang toggle EN/BN, notifications, profile)
-- Auth guard: redirect unauth → `/login`
-- Role-based sidebar (farmer/technician/admin variants)
-- i18n scaffold (simple `t()` keyed strings, EN + BN)
-- Design tokens: status colors in `styles.css` (good/watch/warning/critical/offline/calibration)
-- Status badge, parameter card, pond status card primitives
+### 2. Technician pages
+- `/app/setup` — 6-step wizard (Installation checklist → Connectivity test → Registration/QR → Assign to pond → Sensor calibration → Finalize). Stepper UI, validation per step, completion summary.
+- `/app/calibration/:deviceId` — Per-sensor calibration cards (pH, DO, temp, turbidity, salinity, ammonia) with calibration value, date, technician name, result status; saves log.
+- `/app/maintenance/:deviceId` — Maintenance log table + add-entry form (visit date, technician, issue, action, photos, notes).
 
-**Seed data** — 1 farm, 3 ponds, 1 device, sample readings + 1 critical alert so screens aren't empty.
+### 3. Admin shell + pages
+- New `/admin` layout with `AdminSidebar` (Dashboard, Farms, Devices, Users, Alerts, Support, System Settings) reusing `AppTopbar`. Role-gated: only `admin` users can access (check `auth.users` role via insforge profile/role; redirect otherwise).
+- `/admin/dashboard` — Platform metrics (customers, farms, ponds, devices online/offline, active+critical alerts, cal due, support tickets), charts (device status, alert trends, farm distribution, uptime trend).
+- `/admin/farms` — Customer search, customer profile drawer (farms, ponds, devices, activity, suspend/reactivate), farm/pond CRUD, assign device.
+- `/admin/devices` — Full inventory table with firmware/SIM/warranty/maintenance columns, filters, bulk actions (mark maint due, assign technician, export CSV, deactivate, flag).
+- `/admin/users` — User table with role filter, create/edit user dialog (role: farmer/manager/technician/admin/support), suspend, reset password, assign org/farm.
+- `/admin/alerts` — Cross-platform alert monitoring, filters (farm/district/device/severity), detail drawer with assign-technician, internal note, escalate, resolve.
+- `/admin/support` — Ticket table with status filter, create ticket, ticket detail drawer (issue type, farmer, pond, device, priority, photos, assigned tech), status transitions.
+- `/admin/settings` — Tabs: Sensor types, Default safe ranges, Alert thresholds, Alert templates (EN/BN), Device packages, Roles, Notification channels, Report templates, Language strings. Changes logged.
 
-### Phase 2 — Farmer core
-- `/app/dashboard` (farm health summary, pond cards, today's alerts, recommended action, device health, empty state)
-- `/app/live` (live grid, filters, auto-refresh, stale indicator)
-- `/app/ponds/:pondId` (live cards, chart with thresholds, timeline, sensor history table, export)
+### 4. Backend additions (insforge migration)
+New tables + RLS:
+- `profiles` (id → auth.users, full_name, phone, role enum: farmer|manager|technician|admin|support, district, language, suspended)
+- `alerts` extra cols if missing: severity, status (open/ack/resolved), recommended_action, acknowledged_at/by, resolved_at/by, notes[]
+- `calibrations` (device_id, sensor_type, value, calibrated_at, technician_id, result)
+- `maintenance_logs` (device_id, technician_id, visit_date, issue, action, photos[], notes)
+- `support_tickets` (farmer_id, farm_id, pond_id, device_id, issue_type, priority, description, photos[], assigned_to, status)
+- `system_settings` (key, value jsonb) for thresholds/templates/sensor types
+- `audit_logs` (actor_id, action, entity, entity_id, diff, created_at)
+- `device_assignments` history (optional)
+- RLS: farmers see own farms/ponds/devices/alerts; admin/support see all; technicians see assigned.
 
-### Phase 3 — Farm/pond/device management + alerts
-- `/app/farms` (farm + pond CRUD, assign device, threshold preset)
-- `/app/alerts` (tabs, table, detail drawer, ack/resolve/note actions)
-- `/app/devices` + `/app/devices/:deviceId` (overview/sensors/history/settings tabs)
+### 5. Shared components to add
+- `StatusBadge` (good/watch/warning/critical/offline/cal-due) — colors from semantic tokens
+- `ParameterCard` (value, unit, status, safe range, sparkline)
+- `BatteryIndicator`, `SignalIndicator`
+- `AlertDrawer`, `DeviceCard`, `FarmCard`, `PondCard`
+- `Stepper` for technician wizard
+- `EmptyState`, `LoadingSkeleton`, `StaleDataChip`
+- `RoleGuard` wrapper
 
-### Phase 4 — Technician + Settings + Reports
-- `/app/setup` 6-step wizard, `/app/calibration/:deviceId`, `/app/maintenance/:deviceId`
-- `/app/reports` (charts, export PDF/CSV)
-- `/app/settings` (profile, security, notifications)
+### 6. Design tokens (extend src/styles.css)
+Add semantic colors for: `--status-good`, `--status-watch`, `--status-warning`, `--status-critical`, `--status-offline`, `--status-calibration`, plus gradients and shadows for cards. Keep current Acqua palette (calm aquatic blues/teals with warm coral for critical).
 
-### Phase 5 — Admin panel
-- `/admin/*` — dashboard, farms, devices, users, alerts, support, system settings
-
-### Phase 6 — Polish
-- Mobile bottom-tab nav for farmer
-- Full BN translations pass
-- All UI states (loading skeletons, empty, error, offline, stale, no-permission)
-- Analytics event hooks
+### 7. Mobile
+All pages responsive at 360px. Sidebar collapses; farmer pages get a bottom-tab feel via existing sidebar in mobile drawer mode. Cards stack, charts simplified.
 
 ## Technical notes
-- Stack: TanStack Start + InsForge SDK (already wired). Charts: Recharts. State: TanStack Query.
-- The existing landing page stays at `/` with a "Sign in" button → `/login`.
-- Readings table is the hot path; insert via device API later — Phase 1 seeds rows + provides a "simulate reading" dev button so the UI is testable without hardware.
-- Auth: email/password to start (InsForge supports it out of the box); add phone+OTP in Phase 4 once we wire the SMS provider.
-- Bangla typography: add Noto Sans Bengali via Google Fonts and wire to `--font-body`.
+- Routes use file-based TanStack flat names: `app.farms.tsx`, `app.alerts.tsx`, `app.reports.tsx`, `app.devices.tsx`, `app.devices.$deviceId.tsx`, `app.settings.tsx`, `app.setup.tsx`, `app.calibration.$deviceId.tsx`, `app.maintenance.$deviceId.tsx`, `admin.tsx` (layout), `admin.dashboard.tsx`, `admin.farms.tsx`, `admin.devices.tsx`, `admin.users.tsx`, `admin.alerts.tsx`, `admin.support.tsx`, `admin.settings.tsx`.
+- Data: TanStack Query (`useQuery`/`useMutation`) against `insforge` SDK with array-form `insert([...])`.
+- Charts: Recharts (already installed) with threshold `ReferenceArea`s.
+- i18n: extend `useI18n` dictionary with new keys for every page (EN + BN).
+- Admin gate: read role from `profiles` table; redirect non-admins to `/app/dashboard`.
 
-## Confirm before I start
+## Execution order
+1. Migration: profiles + role, calibrations, maintenance_logs, support_tickets, system_settings, audit_logs, alert columns; insert default system_settings (sensor types + thresholds).
+2. Shared components + status tokens.
+3. Farmer pages: farms → alerts → devices → device detail → reports → settings.
+4. Technician pages: setup wizard → calibration → maintenance.
+5. Admin shell + role guard.
+6. Admin pages: dashboard → farms → devices → users → alerts → support → settings.
+7. i18n strings (EN + BN) pass.
+8. Mobile QA + polish.
 
-1. **OK to start with Phase 1** (schema + auth + shell + seed) in this turn, then iterate? Each phase ≈ one back-and-forth.
-2. **Keep the existing marketing landing at `/`** with a "Sign in" CTA, or replace it with the login screen as the root?
-3. **Auth method for v1**: email/password now, phone-OTP later — OK? (Phone-OTP needs a paid SMS provider on InsForge.)
-4. **Bangla strings**: I'll set up the i18n scaffold and translate critical alert/action strings. Full BN translation of every label can land in Phase 6 — OK?
+This is a large build (~20 new route files + ~15 shared components + 1 migration). After approval I'll execute in the order above, batching parallel file writes per phase.
