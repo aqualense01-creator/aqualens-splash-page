@@ -91,7 +91,7 @@ async function signIn(page: Page, credentials?: Credentials, label = "app") {
     test.skip(true, message);
   }
 
-  await page.goto("/login");
+  await page.goto("/login", { waitUntil: "domcontentloaded" });
   await page.locator('input[type="email"]').fill(email!);
   await page.locator('input[type="password"]').fill(password!);
   await page.getByRole("button", { name: "Sign in" }).click();
@@ -101,7 +101,7 @@ async function signIn(page: Page, credentials?: Credentials, label = "app") {
 test.describe("public route smoke", () => {
   for (const route of publicRoutes) {
     test(`loads ${route.path}`, async ({ page }) => {
-      await page.goto(route.path);
+      await page.goto(route.path, { waitUntil: "domcontentloaded" });
       await expectUsablePage(page, route.expected);
     });
   }
@@ -110,7 +110,7 @@ test.describe("public route smoke", () => {
 test.describe("protected route guard smoke", () => {
   for (const path of protectedRoutes) {
     test(`redirects unauthenticated users from ${path}`, async ({ page }) => {
-      await page.goto(path);
+      await page.goto(path, { waitUntil: "domcontentloaded" });
 
       await expect(page).toHaveURL(/\/login/);
       const url = new URL(page.url());
@@ -127,7 +127,7 @@ test.describe("authenticated app smoke", () => {
 
   for (const route of authenticatedAppRoutes) {
     test(`loads ${route.path}`, async ({ page }) => {
-      await page.goto(route.path);
+      await page.goto(route.path, { waitUntil: "domcontentloaded" });
       await expect(page).toHaveURL(routeUrlPattern(route.path));
       await expectUsablePage(page, route.expected);
     });
@@ -148,7 +148,7 @@ test.describe("authenticated admin smoke", () => {
 
   for (const route of authenticatedAdminRoutes) {
     test(`loads ${route.path}`, async ({ page }) => {
-      await page.goto(route.path);
+      await page.goto(route.path, { waitUntil: "domcontentloaded" });
       await expect(page).toHaveURL(routeUrlPattern(route.path));
       await expectUsablePage(page, route.expected);
     });

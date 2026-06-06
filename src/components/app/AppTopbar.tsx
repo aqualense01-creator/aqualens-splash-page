@@ -152,14 +152,18 @@ export function AppTopbar() {
         {/* Demo Mode Toggle */}
         <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/30 px-2 py-1 select-none">
           <span className="relative flex h-2 w-2">
-            <span className={cn(
-              "absolute inline-flex h-full w-full rounded-full opacity-75",
-              demoEnabled ? "animate-ping bg-emerald-400" : "bg-muted-foreground"
-            )}></span>
-            <span className={cn(
-              "relative inline-flex rounded-full h-2 w-2",
-              demoEnabled ? "bg-emerald-500" : "bg-muted-foreground/60"
-            )}></span>
+            <span
+              className={cn(
+                "absolute inline-flex h-full w-full rounded-full opacity-75",
+                demoEnabled ? "animate-ping bg-emerald-400" : "bg-muted-foreground",
+              )}
+            ></span>
+            <span
+              className={cn(
+                "relative inline-flex rounded-full h-2 w-2",
+                demoEnabled ? "bg-emerald-500" : "bg-muted-foreground/60",
+              )}
+            ></span>
           </span>
           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground hidden sm:inline">
             {lang === "bn" ? "ডেমো মোড" : "Demo Mode"}
@@ -169,13 +173,13 @@ export function AppTopbar() {
             type="button"
             className={cn(
               "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-1 focus:ring-primary focus:ring-offset-1",
-              demoEnabled ? "bg-primary" : "bg-muted-foreground/30"
+              demoEnabled ? "bg-primary" : "bg-muted-foreground/30",
             )}
           >
             <span
               className={cn(
                 "pointer-events-none inline-block h-3.5 w-3.5 transform rounded-full bg-background shadow-sm ring-0 transition duration-200 ease-in-out",
-                demoEnabled ? "translate-x-4" : "translate-x-0"
+                demoEnabled ? "translate-x-4" : "translate-x-0",
               )}
             />
           </button>
