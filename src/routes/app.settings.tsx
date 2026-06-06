@@ -191,21 +191,33 @@ function SettingsPage() {
       />
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:inline-flex sm:w-auto">
-          <TabsTrigger value="profile" className="gap-1.5">
-            <User className="h-3.5 w-3.5" />
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl p-1 sm:inline-flex sm:h-9 sm:w-auto sm:gap-0">
+          <TabsTrigger
+            value="profile"
+            className="min-w-0 gap-1.5 px-2 py-2.5 text-sm sm:px-3 sm:py-1"
+          >
+            <User className="h-3.5 w-3.5 shrink-0" />
             {T("Profile", "প্রোফাইল")}
           </TabsTrigger>
-          <TabsTrigger value="security" className="gap-1.5">
-            <Shield className="h-3.5 w-3.5" />
+          <TabsTrigger
+            value="security"
+            className="min-w-0 gap-1.5 px-2 py-2.5 text-sm sm:px-3 sm:py-1"
+          >
+            <Shield className="h-3.5 w-3.5 shrink-0" />
             {T("Security", "নিরাপত্তা")}
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="gap-1.5">
-            <Bell className="h-3.5 w-3.5" />
+          <TabsTrigger
+            value="notifications"
+            className="min-w-0 gap-1.5 px-2 py-2.5 text-sm sm:px-3 sm:py-1"
+          >
+            <Bell className="h-3.5 w-3.5 shrink-0" />
             {T("Notifications", "নোটিফিকেশন")}
           </TabsTrigger>
-          <TabsTrigger value="language" className="gap-1.5">
-            <Languages className="h-3.5 w-3.5" />
+          <TabsTrigger
+            value="language"
+            className="min-w-0 gap-1.5 px-2 py-2.5 text-sm sm:px-3 sm:py-1"
+          >
+            <Languages className="h-3.5 w-3.5 shrink-0" />
             {T("Language", "ভাষা")}
           </TabsTrigger>
         </TabsList>

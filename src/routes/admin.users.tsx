@@ -79,7 +79,9 @@ type ActivityRow = {
   occurred_at: string;
 };
 
+const SINGLE_ADMIN_EMAIL = "aqualense01@gmail.com";
 const ROLES: AppRole[] = ["farmer", "farm_manager", "technician", "admin", "support"];
+const ASSIGNABLE_ROLES = ROLES.filter((role) => role !== "admin");
 const STATUSES = ["active", "suspended", "invited"] as const;
 const LANGUAGES = [
   { value: "en", label: "English" },
@@ -120,6 +122,14 @@ function fmtDate(d?: string | null) {
   const dt = new Date(d);
   if (Number.isNaN(dt.getTime())) return "—";
   return dt.toLocaleString();
+}
+
+function normalizedEmail(value?: string | null) {
+  return (value ?? "").trim().toLowerCase();
+}
+
+function isSingleAdminEmail(value?: string | null) {
+  return normalizedEmail(value) === SINGLE_ADMIN_EMAIL;
 }
 
 type UserForm = {
@@ -200,6 +210,28 @@ function AdminUsers() {
   }, [roles]);
 
   const farmById = useMemo(() => new Map(farms.map((f) => [f.id, f])), [farms]);
+  const editingProfile = useMemo(
+    () => (editingId ? (profiles.find((p) => p.id === editingId) ?? null) : null),
+    [editingId, profiles],
+  );
+  const soleAdminProfile = useMemo(
+    () => profiles.find((p) => isSingleAdminEmail(p.email)) ?? null,
+    [profiles],
+  );
+  const isSoleAdminId = (id?: string | null) => Boolean(id && soleAdminProfile?.id === id);
+  const formTargetsSingleAdmin = isSingleAdminEmail(form.email);
+  const editingTargetsSingleAdmin =
+    Boolean(editingId) && (formTargetsSingleAdmin || isSingleAdminEmail(editingProfile?.email));
+
+  const roleOptions = useMemo(() => {
+    if (formTargetsSingleAdmin || isSingleAdminEmail(editingProfile?.email)) return ROLES;
+    return ASSIGNABLE_ROLES;
+  }, [editingProfile?.email, formTargetsSingleAdmin]);
+
+  const statusOptions = useMemo(
+    () => (editingTargetsSingleAdmin ? STATUSES.filter((status) => status === "active") : STATUSES),
+    [editingTargetsSingleAdmin],
+  );
 
   const districts = useMemo(
     () =>
@@ -251,13 +283,36 @@ function AdminUsers() {
   const upsertMut = useMutation({
     mutationFn: async (input: { id?: string; form: UserForm }) => {
       const { form: f, id } = input;
+      const isTargetAdminEmail = isSingleAdminEmail(f.email);
+      const isProtectedAdmin = Boolean(id) && (isSoleAdminId(id) || isTargetAdminEmail);
+
+      if (f.role === "admin" && !isTargetAdminEmail) {
+        throw new Error(`Only ${SINGLE_ADMIN_EMAIL} can be assigned the admin role.`);
+      }
+
+      if (isTargetAdminEmail && f.role !== "admin") {
+        throw new Error(`${SINGLE_ADMIN_EMAIL} must keep the admin role.`);
+      }
+
+      if (isProtectedAdmin && f.role !== "admin") {
+        throw new Error("The sole admin cannot be demoted.");
+      }
+
+      if (isProtectedAdmin && !isTargetAdminEmail) {
+        throw new Error(`The sole admin email must remain ${SINGLE_ADMIN_EMAIL}.`);
+      }
+
+      if (isProtectedAdmin && f.account_status !== "active") {
+        throw new Error("The sole admin must stay active.");
+      }
+
       const profilePayload = {
         full_name: f.full_name || null,
         phone: f.phone || null,
-        email: f.email || null,
+        email: normalizedEmail(f.email) || null,
         district: f.district || null,
         language: f.language,
-        account_status: f.account_status,
+        account_status: isProtectedAdmin ? "active" : f.account_status,
         assigned_farm_id: f.assigned_farm_id || null,
       };
       if (id) {
@@ -266,12 +321,16 @@ function AdminUsers() {
         // sync role
         const existing = roles.filter((x) => x.user_id === id);
         const keep = existing.find((x) => x.role === f.role);
+        if (!keep) {
+          const roleInsert = await insforge.database
+            .from("user_roles")
+            .insert([{ user_id: id, role: f.role }]);
+          if (roleInsert.error) throw roleInsert.error;
+        }
         const remove = existing.filter((x) => x.role !== f.role);
         for (const x of remove) {
-          await insforge.database.from("user_roles").delete().eq("id", x.id);
-        }
-        if (!keep) {
-          await insforge.database.from("user_roles").insert([{ user_id: id, role: f.role }]);
+          const roleDelete = await insforge.database.from("user_roles").delete().eq("id", x.id);
+          if (roleDelete.error) throw roleDelete.error;
         }
         return id;
       }
@@ -293,6 +352,11 @@ function AdminUsers() {
 
   const toggleStatusMut = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const profile = profiles.find((p) => p.id === id);
+      if ((isSoleAdminId(id) || isSingleAdminEmail(profile?.email)) && status !== "active") {
+        throw new Error("The sole admin cannot be suspended.");
+      }
+
       const r = await insforge.database
         .from("profiles")
         .update({ account_status: status })
@@ -304,7 +368,8 @@ function AdminUsers() {
       qc.invalidateQueries({ queryKey: ["admin-users"] });
       setSuspendId(null);
     },
-    onError: () => toast.error("Failed to update status"),
+    onError: (e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Failed to update status"),
   });
 
   const resetPasswordMut = useMutation({
@@ -355,15 +420,18 @@ function AdminUsers() {
     if (editingId) {
       const p = profiles.find((x) => x.id === editingId);
       if (p) {
+        const isSingleAdmin = isSingleAdminEmail(p.email);
         setForm({
           full_name: p.full_name ?? "",
           phone: p.phone ?? "",
           email: p.email ?? "",
-          role: roleByUser.get(p.id) ?? "farmer",
+          role: isSingleAdmin ? "admin" : (roleByUser.get(p.id) ?? "farmer"),
           assigned_farm_id: p.assigned_farm_id ?? "",
           district: p.district ?? "",
           language: p.language,
-          account_status: (p.account_status ?? "active") as UserForm["account_status"],
+          account_status: isSingleAdmin
+            ? "active"
+            : ((p.account_status ?? "active") as UserForm["account_status"]),
         });
       }
     } else {
@@ -476,63 +544,74 @@ function AdminUsers() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((u) => (
-                  <tr
-                    key={u.id}
-                    className="border-t border-border/60 hover:bg-surface/60 cursor-pointer"
-                    onClick={() => setDrawerUserId(u.id)}
-                  >
-                    <td className="px-4 py-3 font-medium">{u.full_name ?? "—"}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{u.phone ?? "—"}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{u.email ?? "—"}</td>
-                    <td className="px-4 py-3">
-                      <RoleBadge role={u.role} />
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{u.farmName ?? "—"}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{u.district ?? "—"}</td>
-                    <td className="px-4 py-3">
-                      <StatusBadge status={u.status} />
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {fmtDate(u.last_active_at)}
-                    </td>
-                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          title="Edit"
-                          onClick={() => {
-                            setEditingId(u.id);
-                            setEditorOpen(true);
-                          }}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          title="Reset password"
-                          onClick={() => setResetId(u.id)}
-                        >
-                          <KeyRound className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          title={u.status === "suspended" ? "Reactivate" : "Suspend"}
-                          onClick={() => setSuspendId(u.id)}
-                        >
-                          {u.status === "suspended" ? (
-                            <Play className="h-4 w-4" />
-                          ) : (
-                            <Pause className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {rows.map((u) => {
+                  const isProtectedAdmin = isSoleAdminId(u.id) || isSingleAdminEmail(u.email);
+                  const statusActionLocked = isProtectedAdmin && u.status !== "suspended";
+                  return (
+                    <tr
+                      key={u.id}
+                      className="border-t border-border/60 hover:bg-surface/60 cursor-pointer"
+                      onClick={() => setDrawerUserId(u.id)}
+                    >
+                      <td className="px-4 py-3 font-medium">{u.full_name ?? "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{u.phone ?? "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{u.email ?? "—"}</td>
+                      <td className="px-4 py-3">
+                        <RoleBadge role={u.role} />
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">{u.farmName ?? "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{u.district ?? "—"}</td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={u.status} />
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {fmtDate(u.last_active_at)}
+                      </td>
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Edit"
+                            onClick={() => {
+                              setEditingId(u.id);
+                              setEditorOpen(true);
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Reset password"
+                            onClick={() => setResetId(u.id)}
+                          >
+                            <KeyRound className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title={
+                              statusActionLocked
+                                ? "The sole admin cannot be suspended"
+                                : u.status === "suspended"
+                                  ? "Reactivate"
+                                  : "Suspend"
+                            }
+                            disabled={statusActionLocked}
+                            onClick={() => setSuspendId(u.id)}
+                          >
+                            {u.status === "suspended" ? (
+                              <Play className="h-4 w-4" />
+                            ) : (
+                              <Pause className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -660,7 +739,21 @@ function AdminUsers() {
                   <Button size="sm" variant="outline" onClick={() => setResetId(drawerUser.id)}>
                     <KeyRound className="mr-1.5 h-3.5 w-3.5" /> Reset password
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => setSuspendId(drawerUser.id)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    title={
+                      (isSoleAdminId(drawerUser.id) || isSingleAdminEmail(drawerUser.email)) &&
+                      (drawerUser.account_status ?? "active") !== "suspended"
+                        ? "The sole admin cannot be suspended"
+                        : undefined
+                    }
+                    disabled={
+                      (isSoleAdminId(drawerUser.id) || isSingleAdminEmail(drawerUser.email)) &&
+                      (drawerUser.account_status ?? "active") !== "suspended"
+                    }
+                    onClick={() => setSuspendId(drawerUser.id)}
+                  >
                     {(drawerUser.account_status ?? "active") === "suspended" ? (
                       <>
                         <Play className="mr-1.5 h-3.5 w-3.5" /> Reactivate
@@ -708,7 +801,20 @@ function AdminUsers() {
                 <Input
                   type="email"
                   value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  onChange={(e) => {
+                    const email = e.target.value;
+                    const targetsSingleAdmin = isSingleAdminEmail(email);
+                    setForm({
+                      ...form,
+                      email,
+                      role: targetsSingleAdmin
+                        ? "admin"
+                        : form.role === "admin"
+                          ? "farmer"
+                          : form.role,
+                      account_status: targetsSingleAdmin ? "active" : form.account_status,
+                    });
+                  }}
                 />
               </Field>
             </div>
@@ -717,12 +823,13 @@ function AdminUsers() {
                 <Select
                   value={form.role}
                   onValueChange={(v) => setForm({ ...form, role: v as AppRole })}
+                  disabled={editingTargetsSingleAdmin}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {ROLES.map((r) => (
+                    {roleOptions.map((r) => (
                       <SelectItem key={r} value={r}>
                         {roleLabels[r]}
                       </SelectItem>
@@ -736,12 +843,13 @@ function AdminUsers() {
                   onValueChange={(v) =>
                     setForm({ ...form, account_status: v as UserForm["account_status"] })
                   }
+                  disabled={editingTargetsSingleAdmin}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {STATUSES.map((s) => (
+                    {statusOptions.map((s) => (
                       <SelectItem key={s} value={s}>
                         {s}
                       </SelectItem>
@@ -814,8 +922,25 @@ function AdminUsers() {
                   toast.error("Enter a valid email address");
                   return;
                 }
+                if (form.role === "admin" && !isSingleAdminEmail(form.email)) {
+                  toast.error(`Only ${SINGLE_ADMIN_EMAIL} can be assigned admin access`);
+                  return;
+                }
+                if (isSingleAdminEmail(form.email) && form.role !== "admin") {
+                  toast.error(`${SINGLE_ADMIN_EMAIL} must keep admin access`);
+                  return;
+                }
+                if (editingId && isSoleAdminId(editingId) && form.role !== "admin") {
+                  toast.error("The sole admin cannot be demoted");
+                  return;
+                }
+                if (isSingleAdminEmail(form.email) && form.account_status !== "active") {
+                  toast.error("The sole admin must stay active");
+                  return;
+                }
                 const normalizedForm = {
                   ...form,
+                  email: normalizedEmail(form.email),
                   phone: form.phone.trim() ? normalizeBangladeshPhone(form.phone) : "",
                 };
                 if (!editingId) {
@@ -838,23 +963,34 @@ function AdminUsers() {
           {(() => {
             const u = profiles.find((p) => p.id === suspendId);
             const currentlySuspended = (u?.account_status ?? "active") === "suspended";
+            const statusActionLocked =
+              Boolean(u && (isSoleAdminId(u.id) || isSingleAdminEmail(u.email))) &&
+              !currentlySuspended;
             return (
               <>
                 <AlertDialogHeader>
                   <AlertDialogTitle>
-                    {currentlySuspended ? "Reactivate user?" : "Suspend user?"}
+                    {statusActionLocked
+                      ? "Sole admin stays active"
+                      : currentlySuspended
+                        ? "Reactivate user?"
+                        : "Suspend user?"}
                   </AlertDialogTitle>
                   <AlertDialogDescription>
-                    {currentlySuspended
-                      ? `${u?.full_name ?? "This user"} will regain access to Acqua Lence.`
-                      : `${u?.full_name ?? "This user"} will lose access immediately. You can reactivate them later.`}
+                    {statusActionLocked
+                      ? `${u?.full_name ?? SINGLE_ADMIN_EMAIL} is the only admin and cannot be suspended.`
+                      : currentlySuspended
+                        ? `${u?.full_name ?? "This user"} will regain access to Acqua Lence.`
+                        : `${u?.full_name ?? "This user"} will lose access immediately. You can reactivate them later.`}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction
+                    disabled={statusActionLocked}
                     onClick={() =>
                       suspendId &&
+                      !statusActionLocked &&
                       toggleStatusMut.mutate({
                         id: suspendId,
                         status: currentlySuspended ? "active" : "suspended",
