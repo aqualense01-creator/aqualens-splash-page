@@ -22,14 +22,20 @@ const items: Item[] = [
 
 export function Stats() {
   return (
-    <section className="bg-surface py-12 sm:py-20">
+    <section id="platform" className="bg-surface py-12 sm:py-20" aria-labelledby="platform-heading">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <Reveal>
           <div className="flex flex-wrap items-end justify-between gap-4">
-            <h2 className="font-display text-2xl font-bold text-foreground md:text-3xl">
+            <h2
+              id="platform-heading"
+              className="font-display text-2xl font-bold text-foreground md:text-3xl"
+            >
               All-in-One Water Quality Monitoring System
             </h2>
-            <a href="#" className="inline-flex items-center gap-1 text-sm font-medium text-primary">
+            <a
+              href="#params-heading"
+              className="inline-flex items-center gap-1 text-sm font-medium text-primary"
+            >
               Learn More <ArrowRight className="h-4 w-4" />
             </a>
           </div>
@@ -69,7 +75,7 @@ export function Stats() {
                 give you complete control over your aquaculture operations.
               </p>
               <a
-                href="#"
+                href="#features"
                 className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary"
               >
                 Explore the platform <ArrowRight className="h-4 w-4" />

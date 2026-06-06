@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { Nav } from "@/components/landing/Nav";
 import { Hero } from "@/components/landing/Hero";
 import { Dashboard } from "@/components/landing/Dashboard";
@@ -49,6 +50,25 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  useEffect(() => {
+    const onClick = (event: MouseEvent) => {
+      const link = (event.target as Element | null)?.closest<HTMLAnchorElement>('a[href^="#"]');
+      const href = link?.getAttribute("href");
+      if (!href || href === "#") return;
+
+      const target = document.querySelector<HTMLElement>(href);
+      if (!target) return;
+
+      event.preventDefault();
+      window.history.pushState(null, "", href);
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      target.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+    };
+
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, []);
+
   return (
     <main className="min-h-screen overflow-x-clip bg-background font-sans">
       <Nav />

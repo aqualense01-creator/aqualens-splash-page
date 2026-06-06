@@ -11,6 +11,8 @@ const metrics = [
   { icon: BellRing, label: "Critical alerts", value: "Instant" },
 ];
 
+const supportHref = "mailto:aqualense01@gmail.com?subject=Acqua%20Lence%20support";
+
 function NetworkVisual({ className = "" }: { className?: string }) {
   return (
     <div className={`relative ${className}`}>
@@ -116,10 +118,12 @@ export function CTA() {
               <a href="/app/dashboard" className="hover:text-white">
                 Dashboard
               </a>
-              <a href="/app/support" className="hover:text-white">
+              <a href={supportHref} className="hover:text-white">
                 Support
               </a>
-              <span className="cursor-pointer hover:text-white">English / বাংলা</span>
+              <a href="#footer" className="hover:text-white">
+                English / বাংলা
+              </a>
             </div>
           </div>
 

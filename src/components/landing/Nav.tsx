@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import { Logo } from "./Logo";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
@@ -16,6 +16,24 @@ export function Nav() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [active, setActive] = useState<string | null>(null);
+  const menuId = "landing-mobile-menu";
+
+  const handleAnchorClick = (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
+    if (!href.startsWith("#") || href === "#") return;
+
+    const target = document.querySelector<HTMLElement>(href);
+    if (!target) return;
+
+    event.preventDefault();
+    const wasOpen = open;
+    setOpen(false);
+    window.history.pushState(null, "", href);
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const scroll = () => {
+      target.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+    };
+    window.setTimeout(scroll, wasOpen ? 280 : 0);
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -62,6 +80,7 @@ export function Nav() {
               <a
                 key={l.label}
                 href={l.href}
+                onClick={handleAnchorClick(l.href)}
                 className={`relative text-sm font-medium transition-colors ${
                   isActive ? "text-primary" : "text-foreground/80 hover:text-primary"
                 }`}
@@ -86,7 +105,10 @@ export function Nav() {
             </Button>
           </a>
           <button
+            type="button"
             aria-label="Toggle menu"
+            aria-expanded={open}
+            aria-controls={menuId}
             onClick={() => setOpen((v) => !v)}
             className="grid h-10 w-10 place-items-center rounded-md border border-border md:hidden"
           >
@@ -97,6 +119,7 @@ export function Nav() {
       <AnimatePresence>
         {open && (
           <motion.div
+            id={menuId}
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
@@ -108,7 +131,7 @@ export function Nav() {
                 <a
                   key={l.label}
                   href={l.href}
-                  onClick={() => setOpen(false)}
+                  onClick={handleAnchorClick(l.href)}
                   className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                     active === l.href
                       ? "bg-primary/10 text-primary"

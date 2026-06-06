@@ -4,11 +4,51 @@ import { Input } from "@/components/ui/input";
 import { Award, Facebook, Mail, Phone, Send, ShieldCheck } from "lucide-react";
 import { Logo } from "./Logo";
 
+const contactEmail = "aqualense01@gmail.com";
+const emailHref = (subject: string) =>
+  `mailto:${contactEmail}?subject=${encodeURIComponent(subject)}`;
+
 const cols = [
-  { title: "Product", links: ["Buoy", "Sensors", "Platform", "Pricing", "Integrations"] },
-  { title: "Company", links: ["About", "Careers", "Press", "Contact", "Partners"] },
-  { title: "Resources", links: ["Docs", "Blog", "Case Studies", "Support", "Changelog"] },
-  { title: "Legal", links: ["Privacy", "Terms", "Security", "Cookies", "DPA"] },
+  {
+    title: "Product",
+    links: [
+      { label: "Buoy", href: "#device" },
+      { label: "Sensors", href: "#params-heading" },
+      { label: "Platform", href: "#platform" },
+      { label: "Pricing", href: "#pricing" },
+      { label: "Integrations", href: "#features" },
+    ],
+  },
+  {
+    title: "Company",
+    links: [
+      { label: "About", href: "#cta" },
+      { label: "Careers", href: emailHref("Careers at Acqua Lence") },
+      { label: "Press", href: emailHref("Press inquiry") },
+      { label: "Contact", href: `mailto:${contactEmail}` },
+      { label: "Partners", href: emailHref("Partnership inquiry") },
+    ],
+  },
+  {
+    title: "Resources",
+    links: [
+      { label: "Docs", href: "#features" },
+      { label: "Blog", href: "#reports-heading" },
+      { label: "Case Studies", href: "#testimonials" },
+      { label: "Support", href: emailHref("Acqua Lence support") },
+      { label: "Changelog", href: "#reports-heading" },
+    ],
+  },
+  {
+    title: "Legal",
+    links: [
+      { label: "Privacy", href: emailHref("Privacy request") },
+      { label: "Terms", href: emailHref("Terms request") },
+      { label: "Security", href: emailHref("Security request") },
+      { label: "Cookies", href: emailHref("Cookie request") },
+      { label: "DPA", href: emailHref("DPA request") },
+    ],
+  },
 ];
 
 const badges = [
@@ -20,8 +60,8 @@ const contactItems = [
   {
     icon: Mail,
     label: "Email",
-    value: "aqualense01@gmail.com",
-    href: "mailto:aqualense01@gmail.com",
+    value: contactEmail,
+    href: `mailto:${contactEmail}`,
   },
   {
     icon: Phone,
@@ -150,13 +190,13 @@ export function Footer() {
                 <p className="text-sm font-semibold text-foreground">{c.title}</p>
                 <ul className="mt-3 space-y-2">
                   {c.links.map((l) => (
-                    <li key={l}>
+                    <li key={l.label}>
                       <a
-                        href={l === "Pricing" ? "#pricing" : "#"}
+                        href={l.href}
                         className="group inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-primary"
                       >
                         <span className="relative">
-                          {l}
+                          {l.label}
                           <span className="absolute inset-x-0 -bottom-0.5 h-px origin-left scale-x-0 bg-primary transition-transform duration-300 group-hover:scale-x-100" />
                         </span>
                       </a>
@@ -199,16 +239,16 @@ export function Footer() {
         <div className="mt-8 flex flex-col items-start justify-between gap-3 border-t border-border py-5 text-xs text-muted-foreground sm:mt-0 sm:flex-row sm:items-center">
           <p>&copy; {new Date().getFullYear()} AcquaLence Technologies. All rights reserved.</p>
           <div className="flex flex-wrap gap-x-5 gap-y-1">
-            <a href="#" className="hover:text-primary">
+            <a href={emailHref("Privacy request")} className="hover:text-primary">
               Privacy
             </a>
-            <a href="#" className="hover:text-primary">
+            <a href={emailHref("Terms request")} className="hover:text-primary">
               Terms
             </a>
-            <a href="#" className="hover:text-primary">
+            <a href={emailHref("Cookie request")} className="hover:text-primary">
               Cookies
             </a>
-            <a href="#" className="hover:text-primary">
+            <a href="/app/live" className="hover:text-primary">
               Status
             </a>
           </div>

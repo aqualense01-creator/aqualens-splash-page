@@ -44,6 +44,7 @@ export function ScrollSequence({
   const sizeRef = useRef({ w: 0, h: 0, dpr: 1 });
   const [loaded, setLoaded] = useState(0);
   const [reduced, setReduced] = useState(false);
+  const firstFrameSrc = pathTemplate.replace("{n}", "001");
 
   // Detect reduced motion. Mobile still uses the scroll-driven sequence.
   useEffect(() => {
@@ -133,17 +134,21 @@ export function ScrollSequence({
       };
     }
 
-    // Otherwise preload all in parallel for desktop animation
+    // Load frame 1 first so the canvas paints quickly, then continue the sequence.
     let count = 0;
+    const seen = new Set<number>();
     const finish = (i: number) => {
       if (cancelled) return;
+      if (seen.has(i)) return;
+      seen.add(i);
       count += 1;
       setLoaded(count);
       if (i === 0 || count === frameCount) {
         resizeCanvas();
       }
     };
-    for (let i = 0; i < frameCount; i++) {
+
+    const loadFrame = (i: number) => {
       const img = new Image();
       img.decoding = "async";
       img.src = pathTemplate.replace("{n}", String(i + 1).padStart(3, "0"));
@@ -159,10 +164,20 @@ export function ScrollSequence({
       };
       img.onerror = () => finish(i);
       imgs[i] = img;
-    }
+    };
+
     framesRef.current = imgs;
+    loadFrame(0);
+    const restTimer = window.setTimeout(() => {
+      for (let i = 1; i < frameCount; i++) {
+        loadFrame(i);
+      }
+      framesRef.current = imgs;
+    }, 80);
+
     return () => {
       cancelled = true;
+      window.clearTimeout(restTimer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [frameCount, pathTemplate, reduced]);
@@ -283,7 +298,17 @@ export function ScrollSequence({
 
   return (
     <div className={`relative ${className ?? ""}`}>
-      <canvas ref={canvasRef} className="h-full w-full" aria-label={alt} role="img" />
+      <img
+        src={firstFrameSrc}
+        alt=""
+        aria-hidden="true"
+        className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-300 ${
+          loaded > 0 ? "opacity-0" : "opacity-100"
+        }`}
+        loading="eager"
+        decoding="async"
+      />
+      <canvas ref={canvasRef} className="relative h-full w-full" aria-label={alt} role="img" />
       {showLoader && (
         <div className="pointer-events-none absolute inset-x-0 bottom-3 mx-auto flex w-40 flex-col items-center gap-1">
           <div className="h-0.5 w-full overflow-hidden rounded-full bg-foreground/10">
