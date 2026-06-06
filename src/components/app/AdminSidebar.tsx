@@ -22,6 +22,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Logo } from "@/components/landing/Logo";
+import { useAuth } from "@/lib/auth";
 
 const items = [
   { url: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -35,9 +36,15 @@ const items = [
 
 export function AdminSidebar() {
   const { state } = useSidebar();
+  const { isAdmin, isSupport } = useAuth();
   const collapsed = state === "collapsed";
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const isActive = (p: string) => pathname === p || pathname.startsWith(p + "/");
+  const visibleItems = isAdmin
+    ? items
+    : isSupport
+      ? items.filter((item) => item.url === "/admin/support")
+      : [];
 
   return (
     <Sidebar collapsible="icon">
@@ -54,7 +61,7 @@ export function AdminSidebar() {
           <SidebarGroupLabel>Platform</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {visibleItems.map((item) => (
                 <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
                     <a href={item.url} className="flex items-center gap-2">

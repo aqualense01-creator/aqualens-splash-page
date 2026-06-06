@@ -1,5 +1,16 @@
 import { useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Radio, Bell, Cpu, Settings, Waves, ShieldCheck } from "lucide-react";
+import {
+  LayoutDashboard,
+  Radio,
+  Bell,
+  Cpu,
+  Settings,
+  Waves,
+  ShieldCheck,
+  LifeBuoy,
+  Sparkles,
+  Wrench,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 
@@ -9,7 +20,15 @@ type NavItem = {
   icon: React.ComponentType<{ className?: string }>;
 };
 
-export function MobileBottomNav({ isAdmin = false }: { isAdmin?: boolean }) {
+export function MobileBottomNav({
+  isAdmin = false,
+  isSupport = false,
+  isTechnician = false,
+}: {
+  isAdmin?: boolean;
+  isSupport?: boolean;
+  isTechnician?: boolean;
+}) {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const { t } = useI18n();
 
@@ -29,7 +48,25 @@ export function MobileBottomNav({ isAdmin = false }: { isAdmin?: boolean }) {
     { url: "/admin/settings", label: t("nav.system") || "System", icon: ShieldCheck },
   ];
 
-  const items = isAdmin ? adminItems : farmerItems;
+  const supportItems: NavItem[] = [
+    { url: "/admin/support", label: t("nav.support") || "Support", icon: LifeBuoy },
+  ];
+
+  const technicianItems: NavItem[] = [
+    { url: "/app/setup", label: t("nav.setup") || "Setup", icon: Sparkles },
+    { url: "/app/devices", label: t("nav.devices") || "Devices", icon: Cpu },
+    { url: "/app/maintenance", label: t("nav.maintenance") || "Maintenance", icon: Wrench },
+    { url: "/app/alerts", label: t("nav.alerts") || "Alerts", icon: Bell },
+    { url: "/app/settings", label: t("nav.settings") || "Settings", icon: Settings },
+  ];
+
+  const items = isAdmin
+    ? adminItems
+    : isSupport
+      ? supportItems
+      : isTechnician
+        ? technicianItems
+        : farmerItems;
   const isActive = (url: string) => pathname === url || pathname.startsWith(url + "/");
 
   return (

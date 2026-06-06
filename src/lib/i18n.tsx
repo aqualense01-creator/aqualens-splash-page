@@ -69,6 +69,37 @@ const dict: Record<Lang, Record<string, string>> = {
     "common.lastUpdated": "Last updated",
     "common.viewAll": "View all",
     "common.search": "Search",
+    "devices.title": "Devices",
+    "devices.subtitle": "Health, signal and calibration status for every buoy.",
+    "devices.setup": "Setup device",
+    "devices.total": "Total",
+    "devices.online": "Online",
+    "devices.offline": "Offline",
+    "devices.lowBattery": "Low battery",
+    "devices.calDue": "Calibration due",
+    "devices.maintenance": "Maintenance",
+    "devices.searchPlaceholder": "Search by name, serial, farm or pond...",
+    "devices.filterAll": "All statuses",
+    "devices.noDevices": "No devices",
+    "devices.noDevicesDesc": "Run the setup wizard to register your first device.",
+    "devices.colDevice": "Device",
+    "devices.colFarmPond": "Farm / Pond",
+    "devices.colStatus": "Status",
+    "devices.colBattery": "Battery",
+    "devices.colSignal": "Signal",
+    "devices.colFirmware": "Firmware",
+    "devices.colLastSeen": "Last seen",
+    "devices.colCalibration": "Calibration",
+    "devices.ok": "OK",
+    "devices.battery": "Battery",
+    "devices.signal": "Signal",
+    "devices.lastSeen": "Last seen",
+    "devices.farm": "Farm",
+    "devices.pond": "Pond",
+    "devices.firmware": "Firmware",
+    "devices.hardware": "Hardware",
+    "devices.calibrate": "Calibrate",
+    "devices.viewDetail": "View full detail",
   },
   bn: {
     "app.brand": "অ্যাকুয়া লেন্স",
@@ -129,10 +160,45 @@ const dict: Record<Lang, Record<string, string>> = {
     "common.lastUpdated": "শেষ আপডেট",
     "common.viewAll": "সব দেখুন",
     "common.search": "অনুসন্ধান",
+    "devices.title": "ডিভাইস",
+    "devices.subtitle": "প্রতিটি বয়ার স্বাস্থ্য, সিগন্যাল ও ক্যালিব্রেশন অবস্থা।",
+    "devices.setup": "ডিভাইস সেটআপ",
+    "devices.total": "মোট",
+    "devices.online": "অনলাইন",
+    "devices.offline": "অফলাইন",
+    "devices.lowBattery": "কম ব্যাটারি",
+    "devices.calDue": "ক্যালিব্রেশন বাকি",
+    "devices.maintenance": "রক্ষণাবেক্ষণ",
+    "devices.searchPlaceholder": "নাম, সিরিয়াল, খামার বা পুকুর দিয়ে খুঁজুন...",
+    "devices.filterAll": "সব অবস্থা",
+    "devices.noDevices": "কোনো ডিভাইস নেই",
+    "devices.noDevicesDesc": "প্রথম ডিভাইস নিবন্ধন করতে সেটআপ উইজার্ড চালান।",
+    "devices.colDevice": "ডিভাইস",
+    "devices.colFarmPond": "খামার / পুকুর",
+    "devices.colStatus": "অবস্থা",
+    "devices.colBattery": "ব্যাটারি",
+    "devices.colSignal": "সিগন্যাল",
+    "devices.colFirmware": "ফার্মওয়্যার",
+    "devices.colLastSeen": "শেষ দেখা",
+    "devices.colCalibration": "ক্যালিব্রেশন",
+    "devices.ok": "ঠিক আছে",
+    "devices.battery": "ব্যাটারি",
+    "devices.signal": "সিগন্যাল",
+    "devices.lastSeen": "শেষ দেখা",
+    "devices.farm": "খামার",
+    "devices.pond": "পুকুর",
+    "devices.firmware": "ফার্মওয়্যার",
+    "devices.hardware": "হার্ডওয়্যার",
+    "devices.calibrate": "ক্যালিব্রেট",
+    "devices.viewDetail": "সম্পূর্ণ বিস্তারিত দেখুন",
   },
 };
 
-type I18nCtx = { lang: Lang; setLang: (l: Lang) => void; t: (key: string) => string };
+type I18nCtx = {
+  lang: Lang;
+  setLang: (l: Lang) => void;
+  t: (key: string, fallback?: string) => string;
+};
 const Ctx = createContext<I18nCtx | null>(null);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
@@ -149,7 +215,11 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     if (typeof window !== "undefined") window.localStorage.setItem("acqua_lang", l);
   }, []);
 
-  const t = useCallback((key: string) => dict[lang][key] ?? dict.en[key] ?? key, [lang]);
+  const t = useCallback(
+    (key: string, fallback?: string) =>
+      dict[lang][key] ?? dict.en[key] ?? (lang === "bn" && fallback ? fallback : key),
+    [lang],
+  );
 
   const value = useMemo(() => ({ lang, setLang, t }), [lang, setLang, t]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

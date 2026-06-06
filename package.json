@@ -9,6 +9,12 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run lint && npm run typecheck && npm run build",
+    "test:e2e": "playwright test",
+    "test:e2e:auth": "node tests/e2e/run-authenticated.mjs",
+    "test:e2e:ui": "playwright test --ui",
+    "test:load": "node tests/load/smoke-load.mjs",
     "format": "prettier --write ."
   },
   "dependencies": {
@@ -71,6 +77,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
+    "@playwright/test": "^1.60.0",
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",

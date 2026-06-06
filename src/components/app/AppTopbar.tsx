@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { Bell, ChevronDown, Globe, LogOut, User as UserIcon, Waves } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
@@ -12,31 +14,55 @@ import {
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
-import { MOCK_FARMS } from "@/lib/mock-farm";
+import { readFarmSelection, writeFarmSelection } from "@/lib/farm-selection";
+import { insforge, type Farm } from "@/lib/insforge";
+
+const EMPTY_FARMS: Pick<Farm, "id" | "name">[] = [];
+
+function dbErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+}
 
 export function AppTopbar() {
   const { lang, setLang } = useI18n();
   const { user, profile, signOut } = useAuth();
-  const [activeFarmId, setActiveFarmId] = useState<string>("f1");
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (r) => r.location.pathname });
+  const isAppRoute = pathname.startsWith("/app");
+  const [activeFarmId, setActiveFarmId] = useState<string>("all");
+
+  const farmsQ = useQuery({
+    queryKey: ["app-topbar-farms", user?.id],
+    enabled: isAppRoute && !!user,
+    queryFn: async () => {
+      const r = await insforge.database.from("farms").select("id,name").order("name");
+      if (r.error) throw new Error(dbErrorMessage(r.error, "Could not load farms"));
+      return (r.data ?? []) as Pick<Farm, "id" | "name">[];
+    },
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const saved = localStorage.getItem("active_farm_id");
-    if (saved) {
-      setActiveFarmId(saved);
-    } else {
-      localStorage.setItem("active_farm_id", "f1");
-    }
+    setActiveFarmId(readFarmSelection());
   }, []);
 
-  const activeFarm = MOCK_FARMS.find((f) => f.id === activeFarmId) || MOCK_FARMS[0];
-  const isAppRoute =
-    typeof window !== "undefined" ? window.location.pathname.startsWith("/app") : true;
+  const farms = farmsQ.data ?? EMPTY_FARMS;
+
+  useEffect(() => {
+    if (!isAppRoute || activeFarmId === "all" || farms.length === 0) return;
+    if (farms.some((farm) => farm.id === activeFarmId)) return;
+    setActiveFarmId(writeFarmSelection("all"));
+  }, [activeFarmId, farms, isAppRoute]);
+
+  const activeFarm = farms.find((f) => f.id === activeFarmId);
 
   const handleFarmSelect = (id: string) => {
     if (typeof window === "undefined") return;
-    localStorage.setItem("active_farm_id", id);
-    setActiveFarmId(id);
+    setActiveFarmId(writeFarmSelection(id));
     window.location.reload();
   };
 
@@ -55,7 +81,9 @@ export function AppTopbar() {
                 className="h-9 gap-1.5 rounded-xl border-border/70 bg-card/70 px-2.5 text-xs font-semibold backdrop-blur hover:border-primary/40"
               >
                 <Waves className="h-3.5 w-3.5 text-primary shrink-0" />
-                <span className="max-w-[104px] truncate sm:max-w-[160px]">{activeFarm.name}</span>
+                <span className="max-w-[104px] truncate sm:max-w-[160px]">
+                  {activeFarm?.name ?? (lang === "bn" ? "সব খামার" : "All farms")}
+                </span>
                 <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />
               </Button>
             </DropdownMenuTrigger>
@@ -64,7 +92,14 @@ export function AppTopbar() {
                 {lang === "bn" ? "খামার নির্বাচন করুন" : "Select Farm"}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {MOCK_FARMS.map((farm) => (
+              <DropdownMenuItem
+                onClick={() => handleFarmSelect("all")}
+                className="font-medium text-xs flex items-center justify-between cursor-pointer"
+              >
+                {lang === "bn" ? "সব খামার" : "All farms"}
+                {activeFarmId === "all" && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+              </DropdownMenuItem>
+              {farms.map((farm) => (
                 <DropdownMenuItem
                   key={farm.id}
                   onClick={() => handleFarmSelect(farm.id)}
@@ -103,9 +138,7 @@ export function AppTopbar() {
           aria-label="Notifications"
           className="relative h-9 w-9 rounded-xl hover:bg-muted cursor-pointer"
           onClick={() => {
-            if (typeof window !== "undefined") {
-              window.location.assign(isAppRoute ? "/app/alerts" : "/admin/alerts");
-            }
+            navigate({ to: isAppRoute ? "/app/alerts" : "/admin/alerts" });
           }}
         >
           <Bell className="h-4 w-4" />
@@ -151,9 +184,7 @@ export function AppTopbar() {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => {
-                if (typeof window !== "undefined") {
-                  window.location.assign("/app/settings");
-                }
+                navigate({ to: "/app/settings" });
               }}
               className="cursor-pointer text-xs"
             >
@@ -162,9 +193,7 @@ export function AppTopbar() {
             <DropdownMenuItem
               onClick={async () => {
                 await signOut();
-                if (typeof window !== "undefined") {
-                  window.location.assign("/login");
-                }
+                navigate({ to: "/login" });
               }}
               className="cursor-pointer text-xs text-rose-600 hover:text-rose-700"
             >

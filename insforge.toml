@@ -1,7 +1,21 @@
 [auth]
 allowed_redirect_urls = [
+  "http://localhost:4173/login",
+  "http://localhost:4173/reset-password",
+  "http://localhost:4173/app/dashboard",
+  "http://127.0.0.1:4173/login",
+  "http://127.0.0.1:4173/reset-password",
+  "http://127.0.0.1:4173/app/dashboard",
+  "http://localhost:5173/login",
+  "http://localhost:5173/reset-password",
+  "http://localhost:5173/app/dashboard",
+  "http://127.0.0.1:5173/login",
+  "http://127.0.0.1:5173/reset-password",
+  "http://127.0.0.1:5173/app/dashboard",
   "http://localhost:5174/login",
+  "http://localhost:5174/reset-password",
   "http://localhost:5174/app/dashboard",
   "http://127.0.0.1:5174/login",
+  "http://127.0.0.1:5174/reset-password",
   "http://127.0.0.1:5174/app/dashboard"
 ]

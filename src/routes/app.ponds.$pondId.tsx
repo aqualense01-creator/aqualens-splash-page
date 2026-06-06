@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState, useCallback } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Area,
   AreaChart,
@@ -14,24 +15,22 @@ import {
   YAxis,
 } from "recharts";
 import {
-  ArrowLeft,
-  Download,
-  Cpu,
-  StickyNote,
-  AlertTriangle,
-  CheckCircle2,
-  Wrench,
-  FileText,
   Activity,
-  MapPin,
-  Calendar,
-  Waves,
+  AlertTriangle,
+  ArrowLeft,
   Battery,
+  Calendar,
+  CheckCircle2,
+  Cpu,
+  Download,
+  FileText,
+  MapPin,
+  StickyNote,
+  Waves,
+  Wrench,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -40,7 +39,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import {
   Table,
   TableBody,
@@ -49,105 +47,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { StatusBadge } from "@/components/app/StatusBadge";
+import { EmptyState, StatusBadge } from "@/components/app/StatusBadge";
 import { useI18n } from "@/lib/i18n";
-import { toast } from "sonner";
+import {
+  insforge,
+  type Alert as DbAlert,
+  type Device,
+  type Farm,
+  type Pond,
+  type PondStatus,
+  type Reading,
+} from "@/lib/insforge";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/ponds/$pondId")({
-  head: () => ({ meta: [{ title: "Pond Detail — Acqua Lence" }] }),
+  head: () => ({ meta: [{ title: "Pond Detail - Acqua Lence" }] }),
   component: PondDetailPage,
 });
 
-// ----- Mock pond static info -----
-type PondInfo = {
-  id: string;
-  name: string;
-  farm: string;
-  location: string;
-  pond_type: string;
-  area_m2: number;
-  depth_m: number;
-  species: string;
-  stocking_date: string;
-  device_id: string;
-};
-const POND_INFO: Record<string, PondInfo> = {
-  p1: {
-    id: "p1",
-    name: "Pond 1 — Rui",
-    farm: "Sundarban Farm",
-    location: "Dakope, Khulna",
-    pond_type: "Earthen",
-    area_m2: 1200,
-    depth_m: 1.8,
-    species: "Rui (Rohu)",
-    stocking_date: "2026-04-20",
-    device_id: "d1",
-  },
-  p2: {
-    id: "p2",
-    name: "Pond 2 — Shrimp",
-    farm: "Sundarban Farm",
-    location: "Dakope, Khulna",
-    pond_type: "Lined / HDPE",
-    area_m2: 2000,
-    depth_m: 1.5,
-    species: "Bagda Shrimp",
-    stocking_date: "2026-05-08",
-    device_id: "d2",
-  },
-  p3: {
-    id: "p3",
-    name: "Pond 3 — Tilapia",
-    farm: "Sundarban Farm",
-    location: "Dakope, Khulna",
-    pond_type: "Earthen",
-    area_m2: 1500,
-    depth_m: 1.6,
-    species: "Tilapia",
-    stocking_date: "2026-04-05",
-    device_id: "d3",
-  },
-  p4: {
-    id: "p4",
-    name: "Pond 4 — Pangas",
-    farm: "Khulna East Farm",
-    location: "Batiaghata, Khulna",
-    pond_type: "Earthen",
-    area_m2: 2400,
-    depth_m: 2.0,
-    species: "Pangasius",
-    stocking_date: "2026-03-20",
-    device_id: "d4",
-  },
-  p5: {
-    id: "p5",
-    name: "Pond 5 — Carp Mix",
-    farm: "Khulna East Farm",
-    location: "Batiaghata, Khulna",
-    pond_type: "Earthen",
-    area_m2: 1800,
-    depth_m: 1.7,
-    species: "Mixed carp",
-    stocking_date: "2026-03-08",
-    device_id: "d5",
-  },
-  p6: {
-    id: "p6",
-    name: "Pond 6 — Koi",
-    farm: "Khulna East Farm",
-    location: "Batiaghata, Khulna",
-    pond_type: "Lined / HDPE",
-    area_m2: 800,
-    depth_m: 1.4,
-    species: "Koi Carp",
-    stocking_date: "2026-02-04",
-    device_id: "d6",
-  },
-};
-
-// ----- Parameters -----
+type Range = "24h" | "7d" | "30d";
 type ParamKey = "do" | "ph" | "temp" | "turb" | "sal" | "amm" | "level" | "batt";
 type ParamDef = {
   key: ParamKey;
@@ -159,11 +77,51 @@ type ParamDef = {
   min: number;
   max: number;
 };
+
+type PondRow = Pond & { created_at?: string | null; updated_at?: string | null };
+type CalibrationRow = {
+  id: string;
+  sensor_type: string;
+  calibration_value: number | null;
+  technician_name?: string | null;
+  result?: string | null;
+  notes?: string | null;
+  performed_at: string;
+};
+type MaintenanceRow = {
+  id: string;
+  visit_type?: string | null;
+  notes?: string | null;
+  performed_at: string;
+};
+type PondDetailData = {
+  pond: PondRow;
+  farm: Farm | null;
+  device: Device | null;
+  readings: Reading[];
+  alerts: DbAlert[];
+  calibrations: CalibrationRow[];
+  maintenance: MaintenanceRow[];
+};
+type ChartPoint = {
+  t: number;
+  label: string;
+  hasData: boolean;
+} & Record<ParamKey, number | null>;
+type TimelineEvent = {
+  id: string;
+  type: "alert" | "device" | "calibration" | "maintenance" | "note";
+  severity?: string;
+  title: string;
+  detail: string;
+  at: string;
+};
+
 const PARAMS: ParamDef[] = [
   {
     key: "do",
-    labelEn: "Dissolved O₂",
-    labelBn: "দ্রবীভূত O₂",
+    labelEn: "Dissolved O2",
+    labelBn: "দ্রবীভূত O2",
     unit: "mg/L",
     safe: [5, 9],
     warn: [3.5, 11],
@@ -184,7 +142,7 @@ const PARAMS: ParamDef[] = [
     key: "temp",
     labelEn: "Temperature",
     labelBn: "তাপমাত্রা",
-    unit: "°C",
+    unit: "C",
     safe: [24, 31],
     warn: [22, 33],
     min: 18,
@@ -242,79 +200,96 @@ const PARAMS: ParamDef[] = [
   },
 ];
 
-type Range = "24h" | "7d" | "30d";
+const RANGE_MS: Record<Range, number> = {
+  "24h": 24 * 60 * 60 * 1000,
+  "7d": 7 * 24 * 60 * 60 * 1000,
+  "30d": 30 * 24 * 60 * 60 * 1000,
+};
 
-// ----- Deterministic mock series generator (per pond) -----
-function hash(s: string) {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
+function dbErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
   }
-  return (h >>> 0) / 0xffffffff;
+  return fallback;
 }
-function rand(seed: number, i: number) {
-  const x = Math.sin(seed * 9301 + i * 49297) * 233280;
-  return x - Math.floor(x);
+
+function assertDbOk(result: { error?: unknown }, fallback: string) {
+  if (result.error) throw new Error(dbErrorMessage(result.error, fallback));
 }
-function generateSeries(pondId: string, range: Range) {
-  const points = range === "24h" ? 48 : range === "7d" ? 84 : 90;
-  const stepMs =
-    range === "24h"
-      ? (24 * 3600_000) / points
-      : range === "7d"
-        ? (7 * 86400_000) / points
-        : (30 * 86400_000) / points;
-  const seed = hash(pondId);
-  const now = Date.now();
-  const baseDo = pondId === "p2" ? 3.2 : pondId === "p3" ? 4.6 : 6.6;
-  const basePh = 7.3 + (seed - 0.5) * 0.6;
-  const baseT = 28 + seed * 3;
-  const baseTu = 18 + seed * 12;
-  const baseSal = pondId === "p2" ? 14 : 0;
-  const baseAm = 0.1 + seed * 0.15;
-  const baseLv = 1.6 + (seed - 0.5) * 0.3;
-  const baseBatt = pondId === "p3" ? 14 : pondId === "p5" ? 0 : 60 + seed * 35;
-  const data = [] as Array<Record<string, number | string | null>>;
-  for (let i = 0; i < points; i++) {
-    const t = now - (points - 1 - i) * stepMs;
-    const dayPhase = Math.sin((i / points) * Math.PI * (range === "24h" ? 2 : 6));
-    // Inject a missing data gap mid-series
-    const missing = i > points * 0.45 && i < points * 0.5;
-    const row: Record<string, number | string | null> = {
-      t,
-      label:
-        range === "24h"
-          ? new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-          : new Date(t).toLocaleDateString([], { month: "short", day: "numeric" }),
-    };
-    if (missing) {
-      for (const p of PARAMS) row[p.key] = null;
-    } else {
-      row.do = +(baseDo + dayPhase * 0.8 + (rand(seed, i) - 0.5) * 0.4).toFixed(2);
-      row.ph = +(basePh + dayPhase * 0.2 + (rand(seed, i + 7) - 0.5) * 0.15).toFixed(2);
-      row.temp = +(baseT + dayPhase * 1.2 + (rand(seed, i + 13) - 0.5) * 0.4).toFixed(1);
-      row.turb = +(baseTu + (rand(seed, i + 19) - 0.5) * 6).toFixed(0);
-      row.sal = baseSal === 0 ? null : +(baseSal + (rand(seed, i + 23) - 0.5) * 1.2).toFixed(1);
-      row.amm = +(baseAm + dayPhase * 0.05 + (rand(seed, i + 29) - 0.5) * 0.04).toFixed(3);
-      row.level = +(baseLv + (rand(seed, i + 31) - 0.5) * 0.08).toFixed(2);
-      row.batt = pondId === "p5" ? 0 : Math.max(0, Math.round(baseBatt - i * 0.15));
+
+function rangeStart(range: Range) {
+  return new Date(Date.now() - RANGE_MS[range]).toISOString();
+}
+
+function toFiniteNumber(value: unknown, digits = 2) {
+  if (value == null) return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  return Number(parsed.toFixed(digits));
+}
+
+function formatNumber(value: unknown, digits = 2) {
+  const parsed = toFiniteNumber(value, digits);
+  if (parsed == null) return "--";
+  return String(parsed);
+}
+
+function readingValue(reading: Reading, key: ParamKey) {
+  switch (key) {
+    case "do":
+      return toFiniteNumber(reading.do_mg_l, 2);
+    case "ph":
+      return toFiniteNumber(reading.ph, 2);
+    case "temp":
+      return toFiniteNumber(reading.temp_c, 1);
+    case "turb":
+      return toFiniteNumber(reading.turbidity_ntu, 0);
+    case "sal":
+      return toFiniteNumber(reading.salinity_ppt, 1);
+    case "amm":
+      return toFiniteNumber(reading.ammonia_mg_l, 3);
+    case "level": {
+      const levelCm = toFiniteNumber(reading.water_level_cm, 1);
+      return levelCm == null ? null : toFiniteNumber(levelCm / 100, 2);
     }
-    data.push(row);
+    case "batt":
+      return toFiniteNumber(reading.battery_pct, 0);
   }
-  return data;
 }
 
-function pondStatus(
-  latest: Record<string, number | string | null>,
-  pondId: string,
-): "good" | "warning" | "critical" | "offline" {
-  if (pondId === "p5") return "offline";
-  const doVal = latest.do as number | null;
-  if (doVal == null) return "offline";
-  if (doVal < 3.5) return "critical";
-  if (doVal < 5) return "warning";
-  return "good";
+function readingToPoint(reading: Reading, range: Range): ChartPoint {
+  const t = new Date(reading.recorded_at).getTime();
+  const point = {
+    t,
+    label:
+      range === "24h"
+        ? new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        : new Date(t).toLocaleDateString([], { month: "short", day: "numeric" }),
+    hasData: false,
+  } as ChartPoint;
+
+  for (const param of PARAMS) {
+    point[param.key] = readingValue(reading, param.key);
+    if (point[param.key] != null) point.hasData = true;
+  }
+  return point;
+}
+
+function emptyPoint(): ChartPoint {
+  return {
+    t: Date.now(),
+    label: "",
+    hasData: false,
+    do: null,
+    ph: null,
+    temp: null,
+    turb: null,
+    sal: null,
+    amm: null,
+    level: null,
+    batt: null,
+  };
 }
 
 function classifyValue(p: ParamDef, v: number | null): "good" | "warning" | "critical" | "offline" {
@@ -324,176 +299,351 @@ function classifyValue(p: ParamDef, v: number | null): "good" | "warning" | "cri
   return "good";
 }
 
-// ----- Component -----
+function deriveStatus(pond: PondRow, device: Device | null, latest: ChartPoint): PondStatus {
+  if (device?.status === "offline") return "offline";
+  if (latest.hasData) {
+    const doDef = PARAMS.find((param) => param.key === "do")!;
+    const doStatus = classifyValue(doDef, latest.do);
+    if (doStatus === "critical" || doStatus === "warning") return doStatus;
+  }
+  return pond.status;
+}
+
+function toRecommendedStatus(status: PondStatus): "warning" | "critical" | "offline" | null {
+  if (status === "critical" || status === "offline") return status;
+  if (status === "warning" || status === "watch" || status === "calibration_due") return "warning";
+  return null;
+}
+
+function buildTimeline(
+  data: PondDetailData,
+  t: (en: string, bn: string) => string,
+): TimelineEvent[] {
+  const events: TimelineEvent[] = [];
+
+  for (const alert of data.alerts) {
+    events.push({
+      id: `alert-${alert.id}`,
+      type: "alert",
+      severity: alert.severity,
+      title: alert.message || alert.alert_type.replace(/_/g, " "),
+      detail: [
+        alert.parameter,
+        alert.value == null ? null : `value ${formatNumber(alert.value, 2)}`,
+        alert.status,
+      ]
+        .filter(Boolean)
+        .join(" - "),
+      at: alert.detected_at,
+    });
+  }
+
+  if (data.device?.last_seen) {
+    events.push({
+      id: `device-${data.device.id}`,
+      type: "device",
+      title: t("Device heartbeat received", "ডিভাইস হার্টবিট পাওয়া গেছে"),
+      detail: data.device.serial,
+      at: data.device.last_seen,
+    });
+  }
+
+  for (const row of data.calibrations) {
+    events.push({
+      id: `cal-${row.id}`,
+      type: "calibration",
+      title: t("Sensor calibrated", "সেন্সর ক্যালিব্রেট হয়েছে"),
+      detail: [row.sensor_type, row.result, row.technician_name].filter(Boolean).join(" - "),
+      at: row.performed_at,
+    });
+  }
+
+  for (const row of data.maintenance) {
+    events.push({
+      id: `maint-${row.id}`,
+      type: "maintenance",
+      title: row.visit_type || t("Maintenance visit", "রক্ষণাবেক্ষণ ভিজিট"),
+      detail: row.notes || t("No notes recorded", "নোট নেই"),
+      at: row.performed_at,
+    });
+  }
+
+  return events.sort((a, b) => +new Date(b.at) - +new Date(a.at)).slice(0, 12);
+}
+
+function timeAgo(iso: string, lang: "en" | "bn") {
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
+  if (mins < 1) return lang === "bn" ? "এইমাত্র" : "just now";
+  if (mins < 60) return lang === "bn" ? `${mins} মি আগে` : `${mins}m ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return lang === "bn" ? `${hrs} ঘ আগে` : `${hrs}h ago`;
+  const days = Math.round(hrs / 24);
+  return lang === "bn" ? `${days} দিন আগে` : `${days}d ago`;
+}
+
 function PondDetailPage() {
   const { pondId } = Route.useParams();
   const { lang } = useI18n();
   const t = useCallback((en: string, bn: string) => (lang === "bn" ? bn : en), [lang]);
-  const info = POND_INFO[pondId] ?? POND_INFO.p1;
-
   const [range, setRange] = useState<Range>("24h");
   const [activeParam, setActiveParam] = useState<ParamKey>("do");
-  const [noteOpen, setNoteOpen] = useState(false);
-  const [noteText, setNoteText] = useState("");
 
-  const series = useMemo(() => generateSeries(info.id, range), [info.id, range]);
-  const liveSeries = useMemo(() => generateSeries(info.id, "24h"), [info.id]);
-  const latest = liveSeries[liveSeries.length - 1];
-  const status = pondStatus(latest, info.id);
+  const detailQuery = useQuery({
+    queryKey: ["app-pond-detail", pondId, range],
+    refetchInterval: 30_000,
+    queryFn: async (): Promise<PondDetailData | null> => {
+      const pondRes = await insforge.database.from("ponds").select("*").eq("id", pondId).limit(1);
+      assertDbOk(pondRes, "Failed to load pond");
+      const pond = ((pondRes.data ?? []) as PondRow[])[0];
+      if (!pond) return null;
 
-  const daysInCycle = Math.max(
-    0,
-    Math.floor((Date.now() - new Date(info.stocking_date).getTime()) / 86400_000),
+      const since = rangeStart(range);
+      const [farmRes, devicesRes, readingsRes, alertsRes] = await Promise.all([
+        insforge.database.from("farms").select("*").eq("id", pond.farm_id).limit(1),
+        insforge.database.from("devices").select("*").eq("pond_id", pond.id).limit(1),
+        insforge.database
+          .from("readings")
+          .select("*")
+          .eq("pond_id", pond.id)
+          .gte("recorded_at", since)
+          .order("recorded_at", { ascending: true })
+          .limit(2000),
+        insforge.database
+          .from("alerts")
+          .select("*")
+          .eq("pond_id", pond.id)
+          .order("detected_at", { ascending: false })
+          .limit(100),
+      ]);
+
+      assertDbOk(farmRes, "Failed to load farm");
+      assertDbOk(devicesRes, "Failed to load device");
+      assertDbOk(readingsRes, "Failed to load readings");
+      assertDbOk(alertsRes, "Failed to load alerts");
+
+      const farm = ((farmRes.data ?? []) as Farm[])[0] ?? null;
+      const device = ((devicesRes.data ?? []) as Device[])[0] ?? null;
+      let calibrations: CalibrationRow[] = [];
+      let maintenance: MaintenanceRow[] = [];
+
+      if (device) {
+        const [calRes, maintenanceRes] = await Promise.all([
+          insforge.database
+            .from("calibration_logs")
+            .select("*")
+            .eq("device_id", device.id)
+            .order("performed_at", { ascending: false })
+            .limit(50),
+          insforge.database
+            .from("maintenance_logs")
+            .select("*")
+            .eq("device_id", device.id)
+            .order("performed_at", { ascending: false })
+            .limit(50),
+        ]);
+        assertDbOk(calRes, "Failed to load calibration logs");
+        assertDbOk(maintenanceRes, "Failed to load maintenance logs");
+        calibrations = (calRes.data ?? []) as CalibrationRow[];
+        maintenance = (maintenanceRes.data ?? []) as MaintenanceRow[];
+      }
+
+      return {
+        pond,
+        farm,
+        device,
+        readings: (readingsRes.data ?? []) as Reading[],
+        alerts: (alertsRes.data ?? []) as DbAlert[],
+        calibrations,
+        maintenance,
+      };
+    },
+  });
+
+  const detail = detailQuery.data ?? null;
+  const series = useMemo(
+    () => (detail?.readings ?? []).map((reading) => readingToPoint(reading, range)),
+    [detail?.readings, range],
   );
-  const lastUpdated = new Date((latest.t as number) ?? Date.now());
-
+  const liveSeries = useMemo(() => series.slice(-48), [series]);
+  const latest = liveSeries[liveSeries.length - 1] ?? emptyPoint();
+  const status = detail ? deriveStatus(detail.pond, detail.device, latest) : "offline";
   const activeDef = PARAMS.find((p) => p.key === activeParam)!;
+  const events = useMemo(() => (detail ? buildTimeline(detail, t) : []), [detail, t]);
+  const daysInCycle = detail?.pond.stocking_date
+    ? Math.max(
+        0,
+        Math.floor((Date.now() - new Date(detail.pond.stocking_date).getTime()) / 86400_000),
+      )
+    : 0;
+  const lastUpdated = latest.hasData
+    ? new Date(latest.t).toISOString()
+    : (detail?.device?.last_seen ??
+      detail?.pond.updated_at ??
+      detail?.pond.created_at ??
+      new Date().toISOString());
+  const recommendedStatus = toRecommendedStatus(status);
 
-  const downloadCsv = () => {
+  function downloadCsv() {
+    if (!series.length) {
+      toast.error(t("No readings to export", "এক্সপোর্ট করার মতো রিডিং নেই"));
+      return;
+    }
     const header = ["time", ...PARAMS.map((p) => p.key)].join(",");
-    const rows = series.map((r) =>
-      [new Date(r.t as number).toISOString(), ...PARAMS.map((p) => r[p.key] ?? "")].join(","),
+    const rows = series.map((row) =>
+      [new Date(row.t).toISOString(), ...PARAMS.map((param) => row[param.key] ?? "")].join(","),
     );
     const blob = new Blob([header + "\n" + rows.join("\n")], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${info.id}_${range}.csv`;
+    a.download = `${pondId}_${range}_readings.csv`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success(t("Data exported", "ডেটা এক্সপোর্ট হয়েছে"));
-  };
+  }
 
-  // Timeline events
-  const events = useMemo(() => {
-    const now = Date.now();
-    const m = (mins: number) => new Date(now - mins * 60_000).toISOString();
-    return [
-      {
-        id: "e1",
-        type: "alert" as const,
-        severity: status === "critical" ? "critical" : "warning",
-        title: t("Low dissolved oxygen detected", "নিম্ন দ্রবীভূত অক্সিজেন"),
-        detail: t("DO dropped below 4 mg/L", "DO 4 mg/L এর নিচে নেমেছে"),
-        at: m(8),
-      },
-      {
-        id: "e2",
-        type: "device" as const,
-        title: t("Device reconnected", "ডিভাইস পুনরায় সংযুক্ত"),
-        detail: info.device_id,
-        at: m(120),
-      },
-      {
-        id: "e3",
-        type: "calibration" as const,
-        title: t("pH sensor calibrated", "pH সেন্সর ক্যালিব্রেট হয়েছে"),
-        detail: t("Technician onsite", "টেকনিশিয়ান অনসাইট"),
-        at: m(60 * 26),
-      },
-      {
-        id: "e4",
-        type: "note" as const,
-        title: t("Manual note", "ম্যানুয়াল নোট"),
-        detail: t("Aerator switched on for 2 hours.", "এরেটর ২ ঘণ্টা চালু রাখা হয়েছে।"),
-        at: m(60 * 30),
-      },
-      {
-        id: "e5",
-        type: "report" as const,
-        title: t("Weekly report generated", "সাপ্তাহিক রিপোর্ট তৈরি"),
-        detail: t("PDF · 4 pages", "PDF · ৪ পৃষ্ঠা"),
-        at: m(60 * 72),
-      },
-    ];
-  }, [info.device_id, status, t]);
+  if (detailQuery.isLoading) {
+    return (
+      <PondShell t={t}>
+        <EmptyState
+          icon={<Waves className="h-6 w-6" />}
+          title={t("Loading pond", "পুকুর লোড হচ্ছে")}
+          description={t("We are loading live pond data.", "লাইভ পুকুরের ডেটা লোড হচ্ছে।")}
+        />
+      </PondShell>
+    );
+  }
+
+  if (detailQuery.isError) {
+    return (
+      <PondShell t={t}>
+        <EmptyState
+          icon={<AlertTriangle className="h-6 w-6" />}
+          title={t("Could not load pond", "পুকুর লোড করা যায়নি")}
+          description={dbErrorMessage(detailQuery.error, "Please try again.")}
+          action={
+            <Button variant="outline" onClick={() => void detailQuery.refetch()}>
+              {t("Try again", "আবার চেষ্টা করুন")}
+            </Button>
+          }
+        />
+      </PondShell>
+    );
+  }
+
+  if (!detail) {
+    return (
+      <PondShell t={t}>
+        <EmptyState
+          icon={<Waves className="h-6 w-6" />}
+          title={t("Pond not found", "পুকুর পাওয়া যায়নি")}
+          description={t(
+            "This pond is missing or your account does not have access to it.",
+            "এই পুকুরটি নেই অথবা আপনার অ্যাকাউন্টে এর অ্যাক্সেস নেই।",
+          )}
+          action={
+            <Button asChild variant="outline">
+              <Link to="/app/farms">{t("Back to farms", "ফার্মে ফিরুন")}</Link>
+            </Button>
+          }
+        />
+      </PondShell>
+    );
+  }
+
+  const { pond, farm, device } = detail;
+  const pondType = pond.pond_type ?? "--";
+  const area = pond.area_m2 == null ? "--" : `${Number(pond.area_m2).toLocaleString()} m2`;
+  const depth = pond.depth_m == null ? "--" : `${formatNumber(pond.depth_m, 1)} m`;
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <div>
-        <Link
-          to="/app/farms"
-          className="mb-2 inline-flex items-center text-xs text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="mr-1 h-3 w-3" /> {t("Back to farms", "ফার্মে ফিরে যান")}
-        </Link>
+      <BackLink t={t} />
 
-        {/* Header */}
-        <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-soft">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="font-display text-2xl font-bold sm:text-3xl">{info.name}</h1>
-                <StatusBadge status={status} />
-              </div>
-              <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                <span className="inline-flex items-center gap-1">
-                  <Waves className="h-3.5 w-3.5" />
-                  {info.farm}
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <MapPin className="h-3.5 w-3.5" />
-                  {info.location}
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <Calendar className="h-3.5 w-3.5" />
-                  {t("Last update", "শেষ আপডেট")}: {timeAgo(lastUpdated.toISOString(), lang)}
-                </span>
-              </p>
+      <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-soft">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="font-display text-2xl font-bold sm:text-3xl">{pond.name}</h1>
+              <StatusBadge status={status} />
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" onClick={downloadCsv}>
-                <Download className="mr-1.5 h-3.5 w-3.5" /> {t("Export", "এক্সপোর্ট")}
-              </Button>
-              <Link to="/app/devices/$deviceId" params={{ deviceId: info.device_id }}>
+            <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+              <span className="inline-flex items-center gap-1">
+                <Waves className="h-3.5 w-3.5" />
+                {farm?.name ?? t("Unknown farm", "অজানা ফার্ম")}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="h-3.5 w-3.5" />
+                {farm?.location ?? farm?.district ?? "--"}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5" />
+                {t("Last update", "শেষ আপডেট")}: {timeAgo(lastUpdated, lang)}
+              </span>
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={downloadCsv}>
+              <Download className="mr-1.5 h-3.5 w-3.5" /> {t("Export", "এক্সপোর্ট")}
+            </Button>
+            {device ? (
+              <Link to="/app/devices/$deviceId" params={{ deviceId: device.id }}>
                 <Button size="sm" variant="outline">
                   <Cpu className="mr-1.5 h-3.5 w-3.5" /> {t("Open device", "ডিভাইস খুলুন")}
                 </Button>
               </Link>
-              <Button size="sm" onClick={() => setNoteOpen(true)}>
-                <StickyNote className="mr-1.5 h-3.5 w-3.5" /> {t("Add note", "নোট যোগ")}
+            ) : (
+              <Button size="sm" variant="outline" disabled>
+                <Cpu className="mr-1.5 h-3.5 w-3.5" /> {t("No device", "ডিভাইস নেই")}
               </Button>
-            </div>
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              disabled
+              title={t("Pond notes need backend setup.", "পুকুর নোটের জন্য ব্যাকএন্ড সেটআপ দরকার।")}
+            >
+              <StickyNote className="mr-1.5 h-3.5 w-3.5" /> {t("Add note", "নোট যোগ")}
+            </Button>
           </div>
-
-          <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-border/60 pt-4 text-sm sm:grid-cols-3 lg:grid-cols-6">
-            <Info label={t("Pond type", "পুকুরের ধরন")} value={info.pond_type} />
-            <Info label={t("Area", "এলাকা")} value={`${info.area_m2.toLocaleString()} m²`} />
-            <Info label={t("Depth", "গভীরতা")} value={`${info.depth_m} m`} />
-            <Info label={t("Species", "প্রজাতি")} value={info.species} />
-            <Info label={t("Stocked", "মজুদ")} value={info.stocking_date} />
-            <Info
-              label={t("Days in cycle", "চক্রের দিন")}
-              value={`${daysInCycle} ${t("days", "দিন")}`}
-            />
-          </dl>
         </div>
+
+        <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-border/60 pt-4 text-sm sm:grid-cols-3 lg:grid-cols-6">
+          <Info label={t("Pond type", "পুকুরের ধরন")} value={pondType} />
+          <Info label={t("Area", "এলাকা")} value={area} />
+          <Info label={t("Depth", "গভীরতা")} value={depth} />
+          <Info label={t("Species", "প্রজাতি")} value={pond.species ?? "--"} />
+          <Info label={t("Stocked", "মজুদ")} value={pond.stocking_date ?? "--"} />
+          <Info
+            label={t("Days in cycle", "চক্রের দিন")}
+            value={`${daysInCycle} ${t("days", "দিন")}`}
+          />
+        </dl>
       </div>
 
-      {/* Recommended action — kept high on mobile */}
-      {status !== "good" && <RecommendedAction status={status} pondName={info.name} t={t} />}
+      {recommendedStatus && (
+        <RecommendedAction status={recommendedStatus} pondName={pond.name} t={t} />
+      )}
 
-      {/* Live cards */}
       <section>
         <h2 className="mb-3 font-display text-lg font-semibold">
           {t("Live water quality", "তাজা পানির গুণমান")}
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {PARAMS.map((p) => (
+          {PARAMS.map((param) => (
             <LiveCard
-              key={p.key}
-              def={p}
-              value={latest[p.key] as number | null}
+              key={param.key}
+              def={param}
+              value={latest[param.key]}
               series={liveSeries}
               t={t}
-              active={p.key === activeParam}
-              onClick={() => setActiveParam(p.key)}
+              active={param.key === activeParam}
+              onClick={() => setActiveParam(param.key)}
             />
           ))}
         </div>
       </section>
 
-      {/* Main chart */}
       <section className="rounded-2xl border border-border/70 bg-card p-5 shadow-soft">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -504,7 +654,7 @@ function PondDetailPage() {
               )}
             </h2>
             <p className="text-xs text-muted-foreground">
-              {t("Safe range", "নিরাপদ পরিসর")}: {activeDef.safe[0]}–{activeDef.safe[1]}{" "}
+              {t("Safe range", "নিরাপদ পরিসর")}: {activeDef.safe[0]}-{activeDef.safe[1]}{" "}
               {activeDef.unit}
             </p>
           </div>
@@ -514,9 +664,9 @@ function PondDetailPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {PARAMS.map((p) => (
-                  <SelectItem key={p.key} value={p.key}>
-                    {t(p.labelEn, p.labelBn)}
+                {PARAMS.map((param) => (
+                  <SelectItem key={param.key} value={param.key}>
+                    {t(param.labelEn, param.labelBn)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -531,66 +681,78 @@ function PondDetailPage() {
           </div>
         </div>
 
-        <div className="h-72 w-full">
-          <ResponsiveContainer>
-            <AreaChart data={series} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="paramFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 11 }}
-                stroke="hsl(var(--muted-foreground))"
-              />
-              <YAxis
-                domain={[activeDef.min, activeDef.max]}
-                tick={{ fontSize: 11 }}
-                stroke="hsl(var(--muted-foreground))"
-                width={36}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: "hsl(var(--card))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
-              />
-              <ReferenceArea
-                y1={activeDef.safe[0]}
-                y2={activeDef.safe[1]}
-                fill="hsl(var(--primary))"
-                fillOpacity={0.06}
-              />
-              <ReferenceLine y={activeDef.warn[0]} stroke="rgb(245 158 11)" strokeDasharray="4 4" />
-              <ReferenceLine y={activeDef.warn[1]} stroke="rgb(245 158 11)" strokeDasharray="4 4" />
-              <ReferenceLine
-                y={activeDef.min}
-                stroke="rgb(244 63 94)"
-                strokeDasharray="2 2"
-                strokeOpacity={0.4}
-              />
-              <Area
-                type="monotone"
-                dataKey={activeParam}
-                stroke="hsl(var(--primary))"
-                strokeWidth={2}
-                fill="url(#paramFill)"
-                connectNulls={false}
-                dot={false}
-                isAnimationActive={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+        {series.length ? (
+          <div className="h-72 w-full">
+            <ResponsiveContainer>
+              <AreaChart data={series} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="paramFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 11 }}
+                  stroke="hsl(var(--muted-foreground))"
+                />
+                <YAxis
+                  domain={[activeDef.min, activeDef.max]}
+                  tick={{ fontSize: 11 }}
+                  stroke="hsl(var(--muted-foreground))"
+                  width={36}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: 8,
+                    fontSize: 12,
+                  }}
+                />
+                <ReferenceArea
+                  y1={activeDef.safe[0]}
+                  y2={activeDef.safe[1]}
+                  fill="hsl(var(--primary))"
+                  fillOpacity={0.06}
+                />
+                <ReferenceLine
+                  y={activeDef.warn[0]}
+                  stroke="rgb(245 158 11)"
+                  strokeDasharray="4 4"
+                />
+                <ReferenceLine
+                  y={activeDef.warn[1]}
+                  stroke="rgb(245 158 11)"
+                  strokeDasharray="4 4"
+                />
+                <Area
+                  type="monotone"
+                  dataKey={activeParam}
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={2}
+                  fill="url(#paramFill)"
+                  connectNulls={false}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <EmptyState
+            icon={<Activity className="h-6 w-6" />}
+            title={t("No readings yet", "এখনও রিডিং নেই")}
+            description={t(
+              "Charts will appear after the device sends telemetry.",
+              "ডিভাইস টেলিমেট্রি পাঠালে চার্ট দেখা যাবে।",
+            )}
+          />
+        )}
         <div className="mt-2 flex flex-wrap items-center gap-4 text-[11px] text-muted-foreground">
           <Legend dotClass="bg-primary/40" label={t("Safe range", "নিরাপদ পরিসর")} />
           <Legend dotClass="bg-amber-500" label={t("Warning threshold", "সতর্ক সীমা")} />
-          <Legend dotClass="bg-rose-500" label={t("Critical threshold", "গুরুতর সীমা")} />
           <Legend
             dotClass="bg-muted-foreground/40"
             label={t("Gap = missing data", "ফাঁক = অনুপস্থিত ডেটা")}
@@ -599,47 +761,24 @@ function PondDetailPage() {
       </section>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Timeline */}
         <section className="rounded-2xl border border-border/70 bg-card p-5 shadow-soft lg:col-span-2">
           <h2 className="mb-4 font-display text-lg font-semibold">{t("Timeline", "টাইমলাইন")}</h2>
-          <ol className="relative space-y-4 border-l border-border pl-5">
-            {events.map((e) => (
-              <li key={e.id} className="relative">
-                <span
-                  className={cn(
-                    "absolute -left-[27px] grid h-5 w-5 place-items-center rounded-full border-2 border-card",
-                    e.type === "alert"
-                      ? "bg-rose-500"
-                      : e.type === "device"
-                        ? "bg-sky-500"
-                        : e.type === "calibration"
-                          ? "bg-violet-500"
-                          : e.type === "report"
-                            ? "bg-emerald-500"
-                            : "bg-amber-500",
-                  )}
-                >
-                  {e.type === "alert" ? (
-                    <AlertTriangle className="h-2.5 w-2.5 text-white" />
-                  ) : e.type === "device" ? (
-                    <Cpu className="h-2.5 w-2.5 text-white" />
-                  ) : e.type === "calibration" ? (
-                    <Wrench className="h-2.5 w-2.5 text-white" />
-                  ) : e.type === "report" ? (
-                    <FileText className="h-2.5 w-2.5 text-white" />
-                  ) : (
-                    <StickyNote className="h-2.5 w-2.5 text-white" />
-                  )}
-                </span>
-                <p className="text-sm font-medium">{e.title}</p>
-                <p className="text-xs text-muted-foreground">{e.detail}</p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">{timeAgo(e.at, lang)}</p>
-              </li>
-            ))}
-          </ol>
+          {events.length ? (
+            <ol className="relative space-y-4 border-l border-border pl-5">
+              {events.map((event) => (
+                <TimelineItem key={event.id} event={event} lang={lang} />
+              ))}
+            </ol>
+          ) : (
+            <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+              {t(
+                "No alerts or service events recorded yet.",
+                "এখনও কোনো অ্যালার্ট বা সার্ভিস ইভেন্ট নেই।",
+              )}
+            </p>
+          )}
         </section>
 
-        {/* Sensor history */}
         <section className="rounded-2xl border border-border/70 bg-card p-5 shadow-soft lg:col-span-1">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-display text-lg font-semibold">
@@ -656,73 +795,71 @@ function PondDetailPage() {
                   <TableHead className="text-xs">{t("Time", "সময়")}</TableHead>
                   <TableHead className="text-xs">DO</TableHead>
                   <TableHead className="text-xs">pH</TableHead>
-                  <TableHead className="text-xs">°C</TableHead>
+                  <TableHead className="text-xs">C</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {series
-                  .slice()
-                  .reverse()
-                  .slice(0, 30)
-                  .map((r, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="text-[11px] text-muted-foreground">{r.label}</TableCell>
-                      <TableCell className="tabular-nums">{r.do ?? "—"}</TableCell>
-                      <TableCell className="tabular-nums">{r.ph ?? "—"}</TableCell>
-                      <TableCell className="tabular-nums">{r.temp ?? "—"}</TableCell>
-                    </TableRow>
-                  ))}
+                {series.length ? (
+                  series
+                    .slice()
+                    .reverse()
+                    .slice(0, 30)
+                    .map((row) => (
+                      <TableRow key={row.t}>
+                        <TableCell className="text-[11px] text-muted-foreground">
+                          {row.label}
+                        </TableCell>
+                        <TableCell className="tabular-nums">{row.do ?? "--"}</TableCell>
+                        <TableCell className="tabular-nums">{row.ph ?? "--"}</TableCell>
+                        <TableCell className="tabular-nums">{row.temp ?? "--"}</TableCell>
+                      </TableRow>
+                    ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={4}
+                      className="py-6 text-center text-sm text-muted-foreground"
+                    >
+                      {t("No readings in this range.", "এই সময়সীমায় কোনো রিডিং নেই।")}
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
         </section>
       </div>
-
-      {/* Add note drawer */}
-      <Sheet open={noteOpen} onOpenChange={setNoteOpen}>
-        <SheetContent className="w-full sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>{t("Add manual note", "ম্যানুয়াল নোট যোগ করুন")}</SheetTitle>
-          </SheetHeader>
-          <div className="mt-4 space-y-3">
-            <Label>{t("Note", "নোট")}</Label>
-            <Textarea
-              rows={5}
-              value={noteText}
-              onChange={(e) => setNoteText(e.target.value)}
-              placeholder={t(
-                "e.g. Aerator turned on for 1 hour.",
-                "যেমন: এরেটর ১ ঘণ্টা চালু রাখা হয়েছে।",
-              )}
-            />
-            <Input placeholder={t("Tag (optional)", "ট্যাগ (ঐচ্ছিক)")} />
-          </div>
-          <SheetFooter className="mt-6 gap-2">
-            <Button variant="ghost" onClick={() => setNoteOpen(false)}>
-              {t("Cancel", "বাতিল")}
-            </Button>
-            <Button
-              onClick={() => {
-                if (!noteText.trim()) {
-                  toast.error(t("Note cannot be empty", "নোট খালি হতে পারে না"));
-                  return;
-                }
-                toast.success(t("Note added", "নোট যোগ হয়েছে"));
-                setNoteText("");
-                setNoteOpen(false);
-              }}
-            >
-              {t("Save note", "সংরক্ষণ")}
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }
 
-// ----- Subcomponents -----
-function Info({ label, value }: { label: string; value: string }) {
+function PondShell({
+  children,
+  t,
+}: {
+  children: ReactNode;
+  t: (en: string, bn: string) => string;
+}) {
+  return (
+    <div className="mx-auto max-w-6xl space-y-6">
+      <BackLink t={t} />
+      {children}
+    </div>
+  );
+}
+
+function BackLink({ t }: { t: (en: string, bn: string) => string }) {
+  return (
+    <Link
+      to="/app/farms"
+      className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground"
+    >
+      <ArrowLeft className="mr-1 h-3 w-3" /> {t("Back to farms", "ফার্মে ফিরুন")}
+    </Link>
+  );
+}
+
+function Info({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div>
       <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -752,13 +889,13 @@ function LiveCard({
 }: {
   def: ParamDef;
   value: number | null;
-  series: Array<Record<string, number | string | null>>;
+  series: ChartPoint[];
   t: (en: string, bn: string) => string;
   active: boolean;
   onClick: () => void;
 }) {
   const status = classifyValue(def, value);
-  const trend = series.map((r) => ({ v: r[def.key] as number | null }));
+  const trend = series.map((row) => ({ v: row[def.key] }));
   return (
     <button
       onClick={onClick}
@@ -781,14 +918,14 @@ function LiveCard({
       </div>
       <div className="mt-1 flex items-baseline gap-1">
         <span className="font-display text-2xl font-bold tabular-nums">
-          {value == null ? "—" : value}
+          {value == null ? "--" : value}
         </span>
         {def.unit && <span className="text-xs text-muted-foreground">{def.unit}</span>}
       </div>
       <div className="mt-1 flex items-center justify-between">
         <StatusBadge status={status} />
         <span className="text-[10px] text-muted-foreground">
-          {def.safe[0]}–{def.safe[1]}
+          {def.safe[0]}-{def.safe[1]}
         </span>
       </div>
       <div className="mt-2 h-8 w-full">
@@ -810,6 +947,44 @@ function LiveCard({
   );
 }
 
+function TimelineItem({ event, lang }: { event: TimelineEvent; lang: "en" | "bn" }) {
+  return (
+    <li className="relative">
+      <span
+        className={cn(
+          "absolute -left-[27px] grid h-5 w-5 place-items-center rounded-full border-2 border-card",
+          event.type === "alert"
+            ? event.severity === "critical"
+              ? "bg-rose-500"
+              : "bg-amber-500"
+            : event.type === "device"
+              ? "bg-sky-500"
+              : event.type === "calibration"
+                ? "bg-violet-500"
+                : event.type === "maintenance"
+                  ? "bg-emerald-500"
+                  : "bg-amber-500",
+        )}
+      >
+        {event.type === "alert" ? (
+          <AlertTriangle className="h-2.5 w-2.5 text-white" />
+        ) : event.type === "device" ? (
+          <Cpu className="h-2.5 w-2.5 text-white" />
+        ) : event.type === "calibration" ? (
+          <Wrench className="h-2.5 w-2.5 text-white" />
+        ) : event.type === "maintenance" ? (
+          <FileText className="h-2.5 w-2.5 text-white" />
+        ) : (
+          <StickyNote className="h-2.5 w-2.5 text-white" />
+        )}
+      </span>
+      <p className="text-sm font-medium">{event.title}</p>
+      <p className="text-xs text-muted-foreground">{event.detail}</p>
+      <p className="mt-0.5 text-[11px] text-muted-foreground">{timeAgo(event.at, lang)}</p>
+    </li>
+  );
+}
+
 function RecommendedAction({
   status,
   pondName,
@@ -821,28 +996,28 @@ function RecommendedAction({
 }) {
   const cfg = {
     critical: {
-      problem: t("Dissolved oxygen below safe range", "দ্রবীভূত অক্সিজেন নিরাপদ সীমার নিচে"),
+      problem: t("Water quality is in a critical range", "পানির গুণমান গুরুতর পর্যায়ে"),
       action: t(
-        "Turn on aerators immediately for at least 60 minutes.",
-        "অবিলম্বে এরেটর কমপক্ষে ৬০ মিনিট চালু করুন।",
+        "Turn on aerators immediately and inspect the pond.",
+        "অবিলম্বে এরেটর চালু করুন এবং পুকুর পরীক্ষা করুন।",
       ),
       reason: t(
-        "Low DO causes stress and rapid mortality for stocked species.",
-        "নিম্ন DO চাপ ও দ্রুত মৃত্যুর কারণ হতে পারে।",
+        "Critical readings can cause rapid stress or mortality.",
+        "গুরুতর রিডিং দ্রুত চাপ বা মৃত্যুর কারণ হতে পারে।",
       ),
       priority: t("Critical", "গুরুতর"),
       tone: "border-rose-500/50 bg-rose-500/5",
       dot: "bg-rose-500",
     },
     warning: {
-      problem: t("Parameters drifting outside safe range", "পরামিতি নিরাপদ সীমার বাইরে যাচ্ছে"),
+      problem: t("Parameters are outside the preferred range", "প্যারামিটার পছন্দের সীমার বাইরে"),
       action: t(
-        "Run aerators for 30 minutes and re-check in 1 hour.",
-        "৩০ মিনিট এরেটর চালান এবং ১ ঘণ্টা পর পুনরায় পরীক্ষা করুন।",
+        "Check aeration, feeding, and recent water changes.",
+        "এরেশন, খাবার এবং সাম্প্রতিক পানি পরিবর্তন পরীক্ষা করুন।",
       ),
       reason: t(
-        "Early intervention prevents critical conditions.",
-        "দ্রুত পদক্ষেপ গুরুতর অবস্থা প্রতিরোধ করে।",
+        "Early action can prevent a critical pond condition.",
+        "দ্রুত পদক্ষেপ গুরুতর অবস্থা প্রতিরোধ করতে পারে।",
       ),
       priority: t("High", "উচ্চ"),
       tone: "border-amber-500/50 bg-amber-500/5",
@@ -851,12 +1026,12 @@ function RecommendedAction({
     offline: {
       problem: t("Sensor device is offline", "সেন্সর ডিভাইস অফলাইন"),
       action: t(
-        "Check the device power and SIM signal at the pond.",
-        "পুকুরে ডিভাইসের পাওয়ার ও সিম সিগন্যাল পরীক্ষা করুন।",
+        "Check device power, enclosure, and SIM signal at the pond.",
+        "পুকুরে ডিভাইস পাওয়ার, এনক্লোজার ও সিম সিগন্যাল পরীক্ষা করুন।",
       ),
       reason: t(
         "Without live data, water quality cannot be monitored.",
-        "তাজা ডেটা ছাড়া পানির গুণমান পর্যবেক্ষণ সম্ভব নয়।",
+        "লাইভ ডেটা ছাড়া পানির গুণমান পর্যবেক্ষণ করা যায় না।",
       ),
       priority: t("Medium", "মাঝারি"),
       tone: "border-muted-foreground/30 bg-muted/30",
@@ -884,7 +1059,7 @@ function RecommendedAction({
             </span>
           </div>
           <p className="mt-1 text-sm font-medium">
-            {cfg.problem} — {pondName}
+            {cfg.problem} - {pondName}
           </p>
           <p className="mt-2 text-sm">{cfg.action}</p>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -894,20 +1069,10 @@ function RecommendedAction({
             to="/app/alerts"
             className="mt-2 inline-flex text-xs font-medium text-primary hover:underline"
           >
-            {t("View related alert →", "সম্পর্কিত অ্যালার্ট দেখুন →")}
+            {t("View related alerts", "সম্পর্কিত অ্যালার্ট দেখুন")}
           </Link>
         </div>
       </div>
     </section>
   );
-}
-
-function timeAgo(iso: string, lang: "en" | "bn") {
-  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
-  if (mins < 1) return lang === "bn" ? "এইমাত্র" : "just now";
-  if (mins < 60) return lang === "bn" ? `${mins} মি আগে` : `${mins}m ago`;
-  const hrs = Math.round(mins / 60);
-  if (hrs < 24) return lang === "bn" ? `${hrs} ঘ আগে` : `${hrs}h ago`;
-  const days = Math.round(hrs / 24);
-  return lang === "bn" ? `${days} দিন আগে` : `${days}d ago`;
 }

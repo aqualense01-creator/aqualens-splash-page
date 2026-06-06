@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Cpu,
   Wifi,
@@ -21,8 +21,8 @@ import {
   HardDrive,
 } from "lucide-react";
 import { insforge, type Device, type Farm, type Pond } from "@/lib/insforge";
-import { MOCK_PONDS, MOCK_DEVICES, MOCK_FARMS } from "@/lib/mock-farm";
 import { useAuth } from "@/lib/auth";
+import { readFarmSelection, writeFarmSelection } from "@/lib/farm-selection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -56,15 +56,27 @@ export const Route = createFileRoute("/app/devices")({
   component: DevicesPage,
 });
 
+function dbErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+}
+
+function assertDbOk(result: { error?: unknown }, fallback: string) {
+  if (result.error) throw new Error(dbErrorMessage(result.error, fallback));
+}
+
 function DevicesPage() {
-  const { user } = useAuth();
+  const { user, isAdmin, isTechnician } = useAuth();
   const { t } = useI18n();
   const [statusFilter, setStatusFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["devices-page"],
     enabled: !!user,
     queryFn: async () => {
@@ -73,6 +85,9 @@ function DevicesPage() {
         insforge.database.from("farms").select("*"),
         insforge.database.from("ponds").select("*"),
       ]);
+      assertDbOk(d, "Failed to load devices");
+      assertDbOk(f, "Failed to load farms");
+      assertDbOk(p, "Failed to load ponds");
       return {
         devices: (d.data ?? []) as Device[],
         farms: (f.data ?? []) as Farm[],
@@ -82,38 +97,32 @@ function DevicesPage() {
   });
 
   const [activeFarmId, setActiveFarmId] = useState<string>(() => {
-    if (typeof window === "undefined") return "all";
-    return localStorage.getItem("active_farm_id") || "all";
+    return readFarmSelection();
   });
 
-  const farms = data?.farms && data.farms.length > 0 ? data.farms : MOCK_FARMS;
-  const ponds = data?.ponds && data.ponds.length > 0 ? data.ponds : MOCK_PONDS;
+  const farms = useMemo(() => data?.farms ?? [], [data?.farms]);
+  const ponds = useMemo(() => data?.ponds ?? [], [data?.ponds]);
+  const allDevices = useMemo(() => data?.devices ?? [], [data?.devices]);
+
+  useEffect(() => {
+    if (!activeFarmId || activeFarmId === "all") return;
+    if (farms.some((farm) => farm.id === activeFarmId)) return;
+    setActiveFarmId(writeFarmSelection("all"));
+  }, [activeFarmId, farms]);
 
   const devices = useMemo(() => {
-    const raw =
-      data?.devices && data.devices.length > 0
-        ? data.devices
-        : (MOCK_DEVICES as unknown as Device[]);
-    // Map mock device name/pond_name to mock IDs for consistent filtering
-    const mapped = raw.map((d) => {
-      if (d.farm_id && d.pond_id) return d;
-      const matchPond = ponds.find((p) => p.name.includes((d as any).pond_name || ""));
-      return {
-        ...d,
-        pond_id: matchPond?.id ?? null,
-        farm_id: matchPond?.farm_id ?? null,
-      };
-    });
-    // Filter by active farm if set
-    return activeFarmId === "all" ? mapped : mapped.filter((d) => d.farm_id === activeFarmId);
-  }, [data, ponds, activeFarmId]);
+    return activeFarmId === "all"
+      ? allDevices
+      : allDevices.filter((d) => d.farm_id === activeFarmId);
+  }, [activeFarmId, allDevices]);
 
   const counts = useMemo(
     () => ({
       total: devices.length,
       online: devices.filter((d) => d.status === "online").length,
       offline: devices.filter((d) => d.status === "offline").length,
-      lowBattery: devices.filter((d) => (d.battery_pct ?? 100) < 25).length,
+      lowBattery: devices.filter((d) => d.status === "low_battery" || (d.battery_pct ?? 100) < 25)
+        .length,
       calDue: devices.filter((d) => d.status === "calibration_due").length,
       maintDue: devices.filter((d) => d.status === "maintenance_due").length,
     }),
@@ -123,7 +132,16 @@ function DevicesPage() {
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
     return devices.filter((d) => {
-      if (statusFilter !== "all" && d.status !== statusFilter) return false;
+      if (
+        statusFilter === "low_battery" &&
+        d.status !== "low_battery" &&
+        (d.battery_pct ?? 100) >= 25
+      ) {
+        return false;
+      }
+      if (statusFilter !== "all" && statusFilter !== "low_battery" && d.status !== statusFilter) {
+        return false;
+      }
       if (!q) return true;
       const farm = farms.find((f) => f.id === d.farm_id)?.name ?? "";
       const pond = ponds.find((p) => p.id === d.pond_id)?.name ?? "";
@@ -143,6 +161,10 @@ function DevicesPage() {
   const selectedPond = selectedDevice
     ? ponds.find((p) => p.id === selectedDevice.pond_id)
     : undefined;
+  const canServiceDevices = isAdmin || isTechnician;
+  const emptyDescription = canServiceDevices
+    ? (t("devices.noDevicesDesc") ?? "Run the setup wizard to register your first device.")
+    : "No devices are assigned to your farms yet.";
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -150,12 +172,14 @@ function DevicesPage() {
         title={t("devices.title") ?? "Devices"}
         subtitle={t("devices.subtitle") ?? "Health, signal and calibration status for every buoy."}
         actions={
-          <Button asChild>
-            <a href="/app/setup">
-              <Plus className="mr-2 h-4 w-4" />
-              {t("devices.setup") ?? "Setup device"}
-            </a>
-          </Button>
+          canServiceDevices ? (
+            <Button asChild>
+              <a href="/app/setup">
+                <Plus className="mr-2 h-4 w-4" />
+                {t("devices.setup") ?? "Setup device"}
+              </a>
+            </Button>
+          ) : undefined
         }
       />
 
@@ -225,17 +249,28 @@ function DevicesPage() {
           <div className="p-6 text-sm text-muted-foreground">
             {t("common.loading") ?? "Loading…"}
           </div>
+        ) : isError ? (
+          <EmptyState
+            icon={<WifiOff className="h-6 w-6" />}
+            title="Devices did not load"
+            description={dbErrorMessage(error, "Please refresh and try again.")}
+            action={
+              <Button variant="outline" onClick={() => refetch()}>
+                Try again
+              </Button>
+            }
+          />
         ) : filtered.length === 0 ? (
           <EmptyState
             icon={<Cpu className="h-6 w-6" />}
             title={t("devices.noDevices") ?? "No devices"}
-            description={
-              t("devices.noDevicesDesc") ?? "Run the setup wizard to register your first device."
-            }
+            description={emptyDescription}
             action={
-              <Button asChild>
-                <a href="/app/setup">{t("devices.setup") ?? "Setup device"}</a>
-              </Button>
+              canServiceDevices ? (
+                <Button asChild>
+                  <a href="/app/setup">{t("devices.setup") ?? "Setup device"}</a>
+                </Button>
+              ) : undefined
             }
           />
         ) : (
@@ -354,17 +389,28 @@ function DevicesPage() {
           <div className="p-6 text-sm text-muted-foreground">
             {t("common.loading") ?? "Loading…"}
           </div>
+        ) : isError ? (
+          <EmptyState
+            icon={<WifiOff className="h-6 w-6" />}
+            title="Devices did not load"
+            description={dbErrorMessage(error, "Please refresh and try again.")}
+            action={
+              <Button variant="outline" onClick={() => refetch()}>
+                Try again
+              </Button>
+            }
+          />
         ) : filtered.length === 0 ? (
           <EmptyState
             icon={<Cpu className="h-6 w-6" />}
             title={t("devices.noDevices") ?? "No devices"}
-            description={
-              t("devices.noDevicesDesc") ?? "Run the setup wizard to register your first device."
-            }
+            description={emptyDescription}
             action={
-              <Button asChild>
-                <a href="/app/setup">{t("devices.setup") ?? "Setup device"}</a>
-              </Button>
+              canServiceDevices ? (
+                <Button asChild>
+                  <a href="/app/setup">{t("devices.setup") ?? "Setup device"}</a>
+                </Button>
+              ) : undefined
             }
           />
         ) : (
@@ -567,30 +613,38 @@ function DevicesPage() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    asChild
-                    onClick={() => setDrawerOpen(false)}
-                  >
-                    <Link to="/app/calibration/$deviceId" params={{ deviceId: selectedDevice.id }}>
-                      <FlaskConical className="mr-2 h-4 w-4" />
-                      {t("devices.calibrate") ?? "Calibrate"}
-                    </Link>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    asChild
-                    onClick={() => setDrawerOpen(false)}
-                  >
-                    <Link to="/app/maintenance/$deviceId" params={{ deviceId: selectedDevice.id }}>
-                      <Wrench className="mr-2 h-4 w-4" />
-                      {t("devices.maintenance") ?? "Maintenance"}
-                    </Link>
-                  </Button>
-                </div>
+                {canServiceDevices && (
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      asChild
+                      onClick={() => setDrawerOpen(false)}
+                    >
+                      <Link
+                        to="/app/calibration/$deviceId"
+                        params={{ deviceId: selectedDevice.id }}
+                      >
+                        <FlaskConical className="mr-2 h-4 w-4" />
+                        {t("devices.calibrate") ?? "Calibrate"}
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      asChild
+                      onClick={() => setDrawerOpen(false)}
+                    >
+                      <Link
+                        to="/app/maintenance/$deviceId"
+                        params={{ deviceId: selectedDevice.id }}
+                      >
+                        <Wrench className="mr-2 h-4 w-4" />
+                        {t("devices.maintenance") ?? "Maintenance"}
+                      </Link>
+                    </Button>
+                  </div>
+                )}
                 <Button className="w-full" asChild onClick={() => setDrawerOpen(false)}>
                   <Link to="/app/devices/$deviceId" params={{ deviceId: selectedDevice.id }}>
                     <ChevronRight className="mr-2 h-4 w-4" />

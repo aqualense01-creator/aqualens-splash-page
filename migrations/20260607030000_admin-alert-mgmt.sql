@@ -37,4 +37,13 @@ CREATE POLICY "Alert notes write" ON public.alert_notes FOR INSERT WITH CHECK (
   public.is_admin(auth.uid())
   OR public.has_role(auth.uid(),'technician')
   OR public.has_role(auth.uid(),'support')
+  OR (
+    author_id = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM public.alerts a
+      JOIN public.ponds p ON p.id = a.pond_id
+      JOIN public.farms f ON f.id = p.farm_id
+      WHERE a.id = alert_notes.alert_id AND f.owner_id = auth.uid()
+    )
+  )
 );

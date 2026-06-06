@@ -14,7 +14,7 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { signIn, user, loading, isAdmin, isTechnician } = useAuth();
+  const { signIn, user, loading, isAdmin, isTechnician, isSupport } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,11 +29,29 @@ function LoginPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      if (isAdmin) navigate({ to: "/admin/dashboard" });
-      else if (isTechnician) navigate({ to: "/app/setup" });
-      else navigate({ to: "/app/dashboard" });
+      const params = new URLSearchParams(window.location.search);
+      const redirect = params.get("redirect");
+      const safeRedirect =
+        redirect &&
+        redirect.startsWith("/") &&
+        !redirect.startsWith("//") &&
+        (redirect.startsWith("/app") || redirect.startsWith("/admin"))
+          ? redirect
+          : null;
+
+      if (safeRedirect) {
+        navigate({ to: safeRedirect as never });
+      } else if (isAdmin) {
+        navigate({ to: "/admin/dashboard" });
+      } else if (isSupport) {
+        navigate({ to: "/admin/support" });
+      } else if (isTechnician) {
+        navigate({ to: "/app/setup" });
+      } else {
+        navigate({ to: "/app/dashboard" });
+      }
     }
-  }, [loading, user, isAdmin, isTechnician, navigate]);
+  }, [loading, user, isAdmin, isTechnician, isSupport, navigate]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();

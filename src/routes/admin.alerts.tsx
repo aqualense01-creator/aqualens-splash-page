@@ -35,6 +35,7 @@ import {
   type Profile,
   type Reading,
 } from "@/lib/insforge";
+import { useAuth } from "@/lib/auth";
 import { PageHeader, StatusBadge, EmptyState } from "@/components/app/StatusBadge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -74,6 +75,7 @@ export const Route = createFileRoute("/admin/alerts")({
 type ExtAlert = Alert & {
   assigned_technician_id?: string | null;
   escalated_at?: string | null;
+  escalated_by?: string | null;
 };
 
 type AlertNote = {
@@ -83,11 +85,28 @@ type AlertNote = {
   kind: "note" | "assignment" | "escalation" | "resolution" | "status_change";
   body: string | null;
   created_at: string;
+  visibility?: "public" | "internal";
 };
 
 type UserRoleRow = { id: string; user_id: string; role: AppRole };
 
 const SEVERITIES = ["critical", "warning", "watch", "info"] as const;
+
+function dbErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+}
+
+class PartialAlertUpdateError extends Error {
+  constructor(error: unknown) {
+    super(
+      `Alert updated, but the timeline note was not saved. ${dbErrorMessage(error, "")}`.trim(),
+    );
+  }
+}
 
 function fmtDate(d?: string | null) {
   if (!d) return "—";
@@ -114,6 +133,7 @@ const severityRowTone: Record<string, string> = {
 
 function AdminAlerts() {
   const qc = useQueryClient();
+  const { user } = useAuth();
 
   const [q, setQ] = useState("");
   const [sev, setSev] = useState<string>("all");
@@ -145,26 +165,43 @@ function AdminAlerts() {
 
   const farmsQ = useQuery({
     queryKey: ["admin-alerts", "farms"],
-    queryFn: async () => ((await insforge.database.from("farms").select("*")).data ?? []) as Farm[],
+    queryFn: async () => {
+      const r = await insforge.database.from("farms").select("*");
+      if (r.error) throw new Error(dbErrorMessage(r.error, "Failed to load farms"));
+      return (r.data ?? []) as Farm[];
+    },
   });
   const pondsQ = useQuery({
     queryKey: ["admin-alerts", "ponds"],
-    queryFn: async () => ((await insforge.database.from("ponds").select("*")).data ?? []) as Pond[],
+    queryFn: async () => {
+      const r = await insforge.database.from("ponds").select("*");
+      if (r.error) throw new Error(dbErrorMessage(r.error, "Failed to load ponds"));
+      return (r.data ?? []) as Pond[];
+    },
   });
   const devicesQ = useQuery({
     queryKey: ["admin-alerts", "devices"],
-    queryFn: async () =>
-      ((await insforge.database.from("devices").select("*")).data ?? []) as Device[],
+    queryFn: async () => {
+      const r = await insforge.database.from("devices").select("*");
+      if (r.error) throw new Error(dbErrorMessage(r.error, "Failed to load devices"));
+      return (r.data ?? []) as Device[];
+    },
   });
   const profilesQ = useQuery({
     queryKey: ["admin-alerts", "profiles"],
-    queryFn: async () =>
-      ((await insforge.database.from("profiles").select("*")).data ?? []) as Profile[],
+    queryFn: async () => {
+      const r = await insforge.database.from("profiles").select("*");
+      if (r.error) throw new Error(dbErrorMessage(r.error, "Failed to load profiles"));
+      return (r.data ?? []) as Profile[];
+    },
   });
   const rolesQ = useQuery({
     queryKey: ["admin-alerts", "roles"],
-    queryFn: async () =>
-      ((await insforge.database.from("user_roles").select("*")).data ?? []) as UserRoleRow[],
+    queryFn: async () => {
+      const r = await insforge.database.from("user_roles").select("*");
+      if (r.error) throw new Error(dbErrorMessage(r.error, "Failed to load user roles"));
+      return (r.data ?? []) as UserRoleRow[];
+    },
   });
 
   const alerts = useMemo(() => alertsQ.data ?? [], [alertsQ.data]);
@@ -260,6 +297,7 @@ function AdminAlerts() {
         .select("*")
         .eq("alert_id", drawerId!)
         .order("created_at", { ascending: false });
+      if (r.error) throw new Error(dbErrorMessage(r.error, "Failed to load alert notes"));
       return (r.data ?? []) as AlertNote[];
     },
   });
@@ -276,6 +314,7 @@ function AdminAlerts() {
         .gte("recorded_at", since)
         .order("recorded_at", { ascending: true })
         .limit(200);
+      if (r.error) throw new Error(dbErrorMessage(r.error, "Failed to load alert readings"));
       return (r.data ?? []) as Reading[];
     },
   });
@@ -304,19 +343,53 @@ function AdminAlerts() {
   }, [readingsQ.data, paramKey]);
 
   // ===== Mutations =====
-  const addNote = async (alertId: string, kind: AlertNote["kind"], body: string | null) => {
-    await insforge.database.from("alert_notes").insert([{ alert_id: alertId, kind, body }]);
+  const addNote = async (
+    alertId: string,
+    kind: AlertNote["kind"],
+    body: string | null,
+    visibility: "public" | "internal" = "internal",
+  ) => {
+    if (!user?.id) throw new Error("Please sign in again before updating alerts.");
+    const r = await insforge.database.from("alert_notes").insert([
+      {
+        alert_id: alertId,
+        author_id: user.id,
+        kind,
+        body,
+        visibility,
+      },
+    ]);
+    if (r.error) throw new Error(dbErrorMessage(r.error, "Failed to save alert note"));
+  };
+
+  const addNoteAfterAlertUpdate = async (
+    alertId: string,
+    kind: AlertNote["kind"],
+    body: string | null,
+  ) => {
+    try {
+      await addNote(alertId, kind, body);
+    } catch (e) {
+      throw new PartialAlertUpdateError(e);
+    }
   };
 
   const assignMut = useMutation({
     mutationFn: async ({ id, techId }: { id: string; techId: string }) => {
+      if (!user?.id) throw new Error("Please sign in again before updating alerts.");
       const r = await insforge.database
         .from("alerts")
         .update({ assigned_technician_id: techId })
-        .eq("id", id);
+        .eq("id", id)
+        .select("id")
+        .single();
       if (r.error) throw r.error;
       const tech = profileById.get(techId);
-      await addNote(id, "assignment", `Assigned to ${tech?.full_name ?? "technician"}`);
+      await addNoteAfterAlertUpdate(
+        id,
+        "assignment",
+        `Assigned to ${tech?.full_name ?? "technician"}`,
+      );
     },
     onSuccess: () => {
       toast.success("Technician assigned");
@@ -324,7 +397,10 @@ function AdminAlerts() {
       setAssignOpen(false);
       setAssignTechId("");
     },
-    onError: () => toast.error("Failed to assign"),
+    onError: (e) => {
+      qc.invalidateQueries({ queryKey: ["admin-alerts"] });
+      toast.error(dbErrorMessage(e, "Failed to assign"));
+    },
   });
 
   const noteMut = useMutation({
@@ -336,17 +412,24 @@ function AdminAlerts() {
       setNoteDraft("");
       qc.invalidateQueries({ queryKey: ["admin-alerts", "notes"] });
     },
-    onError: () => toast.error("Failed to add note"),
+    onError: (e) => toast.error(dbErrorMessage(e, "Failed to add note")),
   });
 
   const resolveMut = useMutation({
     mutationFn: async ({ id, body }: { id: string; body: string }) => {
+      if (!user?.id) throw new Error("Please sign in again before updating alerts.");
       const r = await insforge.database
         .from("alerts")
-        .update({ status: "resolved", resolved_at: new Date().toISOString() })
-        .eq("id", id);
+        .update({
+          status: "resolved",
+          resolved_at: new Date().toISOString(),
+          resolved_by: user?.id,
+        })
+        .eq("id", id)
+        .select("id")
+        .single();
       if (r.error) throw r.error;
-      await addNote(id, "resolution", body || "Marked resolved");
+      await addNoteAfterAlertUpdate(id, "resolution", body || "Marked resolved");
     },
     onSuccess: () => {
       toast.success("Alert resolved");
@@ -354,20 +437,27 @@ function AdminAlerts() {
       setResolveOpen(false);
       setNoteDraft("");
     },
-    onError: () => toast.error("Failed to resolve"),
+    onError: (e) => {
+      qc.invalidateQueries({ queryKey: ["admin-alerts"] });
+      toast.error(dbErrorMessage(e, "Failed to resolve"));
+    },
   });
 
   const escalateMut = useMutation({
     mutationFn: async ({ id, body }: { id: string; body: string }) => {
+      if (!user?.id) throw new Error("Please sign in again before updating alerts.");
       const r = await insforge.database
         .from("alerts")
         .update({
           severity: "critical",
           escalated_at: new Date().toISOString(),
+          escalated_by: user?.id,
         })
-        .eq("id", id);
+        .eq("id", id)
+        .select("id")
+        .single();
       if (r.error) throw r.error;
-      await addNote(id, "escalation", body || "Escalated to critical");
+      await addNoteAfterAlertUpdate(id, "escalation", body || "Escalated to critical");
     },
     onSuccess: () => {
       toast.success("Alert escalated");
@@ -375,7 +465,10 @@ function AdminAlerts() {
       setEscalateOpen(false);
       setNoteDraft("");
     },
-    onError: () => toast.error("Failed to escalate"),
+    onError: (e) => {
+      qc.invalidateQueries({ queryKey: ["admin-alerts"] });
+      toast.error(dbErrorMessage(e, "Failed to escalate"));
+    },
   });
 
   return (
@@ -873,7 +966,7 @@ function AdminAlerts() {
           <AlertDialogHeader>
             <AlertDialogTitle>Escalate to critical?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will raise the severity and notify on-call responders.
+              This will raise the severity and add an internal audit note.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <Textarea

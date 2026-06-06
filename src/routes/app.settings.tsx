@@ -102,7 +102,7 @@ const NOTIF_TYPES: NotifType[] = [
 ];
 
 function SettingsPage() {
-  const { user, profile, roles, signOut, refresh } = useAuth();
+  const { user, profile, roles, signOut, refresh, sendResetLink } = useAuth();
   const { lang, setLang } = useI18n();
   const T = (en: string, bn: string) => tx(lang, en, bn);
 
@@ -130,23 +130,18 @@ function SettingsPage() {
   });
 
   // ----- Security -----
-  const [pwd, setPwd] = useState({ current: "", next: "", confirm: "" });
   const [signOutOpen, setSignOutOpen] = useState(false);
 
-  const changePassword = () => {
-    if (pwd.next.length < 8) {
-      toast.error(
-        T("Password must be at least 8 characters", "পাসওয়ার্ড অন্তত ৮ অক্ষরের হতে হবে"),
-      );
-      return;
-    }
-    if (pwd.next !== pwd.confirm) {
-      toast.error(T("Passwords do not match", "পাসওয়ার্ড মিলছে না"));
-      return;
-    }
-    toast.success(T("Password updated", "পাসওয়ার্ড পরিবর্তিত হয়েছে"));
-    setPwd({ current: "", next: "", confirm: "" });
-  };
+  const requestPasswordReset = useMutation({
+    mutationFn: async () => {
+      const email = user?.email ?? profile?.email;
+      if (!email) throw new Error("No email is attached to this account.");
+      const { error } = await sendResetLink(email);
+      if (error) throw new Error(error);
+    },
+    onSuccess: () => toast.success(T("Password reset email sent", "Password reset email sent")),
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   // ----- Notifications matrix -----
   const [matrix, setMatrix] = useState<Record<string, Record<ChannelKey, boolean>>>(() => {
@@ -294,36 +289,33 @@ function SettingsPage() {
         {/* SECURITY */}
         <TabsContent value="security" className="mt-4 space-y-4">
           <Card
-            title={T("Change password", "পাসওয়ার্ড পরিবর্তন")}
+            title={T("Password reset", "Password reset")}
             icon={<KeyRound className="h-4 w-4 text-primary" />}
+            description={T(
+              "We will send a secure reset link to your account email.",
+              "We will send a secure reset link to your account email.",
+            )}
           >
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label={T("Current password", "বর্তমান পাসওয়ার্ড")} className="sm:col-span-2">
-                <Input
-                  type="password"
-                  value={pwd.current}
-                  onChange={(e) => setPwd({ ...pwd, current: e.target.value })}
-                />
-              </Field>
-              <Field label={T("New password", "নতুন পাসওয়ার্ড")}>
-                <Input
-                  type="password"
-                  value={pwd.next}
-                  onChange={(e) => setPwd({ ...pwd, next: e.target.value })}
-                />
-              </Field>
-              <Field label={T("Confirm new password", "নতুন পাসওয়ার্ড নিশ্চিত করুন")}>
-                <Input
-                  type="password"
-                  value={pwd.confirm}
-                  onChange={(e) => setPwd({ ...pwd, confirm: e.target.value })}
-                />
-              </Field>
-            </div>
-            <div className="mt-4 flex justify-end">
-              <Button onClick={changePassword}>
+            <div className="flex flex-col gap-3 rounded-xl border border-border/70 bg-surface/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-medium">
+                  {profile?.email ?? user?.email ?? "No email on file"}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {T(
+                    "Use the email link to choose a new password.",
+                    "Use the email link to choose a new password.",
+                  )}
+                </p>
+              </div>
+              <Button
+                onClick={() => requestPasswordReset.mutate()}
+                disabled={requestPasswordReset.isPending || !(profile?.email ?? user?.email)}
+              >
                 <Lock className="mr-2 h-4 w-4" />
-                {T("Update password", "পাসওয়ার্ড আপডেট করুন")}
+                {requestPasswordReset.isPending
+                  ? T("Sending...", "Sending...")
+                  : T("Send reset email", "Send reset email")}
               </Button>
             </div>
           </Card>
@@ -351,12 +343,9 @@ function SettingsPage() {
           </Card>
 
           <Card
-            title={T("Active sessions", "সক্রিয় সেশন")}
+            title={T("Current session", "Current session")}
             icon={<LogOut className="h-4 w-4 text-rose-600" />}
-            description={T(
-              "Sign out from all other devices currently logged into your account.",
-              "আপনার অ্যাকাউন্টে লগ-ইন থাকা অন্য সব ডিভাইস থেকে সাইন আউট করুন।",
-            )}
+            description={T("Sign out from this device.", "Sign out from this device.")}
           >
             <Button
               variant="outline"
@@ -364,7 +353,7 @@ function SettingsPage() {
               onClick={() => setSignOutOpen(true)}
             >
               <LogOut className="mr-2 h-4 w-4" />
-              {T("Sign out all sessions", "সব সেশন থেকে সাইন আউট")}
+              {T("Sign out", "Sign out")}
             </Button>
           </Card>
         </TabsContent>
@@ -481,8 +470,11 @@ function SettingsPage() {
             <div className="mt-4 flex justify-end">
               <Button
                 onClick={() =>
-                  toast.success(
-                    T("Notification preferences saved", "নোটিফিকেশন পছন্দ সংরক্ষিত হয়েছে"),
+                  toast.info(
+                    T(
+                      "Notification delivery preferences need backend delivery rules before they can be saved.",
+                      "Notification delivery preferences need backend delivery rules before they can be saved.",
+                    ),
                   )
                 }
               >
@@ -539,18 +531,18 @@ function SettingsPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Sign out all sessions confirm */}
+      {/* Sign out current session confirm */}
       <AlertDialog open={signOutOpen} onOpenChange={setSignOutOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <LogOut className="h-5 w-5 text-rose-600" />
-              {T("Sign out all sessions?", "সব সেশন থেকে সাইন আউট করবেন?")}
+              {T("Sign out?", "Sign out?")}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {T(
-                "You'll be signed out everywhere, including this device. You will need to sign in again.",
-                "এই ডিভাইস সহ সব জায়গা থেকে আপনি সাইন আউট হবেন। আবার সাইন ইন করতে হবে।",
+                "You will be signed out on this device and need to sign in again.",
+                "You will be signed out on this device and need to sign in again.",
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -561,7 +553,7 @@ function SettingsPage() {
               onClick={async () => {
                 setSignOutOpen(false);
                 await signOut();
-                toast.success(T("Signed out everywhere", "সব জায়গা থেকে সাইন আউট হয়েছে"));
+                toast.success(T("Signed out", "Signed out"));
               }}
             >
               {T("Yes, sign out", "হ্যাঁ, সাইন আউট করুন")}

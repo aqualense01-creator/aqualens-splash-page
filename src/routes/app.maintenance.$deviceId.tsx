@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -12,6 +12,7 @@ import {
   WifiOff,
   History,
   CircleDot,
+  X,
 } from "lucide-react";
 import { insforge } from "@/lib/insforge";
 import { useAuth } from "@/lib/auth";
@@ -64,8 +65,23 @@ type MaintenanceRow = {
   follow_up_required?: boolean | null;
   technician_name?: string | null;
   notes?: string | null;
+  photos?: unknown;
   performed_at: string;
 };
+
+type MaintenancePhotoDraft = { id: string; file: File; previewUrl: string };
+type MaintenancePhotoRecord = {
+  bucket: string;
+  url: string;
+  key: string;
+  file_name: string;
+  mime_type: string | null;
+  size_bytes: number;
+  uploaded_at: string;
+};
+
+const MAINTENANCE_ATTACHMENTS_BUCKET = "maintenance-attachments";
+const MAX_MAINTENANCE_PHOTO_BYTES = 10 * 1024 * 1024;
 
 const ISSUE_TYPES = [
   "Routine check",
@@ -98,14 +114,61 @@ const emptyForm = (tech: string) => ({
   notes: "",
 });
 
+function dbErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+}
+
+function safeFileName(name: string) {
+  const cleaned = name.replace(/[^a-zA-Z0-9._-]/g, "_").replace(/_{2,}/g, "_");
+  return cleaned || "maintenance-photo";
+}
+
+function normalizeMaintenancePhotos(value: unknown): MaintenancePhotoRecord[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const record = item as Partial<MaintenancePhotoRecord>;
+    if (typeof record.url !== "string" || !record.url) return [];
+    return [
+      {
+        bucket:
+          typeof record.bucket === "string" && record.bucket
+            ? record.bucket
+            : MAINTENANCE_ATTACHMENTS_BUCKET,
+        url: record.url,
+        key: typeof record.key === "string" ? record.key : "",
+        file_name: typeof record.file_name === "string" ? record.file_name : "Maintenance photo",
+        mime_type: typeof record.mime_type === "string" ? record.mime_type : null,
+        size_bytes: typeof record.size_bytes === "number" ? record.size_bytes : 0,
+        uploaded_at: typeof record.uploaded_at === "string" ? record.uploaded_at : "",
+      },
+    ];
+  });
+}
+
 function MaintenancePage() {
   const { deviceId } = Route.useParams();
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin, isTechnician } = useAuth();
   const qc = useQueryClient();
   const defaultTech = profile?.full_name ?? user?.email ?? "Technician";
+  const canWriteMaintenance = isAdmin || isTechnician;
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(() => emptyForm(defaultTech));
+  const [photos, setPhotos] = useState<MaintenancePhotoDraft[]>([]);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const photoUrlsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    return () => {
+      photoUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      photoUrlsRef.current = [];
+    };
+  }, []);
 
   // ── Device header data
   const { data: device } = useQuery({
@@ -204,8 +267,88 @@ function MaintenancePage() {
     return Date.now() - new Date(device.last_seen).getTime() > 30 * 60_000;
   }, [device?.last_seen]);
 
+  const clearPhotoDrafts = () => {
+    photoUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    photoUrlsRef.current = [];
+    setPhotos([]);
+  };
+
+  const handlePhotoFiles = (event: ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (selected.length === 0) return;
+
+    const accepted: MaintenancePhotoDraft[] = [];
+    for (const file of selected) {
+      if (!file.type.startsWith("image/")) {
+        toast.error(`${file.name} is not an image file.`);
+        continue;
+      }
+      if (file.size > MAX_MAINTENANCE_PHOTO_BYTES) {
+        toast.error(`${file.name} must be 10MB or smaller.`);
+        continue;
+      }
+
+      const previewUrl = URL.createObjectURL(file);
+      photoUrlsRef.current.push(previewUrl);
+      accepted.push({ id: crypto.randomUUID(), file, previewUrl });
+    }
+
+    if (accepted.length === 0) return;
+    setPhotos((prev) => [...prev, ...accepted]);
+    toast.success(`${accepted.length} photo${accepted.length === 1 ? "" : "s"} added`);
+  };
+
+  const removePhoto = (photoId: string) => {
+    setPhotos((prev) => {
+      const removed = prev.find((photo) => photo.id === photoId);
+      if (removed) {
+        URL.revokeObjectURL(removed.previewUrl);
+        photoUrlsRef.current = photoUrlsRef.current.filter((url) => url !== removed.previewUrl);
+      }
+      return prev.filter((photo) => photo.id !== photoId);
+    });
+  };
+
+  const uploadMaintenancePhotos = async () => {
+    const uploaded: MaintenancePhotoRecord[] = [];
+    try {
+      for (const photo of photos) {
+        const key = `${deviceId}/${crypto.randomUUID()}-${safeFileName(photo.file.name)}`;
+        const upload = await insforge.storage
+          .from(MAINTENANCE_ATTACHMENTS_BUCKET)
+          .upload(key, photo.file);
+        if (upload.error || !upload.data) {
+          throw new Error(dbErrorMessage(upload.error, "Maintenance photo upload failed"));
+        }
+
+        uploaded.push({
+          bucket: MAINTENANCE_ATTACHMENTS_BUCKET,
+          url: upload.data.url,
+          key: upload.data.key,
+          file_name: photo.file.name,
+          mime_type: photo.file.type || upload.data.mimeType || null,
+          size_bytes: photo.file.size,
+          uploaded_at: new Date().toISOString(),
+        });
+      }
+    } catch (error) {
+      await Promise.all(
+        uploaded.map((photo) =>
+          insforge.storage.from(MAINTENANCE_ATTACHMENTS_BUCKET).remove(photo.key),
+        ),
+      );
+      throw error;
+    }
+    return uploaded;
+  };
+
   const save = useMutation({
     mutationFn: async () => {
+      if (!canWriteMaintenance) {
+        throw new Error("Maintenance logs require technician access.");
+      }
+
       // Validation
       if (!form.performed_at) throw new Error("Visit date/time is required");
       if (!form.technician_name.trim()) throw new Error("Technician name is required");
@@ -213,6 +356,7 @@ function MaintenancePage() {
       if (!form.work_performed.trim()) throw new Error("Work performed is required");
 
       const performedAt = new Date(form.performed_at).toISOString();
+      const uploadedPhotos = await uploadMaintenancePhotos();
       const { error } = await insforge.database.from("maintenance_logs").insert([
         {
           device_id: deviceId,
@@ -225,20 +369,33 @@ function MaintenancePage() {
           device_status_after: form.device_status_after,
           follow_up_required: form.follow_up_required,
           notes: form.notes.trim().slice(0, 1000) || null,
+          photos: uploadedPhotos,
           performed_at: performedAt,
         },
       ]);
-      if (error) throw new Error(error.message);
+      if (error) {
+        await Promise.all(
+          uploadedPhotos.map((photo) =>
+            insforge.storage.from(MAINTENANCE_ATTACHMENTS_BUCKET).remove(photo.key),
+          ),
+        );
+        throw new Error(error.message);
+      }
 
-      // Best-effort: sync device status with the post-visit status the tech recorded.
-      await insforge.database
+      const statusUpdate = await insforge.database
         .from("devices")
         .update({ status: form.device_status_after })
         .eq("id", deviceId);
+      if (statusUpdate.error) {
+        throw new Error(
+          dbErrorMessage(statusUpdate.error, "Maintenance saved, but device status update failed."),
+        );
+      }
     },
     onSuccess: () => {
       toast.success("Maintenance log saved");
       setForm(emptyForm(defaultTech));
+      clearPhotoDrafts();
       setOpen(false);
       qc.invalidateQueries({ queryKey: ["maint-logs", deviceId] });
       qc.invalidateQueries({ queryKey: ["device-detail", deviceId] });
@@ -261,157 +418,197 @@ function MaintenancePage() {
             title="Maintenance log"
             subtitle={device?.name ?? device?.serial ?? `Device ${deviceId.slice(0, 8)}…`}
           />
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild>
-              <Button className="gap-1">
-                <Plus className="h-4 w-4" /> Add maintenance log
-              </Button>
-            </SheetTrigger>
-            <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle>Add maintenance log</SheetTitle>
-                <SheetDescription>
-                  Record a service visit for {device?.name ?? device?.serial ?? "this device"}.
-                </SheetDescription>
-              </SheetHeader>
+          {canWriteMaintenance ? (
+            <Sheet open={open} onOpenChange={setOpen}>
+              <SheetTrigger asChild>
+                <Button className="gap-1">
+                  <Plus className="h-4 w-4" /> Add maintenance log
+                </Button>
+              </SheetTrigger>
+              <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+                <SheetHeader>
+                  <SheetTitle>Add maintenance log</SheetTitle>
+                  <SheetDescription>
+                    Record a service visit for {device?.name ?? device?.serial ?? "this device"}.
+                  </SheetDescription>
+                </SheetHeader>
 
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  save.mutate();
-                }}
-                className="mt-5 grid gap-4"
-              >
-                <div className="grid grid-cols-2 gap-3">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    save.mutate();
+                  }}
+                  className="mt-5 grid gap-4"
+                >
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs">Visit date / time *</Label>
+                      <Input
+                        type="datetime-local"
+                        required
+                        value={form.performed_at}
+                        onChange={(e) => setForm((p) => ({ ...p, performed_at: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Technician *</Label>
+                      <Input
+                        required
+                        maxLength={120}
+                        value={form.technician_name}
+                        onChange={(e) =>
+                          setForm((p) => ({ ...p, technician_name: e.target.value }))
+                        }
+                      />
+                    </div>
+                  </div>
+
                   <div>
-                    <Label className="text-xs">Visit date / time *</Label>
-                    <Input
-                      type="datetime-local"
+                    <Label className="text-xs">Issue type *</Label>
+                    <Select
+                      value={form.issue_type}
+                      onValueChange={(v) => setForm((p) => ({ ...p, issue_type: v }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ISSUE_TYPES.map((t) => (
+                          <SelectItem key={t} value={t}>
+                            {t}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs">Work performed *</Label>
+                    <Textarea
                       required
-                      value={form.performed_at}
-                      onChange={(e) => setForm((p) => ({ ...p, performed_at: e.target.value }))}
+                      rows={3}
+                      maxLength={1000}
+                      value={form.work_performed}
+                      onChange={(e) => setForm((p) => ({ ...p, work_performed: e.target.value }))}
+                      placeholder="Cleaned probes, recalibrated DO sensor…"
                     />
                   </div>
+
                   <div>
-                    <Label className="text-xs">Technician *</Label>
+                    <Label className="text-xs">Parts replaced</Label>
                     <Input
-                      required
-                      maxLength={120}
-                      value={form.technician_name}
-                      onChange={(e) => setForm((p) => ({ ...p, technician_name: e.target.value }))}
+                      maxLength={500}
+                      value={form.parts_replaced}
+                      onChange={(e) => setForm((p) => ({ ...p, parts_replaced: e.target.value }))}
+                      placeholder="e.g. DO membrane, battery pack"
                     />
                   </div>
-                </div>
 
-                <div>
-                  <Label className="text-xs">Issue type *</Label>
-                  <Select
-                    value={form.issue_type}
-                    onValueChange={(v) => setForm((p) => ({ ...p, issue_type: v }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ISSUE_TYPES.map((t) => (
-                        <SelectItem key={t} value={t}>
-                          {t}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label className="text-xs">Work performed *</Label>
-                  <Textarea
-                    required
-                    rows={3}
-                    maxLength={1000}
-                    value={form.work_performed}
-                    onChange={(e) => setForm((p) => ({ ...p, work_performed: e.target.value }))}
-                    placeholder="Cleaned probes, recalibrated DO sensor…"
-                  />
-                </div>
-
-                <div>
-                  <Label className="text-xs">Parts replaced</Label>
-                  <Input
-                    maxLength={500}
-                    value={form.parts_replaced}
-                    onChange={(e) => setForm((p) => ({ ...p, parts_replaced: e.target.value }))}
-                    placeholder="e.g. DO membrane, battery pack"
-                  />
-                </div>
-
-                <div>
-                  <Label className="text-xs">Photos</Label>
-                  <button
-                    type="button"
-                    className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 py-6 text-xs text-muted-foreground hover:bg-muted/50"
-                    onClick={() => toast.info("Photo upload coming soon")}
-                  >
-                    <Camera className="h-4 w-4" />
-                    Tap to add photos (coming soon)
-                  </button>
-                </div>
-
-                <div>
-                  <Label className="text-xs">Device status after maintenance *</Label>
-                  <Select
-                    value={form.device_status_after}
-                    onValueChange={(v) => setForm((p) => ({ ...p, device_status_after: v }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUS_AFTER.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>
-                          {s.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-center justify-between rounded-xl border border-border/60 bg-muted/30 px-3 py-2">
                   <div>
-                    <p className="text-sm font-medium">Follow-up required</p>
-                    <p className="text-[11px] text-muted-foreground">
-                      Schedule another visit for this device.
-                    </p>
+                    <Label className="text-xs">Photos</Label>
+                    <input
+                      ref={photoInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={handlePhotoFiles}
+                    />
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {photos.map((photo) => (
+                        <div
+                          key={photo.id}
+                          className="relative h-20 w-20 overflow-hidden rounded-lg border border-border bg-muted"
+                        >
+                          <img
+                            src={photo.previewUrl}
+                            alt={photo.file.name}
+                            className="h-full w-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removePhoto(photo.id)}
+                            className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-background/90 text-muted-foreground shadow-sm hover:text-foreground"
+                            aria-label={`Remove ${photo.file.name}`}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        className="grid h-20 min-w-20 place-items-center rounded-lg border border-dashed border-border bg-muted/30 px-4 text-xs text-muted-foreground hover:border-primary hover:text-primary"
+                        onClick={() => photoInputRef.current?.click()}
+                      >
+                        <span className="grid justify-items-center gap-1">
+                          <Camera className="h-4 w-4" />
+                          Add photos
+                        </span>
+                      </button>
+                    </div>
                   </div>
-                  <Switch
-                    checked={form.follow_up_required}
-                    onCheckedChange={(v) => setForm((p) => ({ ...p, follow_up_required: v }))}
-                  />
-                </div>
 
-                <div>
-                  <Label className="text-xs">Notes</Label>
-                  <Textarea
-                    rows={2}
-                    maxLength={1000}
-                    value={form.notes}
-                    onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
-                    placeholder="Optional observations"
-                  />
-                </div>
+                  <div>
+                    <Label className="text-xs">Device status after maintenance *</Label>
+                    <Select
+                      value={form.device_status_after}
+                      onValueChange={(v) => setForm((p) => ({ ...p, device_status_after: v }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STATUS_AFTER.map((s) => (
+                          <SelectItem key={s.value} value={s.value}>
+                            {s.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <SheetFooter className="mt-2 flex-row justify-end gap-2">
-                  <SheetClose asChild>
-                    <Button type="button" variant="ghost">
-                      Cancel
+                  <div className="flex items-center justify-between rounded-xl border border-border/60 bg-muted/30 px-3 py-2">
+                    <div>
+                      <p className="text-sm font-medium">Follow-up required</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Schedule another visit for this device.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={form.follow_up_required}
+                      onCheckedChange={(v) => setForm((p) => ({ ...p, follow_up_required: v }))}
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs">Notes</Label>
+                    <Textarea
+                      rows={2}
+                      maxLength={1000}
+                      value={form.notes}
+                      onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
+                      placeholder="Optional observations"
+                    />
+                  </div>
+
+                  <SheetFooter className="mt-2 flex-row justify-end gap-2">
+                    <SheetClose asChild>
+                      <Button type="button" variant="ghost">
+                        Cancel
+                      </Button>
+                    </SheetClose>
+                    <Button type="submit" disabled={save.isPending}>
+                      {save.isPending ? "Saving…" : "Save log"}
                     </Button>
-                  </SheetClose>
-                  <Button type="submit" disabled={save.isPending}>
-                    {save.isPending ? "Saving…" : "Save log"}
-                  </Button>
-                </SheetFooter>
-              </form>
-            </SheetContent>
-          </Sheet>
+                  </SheetFooter>
+                </form>
+              </SheetContent>
+            </Sheet>
+          ) : (
+            <div className="rounded-lg border border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+              Maintenance history is read-only for this account.
+            </div>
+          )}
         </div>
       </div>
 
@@ -529,6 +726,7 @@ function MaintenancePage() {
                   <TableHead>Technician</TableHead>
                   <TableHead>Issue</TableHead>
                   <TableHead>Action taken</TableHead>
+                  <TableHead>Photos</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Follow-up</TableHead>
                 </TableRow>
@@ -547,6 +745,37 @@ function MaintenancePage() {
                         <p className="text-[11px] text-muted-foreground">
                           Parts: {m.parts_replaced}
                         </p>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {normalizeMaintenancePhotos(m.photos).length === 0 ? (
+                        <span className="text-xs text-muted-foreground">No</span>
+                      ) : (
+                        <div className="flex -space-x-2">
+                          {normalizeMaintenancePhotos(m.photos)
+                            .slice(0, 3)
+                            .map((photo) => (
+                              <a
+                                key={photo.key || photo.url}
+                                href={photo.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="block h-9 w-9 overflow-hidden rounded-md border-2 border-card bg-muted"
+                                title={photo.file_name}
+                              >
+                                <img
+                                  src={photo.url}
+                                  alt={photo.file_name}
+                                  className="h-full w-full object-cover"
+                                />
+                              </a>
+                            ))}
+                          {normalizeMaintenancePhotos(m.photos).length > 3 && (
+                            <span className="grid h-9 w-9 place-items-center rounded-md border-2 border-card bg-muted text-[11px] font-medium text-muted-foreground">
+                              +{normalizeMaintenancePhotos(m.photos).length - 3}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </TableCell>
                     <TableCell>

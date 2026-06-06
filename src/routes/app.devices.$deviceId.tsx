@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   RefreshCw,
@@ -22,6 +22,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { insforge, type Device, type Pond, type Farm } from "@/lib/insforge";
+import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -60,6 +61,8 @@ type SensorRow = {
   unit?: string;
   last_calibrated_at?: string;
   calibration_due_at?: string;
+  last_calibrated?: string;
+  calibration_due?: string;
   needs_replacement?: boolean;
 };
 
@@ -79,14 +82,59 @@ type MaintenanceRow = {
   performed_at: string;
 };
 
+type DeviceCommandRow = {
+  id: string;
+  command_type: "diagnostics" | "restart" | "config_update" | string;
+  status: string;
+  payload?: Record<string, unknown> | null;
+  result?: Record<string, unknown> | null;
+  error_message?: string | null;
+  requested_by?: string | null;
+  queued_at?: string | null;
+  created_at: string;
+  expires_at?: string | null;
+};
+
+type DeviceConfigRow = {
+  device_id: string;
+  sampling_interval_seconds: number;
+  threshold_profile: string;
+  version?: number;
+  updated_at?: string;
+};
+
+function dbErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+}
+
+function assertDbOk(result: { error?: unknown }, fallback: string) {
+  if (result.error) throw new Error(dbErrorMessage(result.error, fallback));
+}
+
+function isMissingDeviceCommandBackend(error: unknown) {
+  const message = dbErrorMessage(error, "").toLowerCase();
+  return (
+    message.includes("device_commands") ||
+    message.includes("device_configurations") ||
+    message.includes("enqueue_device_command") ||
+    message.includes("schema cache")
+  );
+}
+
 function DeviceDetailPage() {
   const { deviceId } = Route.useParams();
   const qc = useQueryClient();
+  const { isAdmin, isTechnician } = useAuth();
+  const canServiceDevice = isAdmin || isTechnician;
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["device", deviceId],
     queryFn: async () => {
-      const [d, s, c, m, f, p] = await Promise.all([
+      const [d, s, c, m, f, p, commandRes, configRes] = await Promise.all([
         insforge.database.from("devices").select("*").eq("id", deviceId).single(),
         insforge.database.from("sensors").select("*").eq("device_id", deviceId),
         insforge.database
@@ -101,7 +149,30 @@ function DeviceDetailPage() {
           .order("performed_at", { ascending: false }),
         insforge.database.from("farms").select("*"),
         insforge.database.from("ponds").select("*"),
+        insforge.database
+          .from("device_commands")
+          .select("*")
+          .eq("device_id", deviceId)
+          .order("created_at", { ascending: false })
+          .limit(12),
+        insforge.database
+          .from("device_configurations")
+          .select("*")
+          .eq("device_id", deviceId)
+          .maybeSingle(),
       ]);
+      assertDbOk(d, "Failed to load device");
+      assertDbOk(s, "Failed to load sensors");
+      assertDbOk(c, "Failed to load calibration history");
+      assertDbOk(m, "Failed to load maintenance history");
+      assertDbOk(f, "Failed to load farms");
+      assertDbOk(p, "Failed to load ponds");
+      if (commandRes.error && !isMissingDeviceCommandBackend(commandRes.error)) {
+        assertDbOk(commandRes, "Failed to load device commands");
+      }
+      if (configRes.error && !isMissingDeviceCommandBackend(configRes.error)) {
+        assertDbOk(configRes, "Failed to load device configuration");
+      }
       return {
         device: d.data as Device | null,
         sensors: (s.data ?? []) as SensorRow[],
@@ -109,32 +180,71 @@ function DeviceDetailPage() {
         maintenance: (m.data ?? []) as MaintenanceRow[],
         farms: (f.data ?? []) as Farm[],
         ponds: (p.data ?? []) as Pond[],
+        commands: commandRes.error ? [] : ((commandRes.data ?? []) as DeviceCommandRow[]),
+        config: configRes.error ? null : (configRes.data as DeviceConfigRow | null),
       };
     },
   });
 
   const diag = useMutation({
     mutationFn: async () => {
-      await new Promise((r) => setTimeout(r, 800));
-      await insforge.database
-        .from("devices")
-        .update({ last_seen: new Date().toISOString() })
-        .eq("id", deviceId);
+      if (!canServiceDevice) throw new Error("Technician access is required to run diagnostics.");
+      const { error } = await insforge.database.rpc("enqueue_device_command", {
+        _device_id: deviceId,
+        _command_type: "diagnostics",
+        _payload: { source: "device_detail" },
+        _idempotency_key: crypto.randomUUID(),
+      });
+      if (error) {
+        if (isMissingDeviceCommandBackend(error)) {
+          throw new Error("Device command backend has not been deployed yet.");
+        }
+        throw new Error(dbErrorMessage(error, "Could not queue diagnostics"));
+      }
     },
     onSuccess: () => {
-      toast.success("Diagnostics complete — all systems nominal");
+      toast.success("Diagnostics command queued");
       qc.invalidateQueries({ queryKey: ["device", deviceId] });
     },
+    onError: (error) => toast.error(dbErrorMessage(error, "Could not queue diagnostics")),
   });
 
   const restart = useMutation({
     mutationFn: async () => {
-      await new Promise((r) => setTimeout(r, 1200));
+      if (!canServiceDevice) throw new Error("Technician access is required to restart devices.");
+      const { error } = await insforge.database.rpc("enqueue_device_command", {
+        _device_id: deviceId,
+        _command_type: "restart",
+        _payload: { source: "device_detail" },
+        _idempotency_key: crypto.randomUUID(),
+      });
+      if (error) {
+        if (isMissingDeviceCommandBackend(error)) {
+          throw new Error("Device command backend has not been deployed yet.");
+        }
+        throw new Error(dbErrorMessage(error, "Could not queue restart"));
+      }
     },
-    onSuccess: () => toast.success("Restart command sent to device"),
+    onSuccess: () => {
+      toast.success("Restart command queued");
+      qc.invalidateQueries({ queryKey: ["device", deviceId] });
+    },
+    onError: (error) => toast.error(dbErrorMessage(error, "Could not queue restart")),
   });
 
   if (isLoading) return <div className="text-sm text-muted-foreground">Loading…</div>;
+  if (isError)
+    return (
+      <div className="mx-auto max-w-2xl py-16 text-center">
+        <p className="font-display text-lg">Device did not load</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {dbErrorMessage(error, "Please refresh and try again.")}
+        </p>
+        <Button variant="outline" className="mt-4" onClick={() => refetch()}>
+          Try again
+        </Button>
+      </div>
+    );
   const d = data?.device;
   if (!d)
     return (
@@ -180,22 +290,26 @@ function DeviceDetailPage() {
         }
         actions={
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" asChild>
-              <Link to="/app/calibration/$deviceId" params={{ deviceId: d.id }}>
-                <FlaskConical className="mr-2 h-4 w-4" />
-                Calibrate
-              </Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link to="/app/maintenance/$deviceId" params={{ deviceId: d.id }}>
-                <Wrench className="mr-2 h-4 w-4" />
-                Maintenance
-              </Link>
-            </Button>
-            <Button onClick={() => diag.mutate()} disabled={diag.isPending}>
-              <Activity className="mr-2 h-4 w-4" />
-              {diag.isPending ? "Running…" : "Run diagnostics"}
-            </Button>
+            {canServiceDevice && (
+              <>
+                <Button variant="outline" asChild>
+                  <Link to="/app/calibration/$deviceId" params={{ deviceId: d.id }}>
+                    <FlaskConical className="mr-2 h-4 w-4" />
+                    Calibrate
+                  </Link>
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link to="/app/maintenance/$deviceId" params={{ deviceId: d.id }}>
+                    <Wrench className="mr-2 h-4 w-4" />
+                    Maintenance
+                  </Link>
+                </Button>
+                <Button onClick={() => diag.mutate()} disabled={diag.isPending}>
+                  <Activity className="mr-2 h-4 w-4" />
+                  {diag.isPending ? "Queueing..." : "Run diagnostics"}
+                </Button>
+              </>
+            )}
           </div>
         }
       />
@@ -313,7 +427,9 @@ function DeviceDetailPage() {
               </p>
             ) : (
               data!.sensors.map((s) => {
-                const calDue = s.calibration_due_at && new Date(s.calibration_due_at) <= new Date();
+                const lastCalibrated = s.last_calibrated_at ?? s.last_calibrated;
+                const calibrationDue = s.calibration_due_at ?? s.calibration_due;
+                const calDue = calibrationDue && new Date(calibrationDue) <= new Date();
                 return (
                   <div
                     key={s.id}
@@ -349,9 +465,7 @@ function DeviceDetailPage() {
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Last calibrated</span>
                         <span className="font-medium">
-                          {s.last_calibrated_at
-                            ? new Date(s.last_calibrated_at).toLocaleDateString()
-                            : "—"}
+                          {lastCalibrated ? new Date(lastCalibrated).toLocaleDateString() : "—"}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -362,9 +476,7 @@ function DeviceDetailPage() {
                             calDue ? "text-violet-600" : "text-foreground",
                           )}
                         >
-                          {s.calibration_due_at
-                            ? new Date(s.calibration_due_at).toLocaleDateString()
-                            : "—"}
+                          {calibrationDue ? new Date(calibrationDue).toLocaleDateString() : "—"}
                         </span>
                       </div>
                     </div>
@@ -408,6 +520,9 @@ function DeviceDetailPage() {
             device={d}
             farms={data?.farms ?? []}
             ponds={data?.ponds ?? []}
+            config={data?.config ?? null}
+            commands={data?.commands ?? []}
+            canServiceDevice={canServiceDevice}
             onSaved={() => qc.invalidateQueries({ queryKey: ["device", deviceId] })}
             onRestart={() => restart.mutate()}
             onDiagnostics={() => diag.mutate()}
@@ -547,6 +662,9 @@ function DeviceSettings({
   device,
   farms,
   ponds,
+  config,
+  commands,
+  canServiceDevice,
   onSaved,
   onRestart,
   onDiagnostics,
@@ -556,6 +674,9 @@ function DeviceSettings({
   device: Device;
   farms: Farm[];
   ponds: Pond[];
+  config: DeviceConfigRow | null;
+  commands: DeviceCommandRow[];
+  canServiceDevice: boolean;
   onSaved: () => void;
   onRestart: () => void;
   onDiagnostics: () => void;
@@ -568,16 +689,42 @@ function DeviceSettings({
   const [preset, setPreset] = useState("default");
   const [restartOpen, setRestartOpen] = useState(false);
 
+  useEffect(() => {
+    setFarmId(device.farm_id ?? "");
+    setPondId(device.pond_id ?? "");
+  }, [device.farm_id, device.pond_id]);
+
+  useEffect(() => {
+    setInterval(String(config?.sampling_interval_seconds ?? 300));
+    setPreset(config?.threshold_profile ?? "default");
+  }, [config?.sampling_interval_seconds, config?.threshold_profile]);
+
   const save = useMutation({
     mutationFn: async () => {
-      const { error } = await insforge.database
-        .from("devices")
-        .update({ farm_id: farmId || null, pond_id: pondId || null })
-        .eq("id", device.id);
-      if (error) throw new Error(error.message);
+      if (!canServiceDevice) throw new Error("Technician access is required to update devices.");
+
+      const intervalNumber = Number(interval);
+      if (!Number.isInteger(intervalNumber) || intervalNumber < 30 || intervalNumber > 86400) {
+        throw new Error("Sampling interval must be between 30 seconds and 24 hours.");
+      }
+
+      const result = await insforge.database.rpc("save_device_configuration", {
+        _device_id: device.id,
+        _farm_id: farmId || null,
+        _pond_id: pondId || null,
+        _sampling_interval_seconds: intervalNumber,
+        _threshold_profile: preset,
+        _idempotency_key: crypto.randomUUID(),
+      });
+      if (result.error) {
+        if (isMissingDeviceCommandBackend(result.error)) {
+          throw new Error("Device command backend has not been deployed yet.");
+        }
+        throw new Error(dbErrorMessage(result.error, "Could not save device settings"));
+      }
     },
     onSuccess: () => {
-      toast.success("Settings saved");
+      toast.success("Settings saved and command queued");
       onSaved();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -589,14 +736,22 @@ function DeviceSettings({
         <div className="space-y-3">
           <div>
             <Label>Sampling interval (sec)</Label>
-            <Input type="number" value={interval} onChange={(e) => setInterval(e.target.value)} />
+            <Input
+              type="number"
+              min={30}
+              max={86400}
+              step={30}
+              value={interval}
+              disabled={!canServiceDevice}
+              onChange={(e) => setInterval(e.target.value)}
+            />
             <p className="mt-1 text-xs text-muted-foreground">
               How often the device records and uploads sensor data.
             </p>
           </div>
           <div>
             <Label>Alert threshold profile</Label>
-            <Select value={preset} onValueChange={setPreset}>
+            <Select value={preset} onValueChange={setPreset} disabled={!canServiceDevice}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -615,7 +770,7 @@ function DeviceSettings({
         <div className="space-y-3">
           <div>
             <Label>Assigned farm</Label>
-            <Select value={farmId} onValueChange={setFarmId}>
+            <Select value={farmId} onValueChange={setFarmId} disabled={!canServiceDevice}>
               <SelectTrigger>
                 <SelectValue placeholder="Select farm" />
               </SelectTrigger>
@@ -630,7 +785,7 @@ function DeviceSettings({
           </div>
           <div>
             <Label>Assigned pond</Label>
-            <Select value={pondId} onValueChange={setPondId}>
+            <Select value={pondId} onValueChange={setPondId} disabled={!canServiceDevice}>
               <SelectTrigger>
                 <SelectValue placeholder="Select pond" />
               </SelectTrigger>
@@ -646,32 +801,40 @@ function DeviceSettings({
             </Select>
           </div>
         </div>
-        <Button className="mt-4 w-full" onClick={() => save.mutate()} disabled={save.isPending}>
+        <Button
+          className="mt-4 w-full"
+          onClick={() => save.mutate()}
+          disabled={save.isPending || !canServiceDevice}
+        >
           <RefreshCw className="mr-2 h-4 w-4" />
-          {save.isPending ? "Saving…" : "Save assignment"}
+          {save.isPending ? "Saving..." : "Save settings"}
         </Button>
       </Card>
 
-      <Card title="Maintenance actions" className="lg:col-span-2">
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={onDiagnostics} disabled={diagPending}>
-            <Activity className="mr-2 h-4 w-4" />
-            {diagPending ? "Running…" : "Run diagnostics"}
-          </Button>
-          <Button
-            variant="outline"
-            className="border-rose-500/30 text-rose-700 hover:bg-rose-500/10"
-            onClick={() => setRestartOpen(true)}
-            disabled={restartPending}
-          >
-            <Power className="mr-2 h-4 w-4" />
-            {restartPending ? "Restarting…" : "Restart device"}
-          </Button>
-        </div>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Restarting will briefly take the device offline. No data will be lost.
-        </p>
-      </Card>
+      {canServiceDevice && (
+        <Card title="Maintenance actions" className="lg:col-span-2">
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={onDiagnostics} disabled={diagPending}>
+              <Activity className="mr-2 h-4 w-4" />
+              {diagPending ? "Queueing..." : "Run diagnostics"}
+            </Button>
+            <Button
+              variant="outline"
+              className="border-rose-500/30 text-rose-700 hover:bg-rose-500/10"
+              onClick={() => setRestartOpen(true)}
+              disabled={restartPending}
+            >
+              <Power className="mr-2 h-4 w-4" />
+              {restartPending ? "Queueing..." : "Restart device"}
+            </Button>
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Commands are queued for the device and completed when the hardware acknowledges them.
+          </p>
+        </Card>
+      )}
+
+      <CommandHistory commands={commands} />
 
       <AlertDialog open={restartOpen} onOpenChange={setRestartOpen}>
         <AlertDialogContent>
@@ -700,6 +863,61 @@ function DeviceSettings({
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+function CommandHistory({ commands }: { commands: DeviceCommandRow[] }) {
+  return (
+    <Card title="Command queue" className="lg:col-span-2">
+      {commands.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No device commands queued yet.</p>
+      ) : (
+        <div className="space-y-2">
+          {commands.map((command) => (
+            <div
+              key={command.id}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/60 bg-surface px-3 py-2"
+            >
+              <div>
+                <p className="text-sm font-medium capitalize">
+                  {command.command_type.replace(/_/g, " ")}
+                </p>
+                <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  {new Date(command.created_at ?? command.queued_at ?? "").toLocaleString()}
+                </p>
+              </div>
+              <CommandStatusPill status={command.status} />
+              {command.error_message && (
+                <p className="basis-full text-xs text-rose-600">{command.error_message}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function CommandStatusPill({ status }: { status: string }) {
+  const classes =
+    status === "succeeded"
+      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700"
+      : status === "failed" || status === "expired" || status === "cancelled"
+        ? "border-rose-500/30 bg-rose-500/10 text-rose-700"
+        : status === "sent" || status === "acknowledged"
+          ? "border-sky-500/30 bg-sky-500/10 text-sky-700"
+          : "border-amber-500/30 bg-amber-500/10 text-amber-700";
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider",
+        classes,
+      )}
+    >
+      {status.replace(/_/g, " ")}
+    </span>
   );
 }
 

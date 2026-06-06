@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState, useEffect } from "react";
 import {
   Waves,
@@ -22,16 +23,20 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
+import { readFarmSelection, writeFarmSelection } from "@/lib/farm-selection";
+import {
+  insforge,
+  type Alert as InsforgeAlert,
+  type AlertSeverity,
+  type Device,
+  type DeviceStatus,
+  type Farm,
+  type Pond,
+  type PondStatus,
+  type Reading,
+} from "@/lib/insforge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import {
-  MOCK_PONDS,
-  MOCK_DEVICES,
-  MOCK_ALERTS,
-  type MockPond,
-  type MockAlert,
-  type MockDevice,
-} from "@/lib/mock-farm";
 
 export const Route = createFileRoute("/app/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — Acqua Lence" }] }),
@@ -95,6 +100,203 @@ const statusTone: Record<string, { dot: string; pill: string; text: string }> = 
 };
 
 /* ───────── tiny components ───────── */
+type DashboardPond = {
+  id: string;
+  name: string;
+  species: string;
+  status: PondStatus;
+  do_mg_l: number | null;
+  ph: number | null;
+  temp_c: number | null;
+  last_updated: string;
+  device_status: DeviceStatus;
+  trend: number[];
+};
+
+type DashboardDevice = {
+  id: string;
+  name: string;
+  pond_name: string;
+  status: DeviceStatus;
+  battery_pct: number;
+  last_seen: string;
+};
+
+type DashboardAlertType = "critical" | "warning" | "device_offline" | "calibration_due";
+
+type DashboardAlert = {
+  id: string;
+  pond_name: string | null;
+  device_name: string | null;
+  alert_type: DashboardAlertType;
+  severity: AlertSeverity;
+  message: string;
+  recommended_action: string | null;
+  detected_at: string;
+};
+
+const EMPTY_DASHBOARD = {
+  farms: [] as Pick<Farm, "id" | "name">[],
+  ponds: [] as DashboardPond[],
+  devices: [] as DashboardDevice[],
+  alerts: [] as DashboardAlert[],
+};
+
+function dbErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+}
+
+function assertDbOk(result: { error?: unknown }, fallback: string) {
+  if (result.error) throw new Error(dbErrorMessage(result.error, fallback));
+}
+
+function newestDevice(devices: Device[], pondId: string) {
+  return devices
+    .filter((d) => d.pond_id === pondId)
+    .sort((a, b) => {
+      const aTime = a.last_seen ? new Date(a.last_seen).getTime() : 0;
+      const bTime = b.last_seen ? new Date(b.last_seen).getTime() : 0;
+      return bTime - aTime;
+    })[0];
+}
+
+function derivePondStatus(pond: Pond, device: Device | undefined, reading: Reading | undefined) {
+  const latestAt = reading?.recorded_at ?? device?.last_seen ?? null;
+  const staleMinutes = latestAt ? (Date.now() - new Date(latestAt).getTime()) / 60_000 : Infinity;
+  if (device?.status === "offline" || staleMinutes > 60) return "offline";
+  if (device?.status === "calibration_due") return "calibration_due";
+  if (!reading) return pond.status;
+  if (reading.do_mg_l != null && reading.do_mg_l < 3) return "critical";
+  if (
+    (reading.do_mg_l != null && reading.do_mg_l < 4) ||
+    (reading.ph != null && (reading.ph < 6.5 || reading.ph > 8.5)) ||
+    (reading.ammonia_mg_l != null && reading.ammonia_mg_l > 0.3) ||
+    (reading.turbidity_ntu != null && reading.turbidity_ntu > 50)
+  ) {
+    return "warning";
+  }
+  return pond.status === "watch" ? "watch" : "good";
+}
+
+function readingsForPond(readings: Reading[], pondId: string) {
+  return readings
+    .filter((reading) => reading.pond_id === pondId)
+    .sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime());
+}
+
+function doTrend(readings: Reading[]) {
+  const values = readings
+    .map((reading) => reading.do_mg_l)
+    .filter((value): value is number => value != null)
+    .slice(-12);
+  if (values.length >= 2) return values;
+  const fallback = values[0] ?? 0;
+  return Array.from({ length: 12 }, () => fallback);
+}
+
+function mapAlertType(alert: InsforgeAlert): DashboardAlertType {
+  const type =
+    `${alert.alert_type ?? ""} ${alert.parameter ?? ""} ${alert.message ?? ""}`.toLowerCase();
+  if (type.includes("calibration")) return "calibration_due";
+  if (type.includes("offline")) return "device_offline";
+  if (alert.severity === "critical") return "critical";
+  return "warning";
+}
+
+function mapDashboardData({
+  activeFarmId,
+  farms,
+  ponds,
+  devices,
+  alerts,
+  readings,
+}: {
+  activeFarmId: string;
+  farms: Pick<Farm, "id" | "name">[];
+  ponds: Pond[];
+  devices: Device[];
+  alerts: InsforgeAlert[];
+  readings: Reading[];
+}) {
+  const visibleFarmIds =
+    activeFarmId === "all" ? new Set(farms.map((farm) => farm.id)) : new Set([activeFarmId]);
+  const visiblePonds = ponds.filter((pond) => visibleFarmIds.has(pond.farm_id));
+  const visiblePondIds = new Set(visiblePonds.map((pond) => pond.id));
+  const pondNameById = new Map(ponds.map((pond) => [pond.id, pond.name]));
+  const deviceById = new Map(devices.map((device) => [device.id, device]));
+
+  const mappedPonds = visiblePonds.map((pond) => {
+    const pondReadings = readingsForPond(readings, pond.id);
+    const reading = pondReadings[pondReadings.length - 1];
+    const device = newestDevice(devices, pond.id);
+    return {
+      id: pond.id,
+      name: pond.name,
+      species: pond.species ?? pond.pond_type ?? "Pond",
+      status: derivePondStatus(pond, device, reading),
+      do_mg_l: reading?.do_mg_l ?? null,
+      ph: reading?.ph ?? null,
+      temp_c: reading?.temp_c ?? null,
+      last_updated: reading?.recorded_at ?? device?.last_seen ?? new Date(0).toISOString(),
+      device_status: device?.status ?? "offline",
+      trend: doTrend(pondReadings),
+    } satisfies DashboardPond;
+  });
+
+  const mappedDevices = devices
+    .filter((device) => {
+      if (device.pond_id && visiblePondIds.has(device.pond_id)) return true;
+      return device.farm_id != null && visibleFarmIds.has(device.farm_id);
+    })
+    .map((device) => ({
+      id: device.id,
+      name: device.name ?? device.serial,
+      pond_name: device.pond_id
+        ? (pondNameById.get(device.pond_id) ?? "Unassigned pond")
+        : "Unassigned pond",
+      status: device.status,
+      battery_pct: device.battery_pct ?? 0,
+      last_seen: device.last_seen ?? new Date(0).toISOString(),
+    }));
+
+  const mappedAlerts = alerts
+    .filter((alert) => {
+      if (alert.status === "resolved") return false;
+      if (alert.pond_id && visiblePondIds.has(alert.pond_id)) return true;
+      const device = alert.device_id ? deviceById.get(alert.device_id) : undefined;
+      return (
+        !!device &&
+        (device.pond_id
+          ? visiblePondIds.has(device.pond_id)
+          : device.farm_id != null && visibleFarmIds.has(device.farm_id))
+      );
+    })
+    .map((alert) => {
+      const device = alert.device_id ? deviceById.get(alert.device_id) : undefined;
+      return {
+        id: alert.id,
+        pond_name: alert.pond_id ? (pondNameById.get(alert.pond_id) ?? null) : null,
+        device_name: device?.name ?? device?.serial ?? null,
+        alert_type: mapAlertType(alert),
+        severity: alert.severity,
+        message: alert.message ?? "Alert requires attention",
+        recommended_action: alert.recommended_action,
+        detected_at: alert.detected_at,
+      } satisfies DashboardAlert;
+    });
+
+  return {
+    farms,
+    ponds: mappedPonds,
+    devices: mappedDevices,
+    alerts: mappedAlerts,
+  };
+}
+
 function Sparkline({
   values,
   tone = "primary",
@@ -209,7 +411,7 @@ function StatTile({
   );
 }
 
-function PondCard({ pond, isBn }: { pond: MockPond; isBn: boolean }) {
+function PondCard({ pond, isBn }: { pond: DashboardPond; isBn: boolean }) {
   const ts = timeAgo(pond.last_updated, isBn);
   const tone = statusTone[pond.status] ?? statusTone.offline;
   const sparkTone =
@@ -260,25 +462,25 @@ function PondCard({ pond, isBn }: { pond: MockPond; isBn: boolean }) {
         <Metric
           icon={<Droplets className="h-3.5 w-3.5" />}
           label={isBn ? "DO" : "DO"}
-          value={`${pond.do_mg_l.toFixed(1)}`}
+          value={pond.do_mg_l == null ? "—" : pond.do_mg_l.toFixed(1)}
           unit="mg/L"
-          warn={pond.do_mg_l < 4}
-          crit={pond.do_mg_l < 3}
+          warn={pond.do_mg_l != null && pond.do_mg_l < 4}
+          crit={pond.do_mg_l != null && pond.do_mg_l < 3}
         />
         <Metric
           icon={<FlaskConical className="h-3.5 w-3.5" />}
           label="pH"
-          value={pond.ph.toFixed(1)}
-          warn={pond.ph < 6.5 || pond.ph > 8.2}
-          crit={pond.ph < 6 || pond.ph > 9}
+          value={pond.ph == null ? "—" : pond.ph.toFixed(1)}
+          warn={pond.ph != null && (pond.ph < 6.5 || pond.ph > 8.2)}
+          crit={pond.ph != null && (pond.ph < 6 || pond.ph > 9)}
         />
         <Metric
           icon={<Thermometer className="h-3.5 w-3.5" />}
           label={isBn ? "তাপ" : "Temp"}
-          value={pond.temp_c.toFixed(1)}
+          value={pond.temp_c == null ? "—" : pond.temp_c.toFixed(1)}
           unit="°C"
-          warn={pond.temp_c > 30}
-          crit={pond.temp_c > 32}
+          warn={pond.temp_c != null && pond.temp_c > 30}
+          crit={pond.temp_c != null && pond.temp_c > 32}
         />
       </div>
 
@@ -358,14 +560,14 @@ function Metric({
   );
 }
 
-function alertIcon(type: MockAlert["alert_type"]) {
+function alertIcon(type: DashboardAlertType) {
   if (type === "critical") return AlertCircle;
   if (type === "warning") return AlertTriangle;
   if (type === "device_offline") return WifiOff;
   return Wrench;
 }
 
-function alertTone(type: MockAlert["alert_type"]) {
+function alertTone(type: DashboardAlertType) {
   if (type === "critical")
     return {
       ring: "ring-rose-500/30",
@@ -398,31 +600,61 @@ function alertTone(type: MockAlert["alert_type"]) {
 /* ───────── page ───────── */
 function DashboardPage() {
   const { lang, t } = useI18n();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const isBn = lang === "bn";
 
-  const [activeFarmId, setActiveFarmId] = useState<string>("f1");
+  const [activeFarmId, setActiveFarmId] = useState<string>("all");
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const saved = localStorage.getItem("active_farm_id");
-    if (saved) setActiveFarmId(saved);
+    setActiveFarmId(readFarmSelection());
   }, []);
 
-  // Filter mock data by the active farm
-  const ponds = useMemo(() => MOCK_PONDS.filter((p) => p.farm_id === activeFarmId), [activeFarmId]);
-  const devices = useMemo(() => {
-    return MOCK_DEVICES.filter((d) => {
-      const matchPond = MOCK_PONDS.find((p) => p.name.startsWith(d.pond_name));
-      return matchPond ? matchPond.farm_id === activeFarmId : true;
-    });
-  }, [activeFarmId]);
-  const alerts = useMemo(() => {
-    return MOCK_ALERTS.filter((a) => {
-      if (!a.pond_name) return true;
-      const matchPond = MOCK_PONDS.find((p) => a.pond_name?.includes(p.name.split(" — ")[0]));
-      return matchPond ? matchPond.farm_id === activeFarmId : true;
-    });
-  }, [activeFarmId]);
+  const dashboardQ = useQuery({
+    queryKey: ["app-dashboard", user?.id, activeFarmId],
+    enabled: !!user,
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      const [farmsRes, pondsRes, devicesRes, alertsRes, readingsRes] = await Promise.all([
+        insforge.database.from("farms").select("id,name").order("name"),
+        insforge.database.from("ponds").select("*").order("name"),
+        insforge.database.from("devices").select("*"),
+        insforge.database
+          .from("alerts")
+          .select("*")
+          .order("detected_at", { ascending: false })
+          .limit(200),
+        insforge.database.rpc("get_recent_visible_readings", {
+          _farm_id: activeFarmId === "all" ? null : activeFarmId,
+          _lookback_hours: 24,
+          _per_pond_limit: 12,
+        }),
+      ]);
+
+      assertDbOk(farmsRes, "Failed to load farms");
+      assertDbOk(pondsRes, "Failed to load ponds");
+      assertDbOk(devicesRes, "Failed to load devices");
+      assertDbOk(alertsRes, "Failed to load alerts");
+      assertDbOk(readingsRes, "Failed to load readings");
+
+      return mapDashboardData({
+        activeFarmId,
+        farms: (farmsRes.data ?? []) as Pick<Farm, "id" | "name">[],
+        ponds: (pondsRes.data ?? []) as Pond[],
+        devices: (devicesRes.data ?? []) as Device[],
+        alerts: (alertsRes.data ?? []) as InsforgeAlert[],
+        readings: (readingsRes.data ?? []) as Reading[],
+      });
+    },
+  });
+
+  const dashboard = dashboardQ.data ?? EMPTY_DASHBOARD;
+  const { farms, ponds, devices, alerts } = dashboard;
+
+  useEffect(() => {
+    if (activeFarmId === "all" || farms.length === 0) return;
+    if (farms.some((farm) => farm.id === activeFarmId)) return;
+    setActiveFarmId(writeFarmSelection("all"));
+  }, [activeFarmId, farms]);
 
   const counts = useMemo(
     () => ({
@@ -477,6 +709,43 @@ function DashboardPage() {
   const greetingName = profile?.full_name?.split(" ")[0] ?? (isBn ? "কৃষক" : "Farmer");
 
   /* ─── empty state ─── */
+  if (dashboardQ.isLoading) {
+    return (
+      <div className="grid place-items-center rounded-3xl border border-border bg-card p-12 text-center">
+        <div className="grid h-16 w-16 place-items-center rounded-full bg-primary/10 text-primary">
+          <Activity className="h-7 w-7 animate-pulse" />
+        </div>
+        <h2 className="mt-4 font-display text-xl font-semibold">
+          {isBn ? "ড্যাশবোর্ড লোড হচ্ছে" : "Loading dashboard"}
+        </h2>
+        <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+          {isBn
+            ? "সর্বশেষ পুকুর, ডিভাইস এবং সতর্কতা আনা হচ্ছে।"
+            : "Fetching the latest ponds, devices, and alerts."}
+        </p>
+      </div>
+    );
+  }
+
+  if (dashboardQ.error) {
+    return (
+      <div className="grid place-items-center rounded-3xl border border-amber-500/30 bg-amber-500/10 p-12 text-center">
+        <div className="grid h-16 w-16 place-items-center rounded-full bg-amber-500/15 text-amber-700">
+          <AlertTriangle className="h-7 w-7" />
+        </div>
+        <h2 className="mt-4 font-display text-xl font-semibold">
+          {isBn ? "ড্যাশবোর্ড লোড হয়নি" : "Dashboard did not load"}
+        </h2>
+        <p className="mt-1 max-w-sm text-sm text-amber-800">
+          {dbErrorMessage(dashboardQ.error, isBn ? "আবার চেষ্টা করুন।" : "Please try again.")}
+        </p>
+        <Button className="mt-5" onClick={() => dashboardQ.refetch()}>
+          {isBn ? "আবার চেষ্টা করুন" : "Try again"}
+        </Button>
+      </div>
+    );
+  }
+
   if (ponds.length === 0 && devices.length === 0) {
     return (
       <div className="grid place-items-center rounded-3xl border border-dashed border-border bg-card p-12 text-center">
@@ -599,9 +868,6 @@ function DashboardPage() {
                     {isBn ? "এখনই করুন" : "Do it now"}
                     <ArrowRight className="ml-1 h-3.5 w-3.5" />
                   </Link>
-                </Button>
-                <Button variant="outline" size="sm">
-                  {isBn ? "পরে" : "Later"}
                 </Button>
               </div>
             </div>
@@ -879,7 +1145,7 @@ function DeviceStat({
   );
 }
 
-function DeviceRow({ device, isBn }: { device: MockDevice; isBn: boolean }) {
+function DeviceRow({ device, isBn }: { device: DashboardDevice; isBn: boolean }) {
   const ts = timeAgo(device.last_seen, isBn);
   const tone = statusTone[device.status] ?? statusTone.offline;
   const battTone =

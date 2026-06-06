@@ -86,6 +86,24 @@ type EditFarmState = { open: boolean; farm: Partial<Farm> | null; ownerId: strin
 type EditPondState = { open: boolean; pond: Partial<Pond> | null; farmId: string };
 type AssignDeviceState = { open: boolean; deviceId: string; farmId: string; pondId: string };
 
+const SINGLE_ADMIN_EMAIL = "aqualense01@gmail.com";
+
+function isSingleAdminEmail(email?: string | null) {
+  return (email ?? "").trim().toLowerCase() === SINGLE_ADMIN_EMAIL;
+}
+
+function dbErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+}
+
+function assertDbOk(result: { error?: unknown }, fallback: string) {
+  if (result.error) throw new Error(dbErrorMessage(result.error, fallback));
+}
+
 function AdminFarmsCustomers() {
   const qc = useQueryClient();
   const [q, setQ] = useState("");
@@ -112,7 +130,7 @@ function AdminFarmsCustomers() {
     pondId: "",
   });
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["admin-farms-customers"],
     queryFn: async () => {
       const [profiles, farms, ponds, devices, alerts] = await Promise.all([
@@ -126,6 +144,11 @@ function AdminFarmsCustomers() {
           .order("detected_at", { ascending: false })
           .limit(200),
       ]);
+      assertDbOk(profiles, "Failed to load profiles");
+      assertDbOk(farms, "Failed to load farms");
+      assertDbOk(ponds, "Failed to load ponds");
+      assertDbOk(devices, "Failed to load devices");
+      assertDbOk(alerts, "Failed to load alerts");
       return {
         profiles: (profiles.data ?? []) as AdminProfile[],
         farms: (farms.data ?? []) as Farm[],
@@ -202,11 +225,17 @@ function AdminFarmsCustomers() {
   // === Mutations ===
   const setStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const target = profiles.find((profile) => profile.id === id);
+      if (status !== "active" && isSingleAdminEmail(target?.email)) {
+        throw new Error("The sole admin cannot be suspended.");
+      }
       const r = await insforge.database
         .from("profiles")
         .update({ account_status: status })
-        .eq("id", id);
-      if ((r as any).error) throw new Error((r as any).error.message);
+        .eq("id", id)
+        .select("id")
+        .single();
+      assertDbOk(r, "Could not update account status");
     },
     onSuccess: (_d, v) => {
       toast.success(v.status === "suspended" ? "Account suspended" : "Account reactivated");
@@ -226,19 +255,25 @@ function AdminFarmsCustomers() {
             location: f.location ?? null,
             status: f.status ?? "active",
           })
-          .eq("id", f.id);
-        if ((r as any).error) throw new Error((r as any).error.message);
+          .eq("id", f.id)
+          .select("id")
+          .single();
+        assertDbOk(r, "Failed to update farm");
       } else {
-        const r = await insforge.database.from("farms").insert([
-          {
-            owner_id: f.owner_id,
-            name: f.name,
-            district: f.district ?? null,
-            location: f.location ?? null,
-            status: f.status ?? "active",
-          },
-        ]);
-        if ((r as any).error) throw new Error((r as any).error.message);
+        const r = await insforge.database
+          .from("farms")
+          .insert([
+            {
+              owner_id: f.owner_id,
+              name: f.name,
+              district: f.district ?? null,
+              location: f.location ?? null,
+              status: f.status ?? "active",
+            },
+          ])
+          .select("id")
+          .single();
+        assertDbOk(r, "Failed to create farm");
       }
     },
     onSuccess: () => {
@@ -261,20 +296,26 @@ function AdminFarmsCustomers() {
             area_m2: p.area_m2 ?? null,
             status: p.status ?? "good",
           })
-          .eq("id", p.id);
-        if ((r as any).error) throw new Error((r as any).error.message);
+          .eq("id", p.id)
+          .select("id")
+          .single();
+        assertDbOk(r, "Failed to update pond");
       } else {
-        const r = await insforge.database.from("ponds").insert([
-          {
-            farm_id: p.farm_id,
-            name: p.name,
-            pond_type: p.pond_type ?? null,
-            species: p.species ?? null,
-            area_m2: p.area_m2 ?? null,
-            status: p.status ?? "good",
-          },
-        ]);
-        if ((r as any).error) throw new Error((r as any).error.message);
+        const r = await insforge.database
+          .from("ponds")
+          .insert([
+            {
+              farm_id: p.farm_id,
+              name: p.name,
+              pond_type: p.pond_type ?? null,
+              species: p.species ?? null,
+              area_m2: p.area_m2 ?? null,
+              status: p.status ?? "good",
+            },
+          ])
+          .select("id")
+          .single();
+        assertDbOk(r, "Failed to create pond");
       }
     },
     onSuccess: () => {
@@ -301,8 +342,10 @@ function AdminFarmsCustomers() {
           farm_id: farmId || null,
           pond_id: pondId || null,
         })
-        .eq("id", deviceId);
-      if ((r as any).error) throw new Error((r as any).error.message);
+        .eq("id", deviceId)
+        .select("id")
+        .single();
+      assertDbOk(r, "Failed to update device assignment");
     },
     onSuccess: () => {
       toast.success("Device assignment updated");
@@ -428,6 +471,17 @@ function AdminFarmsCustomers() {
         <div className="rounded-2xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">
           Loading customers…
         </div>
+      ) : isError ? (
+        <EmptyState
+          icon={<AlertTriangle className="h-6 w-6" />}
+          title="Customers did not load"
+          description={dbErrorMessage(error, "Please refresh and try again.")}
+          action={
+            <Button variant="outline" onClick={() => refetch()}>
+              Try again
+            </Button>
+          }
+        />
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={<Users className="h-6 w-6" />}
@@ -546,6 +600,7 @@ function AdminFarmsCustomers() {
                       <Button
                         size="sm"
                         variant="destructive"
+                        disabled={isSingleAdminEmail(selected.email)}
                         onClick={() => setConfirmSuspend(selected)}
                       >
                         <Pause className="mr-1.5 h-4 w-4" /> Suspend

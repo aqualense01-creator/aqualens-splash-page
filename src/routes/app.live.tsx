@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 import {
   Search,
   RefreshCw,
@@ -22,6 +23,16 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
+import { readFarmSelection, writeFarmSelection } from "@/lib/farm-selection";
+import {
+  insforge,
+  type Device,
+  type DeviceStatus,
+  type Farm,
+  type Pond,
+  type PondStatus,
+  type Reading,
+} from "@/lib/insforge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,7 +43,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { MOCK_PONDS, MOCK_FARMS, type MockPond } from "@/lib/mock-farm";
 
 export const Route = createFileRoute("/app/live")({
   head: () => ({ meta: [{ title: "Live View — Acqua Lence" }] }),
@@ -105,49 +115,104 @@ function staleness(ts: string, isBn: boolean) {
   return { label: isBn ? `${hrs} ঘন্টা আগে` : `${hrs}h ago`, stale: true, mins };
 }
 
-function jitter(value: number, amount: number, min?: number, max?: number) {
-  const next = value + (Math.random() - 0.5) * 2 * amount;
-  const lo = min ?? -Infinity;
-  const hi = max ?? Infinity;
-  return Math.min(hi, Math.max(lo, next));
+type LivePond = {
+  id: string;
+  name: string;
+  species: string;
+  status: PondStatus;
+  do_mg_l: number | null;
+  ph: number | null;
+  temp_c: number | null;
+  turbidity_ntu: number | null;
+  salinity_ppt: number | null;
+  ammonia_mg_l: number | null;
+  battery_pct: number;
+  signal_pct: number;
+  farm_id: string;
+  last_updated: string;
+  device_status: DeviceStatus;
+};
+
+const EMPTY_FARMS: Pick<Farm, "id" | "name">[] = [];
+const EMPTY_LIVE_PONDS: LivePond[] = [];
+
+function dbErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
 }
 
-function tickPonds(prev: MockPond[]): MockPond[] {
-  return prev.map((p) => {
-    if (p.status === "offline") return p; // do not update offline ponds
-    const do_mg_l = +jitter(p.do_mg_l, 0.15, 0, 12).toFixed(2);
-    const ph = +jitter(p.ph, 0.05, 5, 10).toFixed(2);
-    const temp_c = +jitter(p.temp_c, 0.1, 20, 38).toFixed(2);
-    const turbidity_ntu = +jitter(p.turbidity_ntu, 0.6, 0, 200).toFixed(1);
-    const salinity_ppt =
-      p.salinity_ppt == null ? null : +jitter(p.salinity_ppt, 0.05, 0, 40).toFixed(2);
-    const ammonia_mg_l =
-      p.ammonia_mg_l == null ? null : +jitter(p.ammonia_mg_l, 0.01, 0, 2).toFixed(3);
-    const battery_pct = Math.max(0, Math.min(100, p.battery_pct - (Math.random() < 0.15 ? 1 : 0)));
-    const signal_pct = Math.max(0, Math.min(100, Math.round(jitter(p.signal_pct, 2, 0, 100))));
-    const trend = [...p.trend.slice(1), do_mg_l];
-    // recompute status from DO + pH heuristic
-    const newStatus: MockPond["status"] =
-      do_mg_l < 3
-        ? "critical"
-        : do_mg_l < 4 || ph > 8.5 || ph < 6.5
-          ? "warning"
-          : p.status === "calibration_due"
-            ? "calibration_due"
-            : "good";
+function assertDbOk(result: { error?: unknown }, fallback: string) {
+  if (result.error) throw new Error(dbErrorMessage(result.error, fallback));
+}
+
+function newestDevice(devices: Device[], pondId: string) {
+  return devices
+    .filter((d) => d.pond_id === pondId)
+    .sort((a, b) => {
+      const aTime = a.last_seen ? new Date(a.last_seen).getTime() : 0;
+      const bTime = b.last_seen ? new Date(b.last_seen).getTime() : 0;
+      return bTime - aTime;
+    })[0];
+}
+
+function latestReadingByPond(readings: Reading[]) {
+  const byPond = new Map<string, Reading>();
+  readings.forEach((reading) => {
+    const previous = byPond.get(reading.pond_id);
+    if (!previous || new Date(reading.recorded_at) > new Date(previous.recorded_at)) {
+      byPond.set(reading.pond_id, reading);
+    }
+  });
+  return byPond;
+}
+
+function deriveStatus(
+  pond: Pond,
+  device: Device | undefined,
+  reading: Reading | undefined,
+): PondStatus {
+  const latestAt = reading?.recorded_at ?? device?.last_seen ?? null;
+  const staleMinutes = latestAt ? (Date.now() - new Date(latestAt).getTime()) / 60_000 : Infinity;
+
+  if (device?.status === "offline" || staleMinutes > 60) return "offline";
+  if (device?.status === "calibration_due") return "calibration_due";
+  if (!reading) return pond.status;
+  if (reading.do_mg_l != null && reading.do_mg_l < 3) return "critical";
+  if (
+    (reading.do_mg_l != null && reading.do_mg_l < 4) ||
+    (reading.ph != null && (reading.ph < 6.5 || reading.ph > 8.5)) ||
+    (reading.ammonia_mg_l != null && reading.ammonia_mg_l > 0.3) ||
+    (reading.turbidity_ntu != null && reading.turbidity_ntu > 50)
+  ) {
+    return "warning";
+  }
+  return pond.status === "watch" ? "watch" : "good";
+}
+
+function toLivePonds(ponds: Pond[], devices: Device[], readings: Reading[]): LivePond[] {
+  const readingsByPond = latestReadingByPond(readings);
+  return ponds.map((pond) => {
+    const device = newestDevice(devices, pond.id);
+    const reading = readingsByPond.get(pond.id);
     return {
-      ...p,
-      do_mg_l,
-      ph,
-      temp_c,
-      turbidity_ntu,
-      salinity_ppt,
-      ammonia_mg_l,
-      battery_pct,
-      signal_pct,
-      trend,
-      status: newStatus,
-      last_updated: new Date().toISOString(),
+      id: pond.id,
+      name: pond.name,
+      species: pond.species ?? pond.pond_type ?? "Pond",
+      status: deriveStatus(pond, device, reading),
+      do_mg_l: reading?.do_mg_l ?? null,
+      ph: reading?.ph ?? null,
+      temp_c: reading?.temp_c ?? null,
+      turbidity_ntu: reading?.turbidity_ntu ?? null,
+      salinity_ppt: reading?.salinity_ppt ?? null,
+      ammonia_mg_l: reading?.ammonia_mg_l ?? null,
+      battery_pct: reading?.battery_pct ?? device?.battery_pct ?? 0,
+      signal_pct: reading?.signal_pct ?? device?.signal_pct ?? 0,
+      farm_id: pond.farm_id,
+      last_updated: reading?.recorded_at ?? device?.last_seen ?? new Date(0).toISOString(),
+      device_status: device?.status ?? "offline",
     };
   });
 }
@@ -156,10 +221,8 @@ function LivePage() {
   const { lang } = useI18n();
   const isBn = lang === "bn";
 
-  const [ponds, setPonds] = useState<MockPond[]>(MOCK_PONDS);
   const [farmId, setFarmId] = useState<string>(() => {
-    if (typeof window === "undefined") return "all";
-    return localStorage.getItem("active_farm_id") || "all";
+    return readFarmSelection();
   });
   const [pondFilter, setPondFilter] = useState<string>("all"); // pond id or "all"
   const [paramFilter, setParamFilter] = useState<ParamKey>("all");
@@ -168,49 +231,75 @@ function LivePage() {
   const [auto, setAuto] = useState(true);
   const [lastTick, setLastTick] = useState<Date>(new Date());
   const [pulse, setPulse] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // auto-refresh ticker
+  const liveQ = useQuery({
+    queryKey: ["app-live-monitoring", farmId],
+    refetchInterval: auto ? REFRESH_MS : false,
+    queryFn: async () => {
+      const [farmsRes, pondsRes, devicesRes, readingsRes] = await Promise.all([
+        insforge.database.from("farms").select("id,name").order("name"),
+        insforge.database.from("ponds").select("*").order("name"),
+        insforge.database.from("devices").select("*"),
+        insforge.database.rpc("get_recent_visible_readings", {
+          _farm_id: farmId === "all" ? null : farmId,
+          _lookback_hours: 24,
+          _per_pond_limit: 1,
+        }),
+      ]);
+
+      assertDbOk(farmsRes, "Failed to load farms");
+      assertDbOk(pondsRes, "Failed to load ponds");
+      assertDbOk(devicesRes, "Failed to load devices");
+      assertDbOk(readingsRes, "Failed to load readings");
+
+      const farms = (farmsRes.data ?? []) as Pick<Farm, "id" | "name">[];
+      const ponds = (pondsRes.data ?? []) as Pond[];
+      const devices = (devicesRes.data ?? []) as Device[];
+      const readings = (readingsRes.data ?? []) as Reading[];
+      const visiblePonds =
+        farmId === "all" ? ponds : ponds.filter((pond) => pond.farm_id === farmId);
+
+      return {
+        farms,
+        ponds: toLivePonds(visiblePonds, devices, readings),
+        fetchedAt: new Date().toISOString(),
+      };
+    },
+  });
+
+  const farms = liveQ.data?.farms ?? EMPTY_FARMS;
+  const ponds = liveQ.data?.ponds ?? EMPTY_LIVE_PONDS;
+
   useEffect(() => {
-    if (!auto) {
-      if (timerRef.current) clearInterval(timerRef.current);
-      return;
-    }
-    timerRef.current = setInterval(() => {
-      setPonds((prev) => {
-        const next = tickPonds(prev);
-        // Detect new critical drops to surface a toast
-        prev.forEach((p, i) => {
-          if (next[i].status === "critical" && p.status !== "critical") {
-            toast.error(
-              isBn ? `${next[i].name}: জরুরি অবস্থা` : `${next[i].name}: critical reading`,
-              {
-                description: isBn
-                  ? `DO ${next[i].do_mg_l} mg/L — অবিলম্বে ব্যবস্থা নিন`
-                  : `DO ${next[i].do_mg_l} mg/L — take action`,
-              },
-            );
-          }
-        });
-        return next;
-      });
-      setLastTick(new Date());
-      setPulse(true);
-      setTimeout(() => setPulse(false), 800);
-    }, REFRESH_MS);
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [auto, isBn]);
+    if (!liveQ.data?.fetchedAt) return;
+    setLastTick(new Date(liveQ.data.fetchedAt));
+    setPulse(true);
+    const timeout = window.setTimeout(() => setPulse(false), 800);
+    return () => window.clearTimeout(timeout);
+  }, [liveQ.data?.fetchedAt]);
+
+  useEffect(() => {
+    if (farmId === "all" || farms.length === 0) return;
+    if (farms.some((farm) => farm.id === farmId)) return;
+    setFarmId(writeFarmSelection("all"));
+  }, [farmId, farms]);
 
   function refreshNow() {
-    setPonds((prev) => tickPonds(prev));
-    setLastTick(new Date());
-    setPulse(true);
-    setTimeout(() => setPulse(false), 800);
-    toast.success(isBn ? "ডেটা আপডেট হয়েছে" : "Live data updated", {
-      description: isBn ? "সর্বশেষ পরিমাপ লোড করা হয়েছে।" : "Latest readings loaded.",
+    liveQ.refetch().then((result) => {
+      if (result.error) {
+        toast.error(isBn ? "লাইভ ডেটা লোড হয়নি" : "Live data failed to load", {
+          description: dbErrorMessage(result.error, "Please try again."),
+        });
+        return;
+      }
+      toast.success(isBn ? "ডেটা আপডেট হয়েছে" : "Live data updated", {
+        description: isBn ? "সর্বশেষ পরিমাপ লোড করা হয়েছে।" : "Latest readings loaded.",
+      });
     });
+  }
+
+  function selectFarm(id: string) {
+    setFarmId(writeFarmSelection(id));
   }
 
   const visiblePonds = useMemo(() => {
@@ -260,24 +349,35 @@ function LivePage() {
             {auto ? <Pause className="mr-1.5 h-4 w-4" /> : <Play className="mr-1.5 h-4 w-4" />}
             {auto ? (isBn ? "অটো চালু" : "Auto on") : isBn ? "অটো বন্ধ" : "Auto off"}
           </Button>
-          <Button variant="outline" size="sm" onClick={refreshNow}>
-            <RefreshCw className={cn("mr-1.5 h-4 w-4", pulse && "animate-spin")} />
+          <Button variant="outline" size="sm" onClick={refreshNow} disabled={liveQ.isFetching}>
+            <RefreshCw className={cn("mr-1.5 h-4 w-4", liveQ.isFetching && "animate-spin")} />
             {isBn ? "রিফ্রেশ" : "Refresh"}
           </Button>
         </div>
       </div>
 
+      {liveQ.error && (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800">
+          <p className="font-semibold">
+            {isBn ? "লাইভ ডেটা লোড হয়নি" : "Live data could not be loaded"}
+          </p>
+          <p className="mt-1 text-xs">
+            {dbErrorMessage(liveQ.error, isBn ? "আবার চেষ্টা করুন।" : "Please try again.")}
+          </p>
+        </div>
+      )}
+
       {/* Controls bar */}
       <div className="rounded-2xl border border-border/60 bg-card p-3 shadow-soft">
         <div className="flex flex-wrap items-center gap-2">
           <ControlGroup label={isBn ? "খামার" : "Farm"}>
-            <Select value={farmId} onValueChange={setFarmId}>
+            <Select value={farmId} onValueChange={selectFarm}>
               <SelectTrigger className="h-9 w-[170px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{isBn ? "সব খামার" : "All farms"}</SelectItem>
-                {MOCK_FARMS.map((f) => (
+                {farms.map((f) => (
                   <SelectItem key={f.id} value={f.id}>
                     {f.name}
                   </SelectItem>
@@ -365,10 +465,22 @@ function LivePage() {
           <div className="col-span-full rounded-2xl border border-dashed border-border bg-card p-12 text-center">
             <Filter className="mx-auto h-8 w-8 text-muted-foreground" />
             <p className="mt-3 text-sm font-medium text-foreground">
-              {isBn ? "কোনো পুকুর মিলেনি" : "No ponds match the current filters"}
+              {liveQ.isLoading
+                ? isBn
+                  ? "লাইভ ডেটা লোড হচ্ছে"
+                  : "Loading live readings"
+                : isBn
+                  ? "কোনো পুকুর মিলেনি"
+                  : "No ponds match the current filters"}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              {isBn ? "ফিল্টার পরিবর্তন করে দেখুন।" : "Try adjusting the filters above."}
+              {liveQ.isLoading
+                ? isBn
+                  ? "সর্বশেষ পরিমাপ আনা হচ্ছে।"
+                  : "Fetching the latest pond measurements."
+                : isBn
+                  ? "ফিল্টার পরিবর্তন করে দেখুন।"
+                  : "Try adjusting the filters above."}
             </p>
           </div>
         )}
@@ -439,7 +551,7 @@ function ControlGroup({ label, children }: { label: React.ReactNode; children: R
   );
 }
 
-function RiskSummary({ ponds, isBn }: { ponds: MockPond[]; isBn: boolean }) {
+function RiskSummary({ ponds, isBn }: { ponds: LivePond[]; isBn: boolean }) {
   const counts = {
     critical: ponds.filter((p) => p.status === "critical").length,
     warning: ponds.filter((p) => p.status === "warning").length,
@@ -501,7 +613,7 @@ function LiveCard({
   isBn,
   pulse,
 }: {
-  pond: MockPond;
+  pond: LivePond;
   paramFilter: ParamKey;
   isBn: boolean;
   pulse: boolean;
@@ -575,8 +687,8 @@ function LiveCard({
             unit="mg/L"
             value={pond.do_mg_l}
             digits={2}
-            crit={pond.do_mg_l < 3}
-            warn={pond.do_mg_l < 4}
+            crit={pond.do_mg_l != null && pond.do_mg_l < 3}
+            warn={pond.do_mg_l != null && pond.do_mg_l < 4}
             stale={isOffline}
           />
         )}
@@ -587,8 +699,8 @@ function LiveCard({
             unit=""
             value={pond.ph}
             digits={2}
-            crit={pond.ph < 6 || pond.ph > 9}
-            warn={pond.ph < 6.5 || pond.ph > 8.2}
+            crit={pond.ph != null && (pond.ph < 6 || pond.ph > 9)}
+            warn={pond.ph != null && (pond.ph < 6.5 || pond.ph > 8.2)}
             stale={isOffline}
           />
         )}
@@ -599,8 +711,8 @@ function LiveCard({
             unit="°C"
             value={pond.temp_c}
             digits={1}
-            crit={pond.temp_c > 32}
-            warn={pond.temp_c > 30}
+            crit={pond.temp_c != null && pond.temp_c > 32}
+            warn={pond.temp_c != null && pond.temp_c > 30}
             stale={isOffline}
           />
         )}
@@ -611,8 +723,8 @@ function LiveCard({
             unit="NTU"
             value={pond.turbidity_ntu}
             digits={1}
-            warn={pond.turbidity_ntu > 30}
-            crit={pond.turbidity_ntu > 50}
+            warn={pond.turbidity_ntu != null && pond.turbidity_ntu > 30}
+            crit={pond.turbidity_ntu != null && pond.turbidity_ntu > 50}
             stale={isOffline}
           />
         )}
@@ -712,7 +824,7 @@ function BigReading({
   icon: React.ReactNode;
   label: string;
   unit: string;
-  value: number;
+  value: number | null;
   digits: number;
   warn?: boolean;
   crit?: boolean;
@@ -739,8 +851,10 @@ function BigReading({
         {label}
       </div>
       <p className={cn("mt-0.5 font-display text-2xl font-bold tabular-nums leading-tight", color)}>
-        {value.toFixed(digits)}
-        {unit && <span className="ml-1 text-[10px] font-medium text-muted-foreground">{unit}</span>}
+        {value == null ? "—" : value.toFixed(digits)}
+        {unit && value != null && (
+          <span className="ml-1 text-[10px] font-medium text-muted-foreground">{unit}</span>
+        )}
       </p>
     </div>
   );

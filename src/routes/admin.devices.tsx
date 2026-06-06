@@ -22,6 +22,7 @@ import {
 import { toast } from "sonner";
 import {
   insforge,
+  type AppRole,
   type Device,
   type Farm,
   type Pond,
@@ -99,7 +100,57 @@ type DeviceRow = Device &
     pondName?: string | null;
     district?: string | null;
     calStatus?: "ok" | "due" | "overdue" | "unknown";
+    latestCommand?: DeviceCommandRow | null;
+    hasPendingCommand?: boolean;
   };
+
+type DeviceCommandRow = {
+  id: string;
+  device_id: string;
+  command_type: string;
+  status: string;
+  error_message?: string | null;
+  created_at?: string | null;
+  queued_at?: string | null;
+  updated_at?: string | null;
+};
+
+type UserRoleRow = { id: string; user_id: string; role: AppRole };
+type AdminCommandType = "maintenance_due" | "deactivate";
+
+const PENDING_COMMAND_STATUSES = new Set(["queued", "sent", "acknowledged"]);
+
+function dbErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+}
+
+function assertDbOk(result: { error?: unknown }, fallback: string) {
+  if (result.error) throw new Error(dbErrorMessage(result.error, fallback));
+}
+
+function isMissingDeviceCommandBackend(error: unknown) {
+  const message = dbErrorMessage(error, "").toLowerCase();
+  return (
+    message.includes("device_commands") ||
+    message.includes("enqueue_device_command") ||
+    message.includes("schema cache")
+  );
+}
+
+function commandLabel(type: string) {
+  const labels: Record<string, string> = {
+    diagnostics: "Diagnostics",
+    restart: "Restart",
+    config_update: "Configuration update",
+    maintenance_due: "Maintenance check",
+    deactivate: "Deactivate",
+  };
+  return labels[type] ?? type.replace(/_/g, " ");
+}
 
 type FilterState = {
   q: string;
@@ -143,7 +194,7 @@ function AdminDevices() {
     queryKey: ["admin-devices-all"],
     refetchInterval: 30_000,
     queryFn: async () => {
-      const [devices, farms, ponds, profiles, alerts] = await Promise.all([
+      const [devices, farms, ponds, profiles, alerts, roles, commands] = await Promise.all([
         insforge.database.from("devices").select("*").order("serial"),
         insforge.database.from("farms").select("*"),
         insforge.database.from("ponds").select("*"),
@@ -153,25 +204,39 @@ function AdminDevices() {
           .select("*")
           .order("detected_at", { ascending: false })
           .limit(200),
-      ]);
-      let maintenance: any[] = [];
-      try {
-        const m = await insforge.database
-          .from("maintenance_logs")
+        insforge.database.from("user_roles").select("*"),
+        insforge.database
+          .from("device_commands")
           .select("*")
-          .order("visit_at", { ascending: false })
-          .limit(500);
-        maintenance = m.data ?? [];
-      } catch {
-        maintenance = [];
+          .order("created_at", { ascending: false })
+          .limit(500),
+      ]);
+      assertDbOk(devices, "Failed to load devices");
+      assertDbOk(farms, "Failed to load farms");
+      assertDbOk(ponds, "Failed to load ponds");
+      assertDbOk(profiles, "Failed to load profiles");
+      assertDbOk(alerts, "Failed to load alerts");
+      assertDbOk(roles, "Failed to load user roles");
+      if (commands.error && !isMissingDeviceCommandBackend(commands.error)) {
+        assertDbOk(commands, "Failed to load device commands");
       }
+
+      const maintenanceLogs = await insforge.database
+        .from("maintenance_logs")
+        .select("*")
+        .order("performed_at", { ascending: false })
+        .limit(500);
+      assertDbOk(maintenanceLogs, "Failed to load maintenance logs");
+
       return {
         devices: (devices.data ?? []) as DeviceRow[],
         farms: (farms.data ?? []) as Farm[],
         ponds: (ponds.data ?? []) as Pond[],
         profiles: (profiles.data ?? []) as Profile[],
         alerts: (alerts.data ?? []) as Alert[],
-        maintenance,
+        roles: (roles.data ?? []) as UserRoleRow[],
+        maintenance: maintenanceLogs.data ?? [],
+        commands: commands.error ? [] : ((commands.data ?? []) as DeviceCommandRow[]),
       };
     },
   });
@@ -181,12 +246,24 @@ function AdminDevices() {
   const ponds = useMemo(() => data?.ponds ?? [], [data?.ponds]);
   const profiles = useMemo(() => data?.profiles ?? [], [data?.profiles]);
   const alerts = useMemo(() => data?.alerts ?? [], [data?.alerts]);
+  const roles = useMemo(() => data?.roles ?? [], [data?.roles]);
   const maintenance = useMemo(() => data?.maintenance ?? [], [data?.maintenance]);
+  const commands = useMemo(() => data?.commands ?? [], [data?.commands]);
 
-  const technicians = useMemo(
-    () => profiles.filter((p) => (p as any).role === "technician" || (p as any).role === "admin"),
-    [profiles],
-  );
+  const technicians = useMemo(() => {
+    const technicianIds = new Set(
+      roles.filter((r) => r.role === "technician" || r.role === "admin").map((r) => r.user_id),
+    );
+    return profiles.filter((p) => technicianIds.has(p.id));
+  }, [profiles, roles]);
+
+  const latestCommandByDevice = useMemo(() => {
+    const latest = new Map<string, DeviceCommandRow>();
+    commands.forEach((command) => {
+      if (!latest.has(command.device_id)) latest.set(command.device_id, command);
+    });
+    return latest;
+  }, [commands]);
 
   // === Enrichment ===
   type Enriched = DeviceRow & {
@@ -195,6 +272,8 @@ function AdminDevices() {
     pondName: string | null;
     district: string | null;
     calStatus: "ok" | "due" | "overdue" | "unknown";
+    latestCommand: DeviceCommandRow | null;
+    hasPendingCommand: boolean;
   };
 
   const enriched: Enriched[] = useMemo(() => {
@@ -223,9 +302,13 @@ function AdminDevices() {
         pondName: pond?.name ?? null,
         district: farm?.district ?? null,
         calStatus,
+        latestCommand: latestCommandByDevice.get(d.id) ?? null,
+        hasPendingCommand: PENDING_COMMAND_STATUSES.has(
+          latestCommandByDevice.get(d.id)?.status ?? "",
+        ),
       };
     });
-  }, [devices, farms, ponds, profiles]);
+  }, [devices, farms, ponds, profiles, latestCommandByDevice]);
 
   const districts = useMemo(
     () => Array.from(new Set(enriched.map((d) => d.district).filter(Boolean))).sort() as string[],
@@ -302,23 +385,93 @@ function AdminDevices() {
   // === Mutations ===
   const patchDevices = useMutation({
     mutationFn: async ({ ids, patch }: { ids: string[]; patch: Record<string, unknown> }) => {
-      await Promise.all(
+      const results = await Promise.all(
         ids.map((id) => insforge.database.from("devices").update(patch).eq("id", id)),
       );
+      results.forEach((result) => assertDbOk(result, "Device update failed"));
     },
     onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: ["admin-devices-all"] });
       toast.success(`${v.ids.length} device${v.ids.length === 1 ? "" : "s"} updated`);
     },
-    onError: (e: Error) => toast.error(e.message || "Update failed"),
+    onError: (e: Error) => {
+      qc.invalidateQueries({ queryKey: ["admin-devices-all"] });
+      toast.error(e.message || "Update failed");
+    },
+  });
+
+  const queueDeviceCommands = useMutation({
+    mutationFn: async ({
+      devices: targetDevices,
+      commandType,
+      payload,
+      afterQueuePatch,
+    }: {
+      devices: DeviceRow[];
+      commandType: AdminCommandType;
+      payload?: Record<string, unknown>;
+      afterQueuePatch?: Record<string, unknown>;
+    }) => {
+      if (targetDevices.length === 0) throw new Error("Select at least one device.");
+
+      const results = await Promise.all(
+        targetDevices.map((device) =>
+          insforge.database.rpc("enqueue_device_command", {
+            _device_id: device.id,
+            _command_type: commandType,
+            _payload: {
+              source: "admin_devices",
+              serial: device.serial,
+              ...payload,
+            },
+            _idempotency_key: crypto.randomUUID(),
+          }),
+        ),
+      );
+
+      results.forEach((result) => {
+        if (result.error) {
+          if (isMissingDeviceCommandBackend(result.error)) {
+            throw new Error("Device command backend has not been deployed yet.");
+          }
+          throw new Error(dbErrorMessage(result.error, "Could not queue device command"));
+        }
+      });
+
+      if (afterQueuePatch) {
+        const updates = await Promise.all(
+          targetDevices.map((device) =>
+            insforge.database.from("devices").update(afterQueuePatch).eq("id", device.id),
+          ),
+        );
+        updates.forEach((result) =>
+          assertDbOk(result, "Queued command but device status update failed"),
+        );
+      }
+
+      return { count: targetDevices.length, commandType };
+    },
+    onSuccess: ({ count, commandType }) => {
+      qc.invalidateQueries({ queryKey: ["admin-devices-all"] });
+      setSelected(new Set());
+      toast.success(
+        `${count} ${commandLabel(commandType).toLowerCase()} command${count === 1 ? "" : "s"} queued`,
+      );
+    },
+    onError: (e: Error) => {
+      qc.invalidateQueries({ queryKey: ["admin-devices-all"] });
+      toast.error(e.message || "Could not queue device command");
+    },
   });
 
   // === Bulk action handlers ===
   const bulkMarkMaintenance = () => {
     if (selectedDevices.length === 0) return;
-    patchDevices.mutate({
-      ids: selectedDevices.map((d) => d.id),
-      patch: { status: "maintenance_due" },
+    queueDeviceCommands.mutate({
+      devices: selectedDevices,
+      commandType: "maintenance_due",
+      payload: { reason: "admin_marked_maintenance_due" },
+      afterQueuePatch: { status: "maintenance_due" },
     });
   };
 
@@ -385,6 +538,9 @@ function AdminDevices() {
     ? maintenance.filter((m: any) => m.device_id === openDevice.id)
     : [];
   const openAlerts = openDevice ? alerts.filter((a) => a.device_id === openDevice.id) : [];
+  const openCommands = openDevice
+    ? commands.filter((command) => command.device_id === openDevice.id).slice(0, 10)
+    : [];
 
   return (
     <div className="mx-auto max-w-[1400px]">
@@ -502,8 +658,14 @@ function AdminDevices() {
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
           <span className="font-medium">{selectedDevices.length} selected</span>
           <div className="ml-auto flex flex-wrap items-center gap-1.5">
-            <Button size="sm" variant="outline" onClick={bulkMarkMaintenance}>
-              <Wrench className="mr-1.5 h-4 w-4" /> Mark maintenance due
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={bulkMarkMaintenance}
+              disabled={queueDeviceCommands.isPending}
+            >
+              <Wrench className="mr-1.5 h-4 w-4" />
+              {queueDeviceCommands.isPending ? "Queueing..." : "Queue maintenance"}
             </Button>
             <Button size="sm" variant="outline" onClick={bulkAssignTech}>
               <UserCog className="mr-1.5 h-4 w-4" /> Assign technician
@@ -514,8 +676,13 @@ function AdminDevices() {
             <Button size="sm" variant="outline" onClick={bulkFlag} className="text-amber-700">
               <Flag className="mr-1.5 h-4 w-4" /> Flag issue
             </Button>
-            <Button size="sm" variant="destructive" onClick={bulkDeactivate}>
-              <Power className="mr-1.5 h-4 w-4" /> Deactivate
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={bulkDeactivate}
+              disabled={queueDeviceCommands.isPending}
+            >
+              <Power className="mr-1.5 h-4 w-4" /> Queue deactivation
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
               Clear
@@ -598,6 +765,11 @@ function AdminDevices() {
                         <td className="px-3 py-3 font-medium">
                           {d.name ?? "—"}
                           {d.flagged && <Flag className="ml-1.5 inline h-3 w-3 text-amber-600" />}
+                          {d.hasPendingCommand && d.latestCommand && (
+                            <p className="mt-1 text-[11px] font-normal text-sky-700">
+                              {commandLabel(d.latestCommand.command_type)} pending
+                            </p>
+                          )}
                         </td>
                         <td className="px-3 py-3 font-mono text-xs text-muted-foreground">
                           {d.serial}
@@ -658,13 +830,16 @@ function AdminDevices() {
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() =>
-                                  patchDevices.mutate({
-                                    ids: [d.id],
-                                    patch: { status: "maintenance_due" },
+                                  queueDeviceCommands.mutate({
+                                    devices: [d],
+                                    commandType: "maintenance_due",
+                                    payload: { reason: "admin_marked_maintenance_due" },
+                                    afterQueuePatch: { status: "maintenance_due" },
                                   })
                                 }
+                                disabled={queueDeviceCommands.isPending}
                               >
-                                <Wrench className="mr-2 h-4 w-4" /> Mark maintenance due
+                                <Wrench className="mr-2 h-4 w-4" /> Queue maintenance
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() =>
@@ -692,8 +867,9 @@ function AdminDevices() {
                               <DropdownMenuItem
                                 className="text-rose-600 focus:text-rose-600"
                                 onClick={() => setConfirmDeactivate([d])}
+                                disabled={queueDeviceCommands.isPending}
                               >
-                                <Power className="mr-2 h-4 w-4" /> Deactivate
+                                <Power className="mr-2 h-4 w-4" /> Queue deactivation
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -735,6 +911,11 @@ function AdminDevices() {
                           Bat {d.battery_pct ?? "—"}% · Sig {d.signal_pct ?? "—"}% ·{" "}
                           {d.firmware_version ?? "—"}
                         </p>
+                        {d.hasPendingCommand && d.latestCommand && (
+                          <p className="mt-1 text-xs font-medium text-sky-700">
+                            {commandLabel(d.latestCommand.command_type)} pending
+                          </p>
+                        )}
                       </div>
                       <StatusBadge status={d.status} />
                     </button>
@@ -770,13 +951,16 @@ function AdminDevices() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
                         onClick={() =>
-                          patchDevices.mutate({
-                            ids: [openDevice.id],
-                            patch: { status: "maintenance_due" },
+                          queueDeviceCommands.mutate({
+                            devices: [openDevice],
+                            commandType: "maintenance_due",
+                            payload: { reason: "admin_marked_maintenance_due" },
+                            afterQueuePatch: { status: "maintenance_due" },
                           })
                         }
+                        disabled={queueDeviceCommands.isPending}
                       >
-                        <Wrench className="mr-2 h-4 w-4" /> Mark maintenance due
+                        <Wrench className="mr-2 h-4 w-4" /> Queue maintenance
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() =>
@@ -804,8 +988,9 @@ function AdminDevices() {
                       <DropdownMenuItem
                         className="text-rose-600 focus:text-rose-600"
                         onClick={() => setConfirmDeactivate([openDevice])}
+                        disabled={queueDeviceCommands.isPending}
                       >
-                        <Power className="mr-2 h-4 w-4" /> Deactivate
+                        <Power className="mr-2 h-4 w-4" /> Queue deactivation
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -869,6 +1054,25 @@ function AdminDevices() {
                     label="Warranty"
                     value={<WarrantyCell until={openDevice.warranty_until} />}
                   />
+                  <div className="rounded-lg border border-border/60 bg-surface p-3">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium">Recent commands</p>
+                      {openDevice.hasPendingCommand && (
+                        <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-sky-700">
+                          Pending
+                        </span>
+                      )}
+                    </div>
+                    {openCommands.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">No commands queued yet.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {openCommands.map((command) => (
+                          <CommandRow key={command.id} command={command} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="assignment" className="mt-4 space-y-2">
@@ -904,7 +1108,7 @@ function AdminDevices() {
                             {m.issue_type ?? m.issue ?? "Maintenance visit"}
                           </p>
                           <span className="text-xs text-muted-foreground">
-                            {m.visit_at ? new Date(m.visit_at).toLocaleString() : ""}
+                            {m.performed_at ? new Date(m.performed_at).toLocaleString() : ""}
                           </span>
                         </div>
                         {m.work_performed && (
@@ -956,12 +1160,12 @@ function AdminDevices() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Deactivate {confirmDeactivate?.length ?? 0} device
+              Queue deactivation for {confirmDeactivate?.length ?? 0} device
               {confirmDeactivate?.length === 1 ? "" : "s"}?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Deactivated devices stop reporting readings and trigger no alerts. The customer will
-              see them as offline. This action can be reversed by reassigning the device.
+              This creates a device command and marks the device offline after the command is
+              accepted. The hardware still needs to acknowledge the queued operation.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -969,18 +1173,18 @@ function AdminDevices() {
             <AlertDialogAction
               onClick={() => {
                 if (!confirmDeactivate) return;
-                patchDevices.mutate({
-                  ids: confirmDeactivate.map((d) => d.id),
-                  patch: { status: "offline" },
+                queueDeviceCommands.mutate({
+                  devices: confirmDeactivate,
+                  commandType: "deactivate",
+                  payload: { reason: "admin_deactivation" },
+                  afterQueuePatch: { status: "offline" },
                 });
-                setSelected(new Set());
                 setConfirmDeactivate(null);
-                if (openDevice && confirmDeactivate.some((d) => d.id === openDevice.id))
-                  setOpenDevice(null);
               }}
+              disabled={queueDeviceCommands.isPending}
               className="bg-rose-600 text-white hover:bg-rose-700"
             >
-              Deactivate
+              Queue deactivation
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1125,6 +1329,47 @@ function FilterSelect({
         ))}
       </SelectContent>
     </Select>
+  );
+}
+
+function CommandRow({ command }: { command: DeviceCommandRow }) {
+  const at = command.created_at ?? command.queued_at ?? command.updated_at;
+  const date = at ? new Date(at) : null;
+  const dateLabel = date && Number.isFinite(date.getTime()) ? date.toLocaleString() : "Queued";
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/50 bg-card px-3 py-2">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium">{commandLabel(command.command_type)}</p>
+        <p className="text-xs text-muted-foreground">{dateLabel}</p>
+        {command.error_message && (
+          <p className="mt-1 text-xs text-rose-600">{command.error_message}</p>
+        )}
+      </div>
+      <CommandStatus status={command.status} />
+    </div>
+  );
+}
+
+function CommandStatus({ status }: { status: string }) {
+  const cls =
+    status === "succeeded"
+      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700"
+      : status === "failed" || status === "expired" || status === "cancelled"
+        ? "border-rose-500/30 bg-rose-500/10 text-rose-700"
+        : PENDING_COMMAND_STATUSES.has(status)
+          ? "border-sky-500/30 bg-sky-500/10 text-sky-700"
+          : "border-border bg-muted text-muted-foreground";
+
+  return (
+    <span
+      className={cn(
+        "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider",
+        cls,
+      )}
+    >
+      {status}
+    </span>
   );
 }
 

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo, useEffect } from "react";
 import {
+  type LucideIcon,
   ShieldCheck,
   Cpu,
   Activity,
@@ -24,6 +25,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { insforge } from "@/lib/insforge";
+import { useAuth } from "@/lib/auth";
 import { PageHeader, StatusBadge } from "@/components/app/StatusBadge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -144,6 +146,86 @@ interface ChangeLogEntry {
   detail: string;
   user: string;
 }
+
+type AdminSettingsDocumentRow = {
+  key: string;
+  payload: unknown;
+};
+
+type AdminSettingsChangeLogRow = {
+  id: string;
+  section: string;
+  detail: string;
+  user_name: string | null;
+  created_at: string;
+};
+
+interface SettingsTabConfig {
+  value: string;
+  label: string;
+  description: string;
+  icon: LucideIcon;
+}
+
+const SETTINGS_TABS: SettingsTabConfig[] = [
+  {
+    value: "sensor_types",
+    label: "Sensor Types",
+    description: "Metrics, units, calibration cadence, and availability.",
+    icon: Cpu,
+  },
+  {
+    value: "default_safe_ranges",
+    label: "Safe Ranges",
+    description: "Default healthy water-quality bands for farm operations.",
+    icon: Activity,
+  },
+  {
+    value: "alert_thresholds",
+    label: "Alert Thresholds",
+    description: "Warning and critical boundaries for sensor alerts.",
+    icon: AlertTriangle,
+  },
+  {
+    value: "alert_templates",
+    label: "Alert Templates",
+    description: "Notification copy and recommended response actions.",
+    icon: Bell,
+  },
+  {
+    value: "device_packages",
+    label: "Device Packages",
+    description: "Hardware bundles, included sensors, and package status.",
+    icon: Package,
+  },
+  {
+    value: "user_roles",
+    label: "User Roles",
+    description: "Role descriptions, permissions, and access scopes.",
+    icon: Users,
+  },
+  {
+    value: "notification_channels",
+    label: "Notification Channels",
+    description: "SMS, email, push, and adapter delivery settings.",
+    icon: Volume2,
+  },
+  {
+    value: "report_templates",
+    label: "Report Templates",
+    description: "Report schedules, formats, and included parameters.",
+    icon: FileText,
+  },
+  {
+    value: "language_strings",
+    label: "Language Strings",
+    description: "Interface copy, translations, and localization groups.",
+    icon: Languages,
+  },
+];
+
+const SETTINGS_TAB_TRIGGER_CLASS =
+  "min-h-11 w-full justify-start gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 data-[state=active]:bg-primary/10 data-[state=active]:font-semibold data-[state=active]:text-primary data-[state=active]:shadow-sm";
 
 // ===== Initial Default Seed Data =====
 const DEFAULT_SENSOR_TYPES: SensorTypeConfig[] = [
@@ -289,6 +371,57 @@ const DEFAULT_USER_ROLES: UserRoleConfig[] = [
   },
 ];
 
+function normalizeUserRoles(value: unknown): UserRoleConfig[] {
+  if (!Array.isArray(value)) return DEFAULT_USER_ROLES;
+
+  const normalized = value
+    .map((item, index) => {
+      if (!item || typeof item !== "object") return null;
+      const role = item as Partial<UserRoleConfig>;
+      const fallback =
+        DEFAULT_USER_ROLES.find((defaultRole) => defaultRole.id === role.id) ??
+        DEFAULT_USER_ROLES[index] ??
+        DEFAULT_USER_ROLES[0];
+
+      return {
+        id: typeof role.id === "string" && role.id ? role.id : fallback.id,
+        role: typeof role.role === "string" && role.role ? role.role : fallback.role,
+        description: typeof role.description === "string" ? role.description : fallback.description,
+        permissions: Array.isArray(role.permissions)
+          ? role.permissions.filter(
+              (permission): permission is string => typeof permission === "string",
+            )
+          : fallback.permissions,
+      };
+    })
+    .filter((role): role is UserRoleConfig => Boolean(role));
+
+  return normalized.length > 0 ? normalized : DEFAULT_USER_ROLES;
+}
+
+function dbErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error) return error.message || fallback;
+  if (typeof error === "object" && error && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+}
+
+function isMissingAdminSettingsTable(error: unknown) {
+  const message = dbErrorMessage(error, "").toLowerCase();
+  return (
+    message.includes("admin_settings_documents") ||
+    message.includes("admin_settings_change_logs") ||
+    (message.includes("relation") && message.includes("does not exist")) ||
+    message.includes("schema cache")
+  );
+}
+
+function createClientId(prefix: string) {
+  return `${prefix}-${crypto.randomUUID()}`;
+}
+
 const DEFAULT_NOTIFICATION_CHANNELS: NotificationChannelConfig[] = [
   {
     id: "chan-1",
@@ -390,32 +523,6 @@ const DEFAULT_LANGUAGE_STRINGS: LanguageStringConfig[] = [
   },
 ];
 
-const DEFAULT_CHANGE_LOGS: ChangeLogEntry[] = [
-  {
-    id: "log-1",
-    timestamp: new Date(Date.now() - 3600 * 24 * 1000 * 2).toISOString(),
-    section: "Alert Templates",
-    detail: "Modified DO Critical Low English notification text",
-    user: "Admin (System)",
-  },
-  {
-    id: "log-2",
-    timestamp: new Date(Date.now() - 3600 * 24 * 1000).toISOString(),
-    section: "Notification Channels",
-    detail: "Disabled Email notifications",
-    user: "Admin (System)",
-  },
-  {
-    id: "log-3",
-    timestamp: new Date(Date.now() - 3600 * 12 * 1000).toISOString(),
-    section: "Device Packages",
-    detail: "Updated price of Starter Lite Kit to BDT 15,000",
-    user: "Admin (System)",
-  },
-];
-
-const LOCAL_STORAGE_PREFIX = "al_settings_";
-
 const PARAMETER_NAMES: Record<string, string> = {
   do_mg_l: "Dissolved Oxygen",
   ph: "pH",
@@ -434,8 +541,72 @@ const PARAMETER_UNITS: Record<string, string> = {
   ammonia_mg_l: "mg/L",
 };
 
+const DEFAULT_THRESHOLDS: ThresholdConfig[] = [
+  {
+    parameter: "do_mg_l",
+    scope: "global",
+    safe_min: 5.0,
+    safe_max: 8.0,
+    warn_min: 4.0,
+    warn_max: 9.0,
+    crit_min: 3.0,
+    crit_max: 12.0,
+  },
+  {
+    parameter: "ph",
+    scope: "global",
+    safe_min: 7.0,
+    safe_max: 8.5,
+    warn_min: 6.5,
+    warn_max: 9.0,
+    crit_min: 6.0,
+    crit_max: 9.5,
+  },
+  {
+    parameter: "temp_c",
+    scope: "global",
+    safe_min: 26.0,
+    safe_max: 30.0,
+    warn_min: 24.0,
+    warn_max: 32.0,
+    crit_min: 22.0,
+    crit_max: 35.0,
+  },
+  {
+    parameter: "turbidity_ntu",
+    scope: "global",
+    safe_min: 0.0,
+    safe_max: 15.0,
+    warn_min: 0.0,
+    warn_max: 25.0,
+    crit_min: 0.0,
+    crit_max: 40.0,
+  },
+  {
+    parameter: "salinity_ppt",
+    scope: "global",
+    safe_min: 10.0,
+    safe_max: 25.0,
+    warn_min: 5.0,
+    warn_max: 30.0,
+    crit_min: 0.0,
+    crit_max: 40.0,
+  },
+  {
+    parameter: "ammonia_mg_l",
+    scope: "global",
+    safe_min: 0.0,
+    safe_max: 0.5,
+    warn_min: 0.0,
+    warn_max: 1.0,
+    crit_min: 0.0,
+    crit_max: 2.0,
+  },
+];
+
 function AdminSettings() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<string>("sensor_types");
 
   // ===== database Fetch & Mutation for Global Thresholds =====
@@ -448,6 +619,34 @@ function AdminSettings() {
         return [] as ThresholdConfig[];
       }
       return (r.data ?? []) as ThresholdConfig[];
+    },
+  });
+
+  const settingsDocumentsQ = useQuery({
+    queryKey: ["admin-settings", "documents"],
+    queryFn: async () => {
+      const r = await insforge.database.from("admin_settings_documents").select("*");
+      if (r.error) {
+        if (isMissingAdminSettingsTable(r.error)) return [] as AdminSettingsDocumentRow[];
+        throw r.error;
+      }
+      return (r.data ?? []) as AdminSettingsDocumentRow[];
+    },
+  });
+
+  const changeLogsQ = useQuery({
+    queryKey: ["admin-settings", "change-logs"],
+    queryFn: async () => {
+      const r = await insforge.database
+        .from("admin_settings_change_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (r.error) {
+        if (isMissingAdminSettingsTable(r.error)) return [] as AdminSettingsChangeLogRow[];
+        throw r.error;
+      }
+      return (r.data ?? []) as AdminSettingsChangeLogRow[];
     },
   });
 
@@ -495,21 +694,11 @@ function AdminSettings() {
     },
     onError: (err: any) => {
       console.error("Failed to write to DB:", err);
-      // Fallback: save to LocalState and LocalStorage
-      if (unsavedThresholds) {
-        localStorage.setItem(
-          LOCAL_STORAGE_PREFIX + "thresholds",
-          JSON.stringify(unsavedThresholds),
-        );
-        setThresholds(unsavedThresholds);
-        addChangeLog("Thresholds", "Updated global thresholds (Saved locally)");
-        setUnsavedThresholds(null);
-        toast.warning("Database update failed. Saved configurations locally.");
-      }
+      toast.error(dbErrorMessage(err, "Database update failed. Settings were not saved."));
     },
   });
 
-  // ===== Local states synced with LocalStorage =====
+  // ===== Settings state synced from InsForge =====
   const [sensorTypes, setSensorTypes] = useState<SensorTypeConfig[]>([]);
   const [thresholds, setThresholds] = useState<ThresholdConfig[]>([]);
   const [alertTemplates, setAlertTemplates] = useState<AlertTemplateConfig[]>([]);
@@ -542,8 +731,6 @@ function AdminSettings() {
 
   // Dialog configurations
   const [showThresholdConfirm, setShowThresholdConfirm] = useState(false);
-  const [pendingConfirmAction, setPendingConfirmAction] = useState<"safe" | "alert" | null>(null);
-
   // Search parameters
   const [alertSearch, setAlertSearch] = useState("");
   const [langSearch, setLangSearch] = useState("");
@@ -588,132 +775,168 @@ function AdminSettings() {
     category: "Common",
   });
 
-  // ===== Loading logic =====
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+  const saveSettingsDocument = async <T,>(key: string, payload: T) => {
+    if (!user?.id) throw new Error("Please sign in again before saving settings.");
+    const result = await insforge.database
+      .from("admin_settings_documents")
+      .upsert({
+        key,
+        payload,
+        updated_by: user.id,
+      })
+      .select();
 
-    // Load simple local items
-    const getLocal = <T,>(key: string, fallback: T): T => {
-      const stored = localStorage.getItem(LOCAL_STORAGE_PREFIX + key);
-      if (stored) {
-        try {
-          return JSON.parse(stored) as T;
-        } catch {
-          return fallback;
+    if (result.error) {
+      if (isMissingAdminSettingsTable(result.error)) {
+        throw new Error("Admin settings storage has not been deployed yet.");
+      }
+      throw new Error(dbErrorMessage(result.error, "Could not save settings"));
+    }
+  };
+
+  const changeLogMutation = useMutation({
+    mutationFn: async ({
+      section,
+      detail,
+      userName,
+    }: {
+      section: string;
+      detail: string;
+      userName: string;
+    }) => {
+      const result = await insforge.database.from("admin_settings_change_logs").insert([
+        {
+          section,
+          detail,
+          user_id: user?.id ?? null,
+          user_name: userName,
+        },
+      ]);
+      if (result.error) {
+        if (isMissingAdminSettingsTable(result.error)) {
+          throw new Error("Admin settings change log has not been deployed yet.");
+        }
+        throw new Error(dbErrorMessage(result.error, "Could not save change log"));
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-settings", "change-logs"] });
+    },
+    onError: (error) => {
+      toast.warning(dbErrorMessage(error, "Change log entry was not saved."));
+    },
+  });
+
+  const persistSetting = async <T,>({
+    key,
+    payload,
+    apply,
+    section,
+    detail,
+    success,
+  }: {
+    key: string;
+    payload: T;
+    apply: () => void;
+    section: string;
+    detail: string;
+    success: string;
+  }) => {
+    try {
+      await saveSettingsDocument(key, payload);
+      apply();
+      addChangeLog(section, detail);
+      toast.success(success);
+      queryClient.invalidateQueries({ queryKey: ["admin-settings", "documents"] });
+      return true;
+    } catch (error) {
+      toast.error(dbErrorMessage(error, "Settings were not saved."));
+      return false;
+    }
+  };
+
+  const clearChangeLogsMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      for (const id of ids) {
+        const result = await insforge.database
+          .from("admin_settings_change_logs")
+          .delete()
+          .eq("id", id);
+        if (result.error) {
+          if (isMissingAdminSettingsTable(result.error)) {
+            throw new Error("Admin settings change log has not been deployed yet.");
+          }
+          throw new Error(dbErrorMessage(result.error, "Could not clear change logs"));
         }
       }
-      return fallback;
+    },
+    onSuccess: () => {
+      setChangeLogs([]);
+      queryClient.invalidateQueries({ queryKey: ["admin-settings", "change-logs"] });
+      toast.success("Change logs cleared");
+    },
+    onError: (error) => toast.error(dbErrorMessage(error, "Could not clear change logs")),
+  });
+
+  // ===== Loading logic =====
+  useEffect(() => {
+    if (!settingsDocumentsQ.data) return;
+
+    const documents = new Map(
+      settingsDocumentsQ.data.map((row) => [row.key, row.payload] as const),
+    );
+    const getDocument = <T,>(key: string, fallback: T): T => {
+      const value = documents.get(key);
+      return value == null ? fallback : (value as T);
     };
 
-    setSensorTypes(getLocal("sensor_types", DEFAULT_SENSOR_TYPES));
-    setAlertTemplates(getLocal("alert_templates", DEFAULT_ALERT_TEMPLATES));
-    setDevicePackages(getLocal("device_packages", DEFAULT_DEVICE_PACKAGES));
-    setUserRoles(getLocal("user_roles", DEFAULT_USER_ROLES));
-    setNotificationChannels(getLocal("notification_channels", DEFAULT_NOTIFICATION_CHANNELS));
-    setReportTemplates(getLocal("report_templates", DEFAULT_REPORT_TEMPLATES));
-    setLanguageStrings(getLocal("language_strings", DEFAULT_LANGUAGE_STRINGS));
-    setChangeLogs(getLocal("change_logs", DEFAULT_CHANGE_LOGS));
-  }, []);
+    setSensorTypes(getDocument("sensor_types", DEFAULT_SENSOR_TYPES));
+    setAlertTemplates(getDocument("alert_templates", DEFAULT_ALERT_TEMPLATES));
+    setDevicePackages(getDocument("device_packages", DEFAULT_DEVICE_PACKAGES));
+    setUserRoles(normalizeUserRoles(getDocument("user_roles", DEFAULT_USER_ROLES)));
+    setNotificationChannels(getDocument("notification_channels", DEFAULT_NOTIFICATION_CHANNELS));
+    setReportTemplates(getDocument("report_templates", DEFAULT_REPORT_TEMPLATES));
+    setLanguageStrings(getDocument("language_strings", DEFAULT_LANGUAGE_STRINGS));
+  }, [settingsDocumentsQ.data]);
+
+  useEffect(() => {
+    if (!changeLogsQ.data) return;
+    setChangeLogs(
+      changeLogsQ.data.map((row) => ({
+        id: row.id,
+        timestamp: row.created_at,
+        section: row.section,
+        detail: row.detail,
+        user: row.user_name ?? "Admin",
+      })),
+    );
+  }, [changeLogsQ.data]);
 
   // Sync loaded DB thresholds to state
   useEffect(() => {
     if (thresholdsQ.data && thresholdsQ.data.length > 0) {
       setThresholds(thresholdsQ.data);
     } else {
-      // Seed fallback
-      const stored = localStorage.getItem(LOCAL_STORAGE_PREFIX + "thresholds");
-      if (stored) {
-        try {
-          setThresholds(JSON.parse(stored));
-        } catch {
-          // Ignore
-        }
-      } else {
-        const fallbacks: ThresholdConfig[] = [
-          {
-            parameter: "do_mg_l",
-            scope: "global",
-            safe_min: 5.0,
-            safe_max: 8.0,
-            warn_min: 4.0,
-            warn_max: 9.0,
-            crit_min: 3.0,
-            crit_max: 12.0,
-          },
-          {
-            parameter: "ph",
-            scope: "global",
-            safe_min: 7.0,
-            safe_max: 8.5,
-            warn_min: 6.5,
-            warn_max: 9.0,
-            crit_min: 6.0,
-            crit_max: 9.5,
-          },
-          {
-            parameter: "temp_c",
-            scope: "global",
-            safe_min: 26.0,
-            safe_max: 30.0,
-            warn_min: 24.0,
-            warn_max: 32.0,
-            crit_min: 22.0,
-            crit_max: 35.0,
-          },
-          {
-            parameter: "turbidity_ntu",
-            scope: "global",
-            safe_min: 0.0,
-            safe_max: 15.0,
-            warn_min: 0.0,
-            warn_max: 25.0,
-            crit_min: 0.0,
-            crit_max: 40.0,
-          },
-          {
-            parameter: "salinity_ppt",
-            scope: "global",
-            safe_min: 10.0,
-            safe_max: 25.0,
-            warn_min: 5.0,
-            warn_max: 30.0,
-            crit_min: 0.0,
-            crit_max: 40.0,
-          },
-          {
-            parameter: "ammonia_mg_l",
-            scope: "global",
-            safe_min: 0.0,
-            safe_max: 0.5,
-            warn_min: 0.0,
-            warn_max: 1.0,
-            crit_min: 0.0,
-            crit_max: 2.0,
-          },
-        ];
-        setThresholds(fallbacks);
-      }
+      setThresholds(DEFAULT_THRESHOLDS);
     }
   }, [thresholdsQ.data]);
 
   // ===== Helper function to append to Change Log =====
   const addChangeLog = (section: string, detail: string) => {
+    const userName = user?.email ?? "Admin";
     const newEntry: ChangeLogEntry = {
-      id: "log-" + Math.random().toString(36).substring(2, 9),
+      id: createClientId("log"),
       timestamp: new Date().toISOString(),
       section,
       detail,
-      user: "Admin (System)",
+      user: userName,
     };
-    const updated = [newEntry, ...changeLogs].slice(0, 50); // limit to 50
-    setChangeLogs(updated);
-    localStorage.setItem(LOCAL_STORAGE_PREFIX + "change_logs", JSON.stringify(updated));
+    setChangeLogs((current) => [newEntry, ...current].slice(0, 50));
+    changeLogMutation.mutate({ section, detail, userName });
   };
 
   const clearChangeLogs = () => {
-    setChangeLogs([]);
-    localStorage.removeItem(LOCAL_STORAGE_PREFIX + "change_logs");
-    toast.success("Change logs cleared");
+    clearChangeLogsMutation.mutate(changeLogs.map((log) => log.id));
   };
 
   // ===== Handlers: Sensor Types =====
@@ -730,13 +953,19 @@ function AdminSettings() {
     });
     setUnsavedSensorTypes(next);
   };
-  const saveSensorTypes = () => {
+  const saveSensorTypes = async () => {
     if (!unsavedSensorTypes) return;
-    setSensorTypes(unsavedSensorTypes);
-    localStorage.setItem(LOCAL_STORAGE_PREFIX + "sensor_types", JSON.stringify(unsavedSensorTypes));
-    addChangeLog("Sensor Types", "Updated calibration intervals and sensor active statuses");
-    setUnsavedSensorTypes(null);
-    toast.success("Sensor Types saved successfully!");
+    await persistSetting({
+      key: "sensor_types",
+      payload: unsavedSensorTypes,
+      apply: () => {
+        setSensorTypes(unsavedSensorTypes);
+        setUnsavedSensorTypes(null);
+      },
+      section: "Sensor Types",
+      detail: "Updated calibration intervals and sensor active statuses",
+      success: "Sensor types saved successfully!",
+    });
   };
 
   // ===== Handlers: Thresholds (Safe Ranges & Alert Thresholds) =====
@@ -754,7 +983,7 @@ function AdminSettings() {
     setUnsavedThresholds(next);
   };
   const triggerSaveThresholds = (type: "safe" | "alert") => {
-    setPendingConfirmAction(type);
+    void type;
     setShowThresholdConfirm(true);
   };
   const executeConfirmSaveThresholds = () => {
@@ -777,31 +1006,38 @@ function AdminSettings() {
     });
     setUnsavedAlertTemplates(next);
   };
-  const handleDeleteAlertTemplate = (id: string) => {
+  const handleDeleteAlertTemplate = async (id: string) => {
     const list = unsavedAlertTemplates || alertTemplates;
     const next = list.filter((item) => item.id !== id);
     if (unsavedAlertTemplates) {
       setUnsavedAlertTemplates(next);
     } else {
-      setAlertTemplates(next);
-      localStorage.setItem(LOCAL_STORAGE_PREFIX + "alert_templates", JSON.stringify(next));
-      addChangeLog("Alert Templates", `Deleted template ${id}`);
-      toast.success("Alert template deleted.");
+      await persistSetting({
+        key: "alert_templates",
+        payload: next,
+        apply: () => setAlertTemplates(next),
+        section: "Alert Templates",
+        detail: `Deleted template ${id}`,
+        success: "Alert template deleted.",
+      });
     }
   };
-  const saveAlertTemplates = () => {
+  const saveAlertTemplates = async () => {
     if (!unsavedAlertTemplates) return;
-    setAlertTemplates(unsavedAlertTemplates);
-    localStorage.setItem(
-      LOCAL_STORAGE_PREFIX + "alert_templates",
-      JSON.stringify(unsavedAlertTemplates),
-    );
-    addChangeLog("Alert Templates", "Updated alert notification templates and recommended actions");
-    setUnsavedAlertTemplates(null);
-    toast.success("Alert templates saved successfully!");
+    await persistSetting({
+      key: "alert_templates",
+      payload: unsavedAlertTemplates,
+      apply: () => {
+        setAlertTemplates(unsavedAlertTemplates);
+        setUnsavedAlertTemplates(null);
+      },
+      section: "Alert Templates",
+      detail: "Updated alert notification templates and recommended actions",
+      success: "Alert templates saved successfully!",
+    });
   };
-  const handleCreateAlertTemplate = () => {
-    const newId = "tmpl-" + Math.random().toString(36).substring(2, 9);
+  const handleCreateAlertTemplate = async () => {
+    const newId = createClientId("tmpl");
     const added: AlertTemplateConfig = {
       id: newId,
       ...newAlertTemplate,
@@ -813,14 +1049,20 @@ function AdminSettings() {
     if (unsavedAlertTemplates) {
       setUnsavedAlertTemplates(list);
     } else {
-      setAlertTemplates(list);
-      localStorage.setItem(LOCAL_STORAGE_PREFIX + "alert_templates", JSON.stringify(list));
-      addChangeLog("Alert Templates", `Added new template: ${newAlertTemplate.type}`);
+      const saved = await persistSetting({
+        key: "alert_templates",
+        payload: list,
+        apply: () => setAlertTemplates(list),
+        section: "Alert Templates",
+        detail: `Added new template: ${newAlertTemplate.type}`,
+        success: "Alert template added successfully!",
+      });
+      if (!saved) return;
     }
 
     setIsAlertModalOpen(false);
     setNewAlertTemplate({ type: "", enMsg: "", bnMsg: "", severity: "warning", action: "" });
-    toast.success("Alert template added successfully!");
+    if (unsavedAlertTemplates) toast.success("Alert template added to draft.");
   };
 
   // ===== Handlers: Device Packages =====
@@ -837,7 +1079,7 @@ function AdminSettings() {
     });
     setUnsavedDevicePackages(next);
   };
-  const handlePackageSensorToggle = (id: string, sensor: string) => {
+  const handlePackageSensorToggle = async (id: string, sensor: string) => {
     const list = unsavedDevicePackages || devicePackages;
     const pkg = list.find((p) => p.id === id);
     if (!pkg) return;
@@ -856,36 +1098,48 @@ function AdminSettings() {
         }
         return item;
       });
-      setDevicePackages(next);
-      localStorage.setItem(LOCAL_STORAGE_PREFIX + "device_packages", JSON.stringify(next));
-      addChangeLog("Device Packages", `Modified sensors for package: ${pkg.name}`);
+      await persistSetting({
+        key: "device_packages",
+        payload: next,
+        apply: () => setDevicePackages(next),
+        section: "Device Packages",
+        detail: `Modified sensors for package: ${pkg.name}`,
+        success: "Package sensors updated.",
+      });
     }
   };
-  const handleDeletePackage = (id: string) => {
+  const handleDeletePackage = async (id: string) => {
     const list = unsavedDevicePackages || devicePackages;
     const next = list.filter((item) => item.id !== id);
     if (unsavedDevicePackages) {
       setUnsavedDevicePackages(next);
     } else {
-      setDevicePackages(next);
-      localStorage.setItem(LOCAL_STORAGE_PREFIX + "device_packages", JSON.stringify(next));
-      addChangeLog("Device Packages", `Deleted device package ${id}`);
-      toast.success("Device package deleted.");
+      await persistSetting({
+        key: "device_packages",
+        payload: next,
+        apply: () => setDevicePackages(next),
+        section: "Device Packages",
+        detail: `Deleted device package ${id}`,
+        success: "Device package deleted.",
+      });
     }
   };
-  const saveDevicePackages = () => {
+  const saveDevicePackages = async () => {
     if (!unsavedDevicePackages) return;
-    setDevicePackages(unsavedDevicePackages);
-    localStorage.setItem(
-      LOCAL_STORAGE_PREFIX + "device_packages",
-      JSON.stringify(unsavedDevicePackages),
-    );
-    addChangeLog("Device Packages", "Saved modifications to commercial hardware bundles");
-    setUnsavedDevicePackages(null);
-    toast.success("Device packages saved successfully!");
+    await persistSetting({
+      key: "device_packages",
+      payload: unsavedDevicePackages,
+      apply: () => {
+        setDevicePackages(unsavedDevicePackages);
+        setUnsavedDevicePackages(null);
+      },
+      section: "Device Packages",
+      detail: "Saved modifications to commercial hardware bundles",
+      success: "Device packages saved successfully!",
+    });
   };
-  const handleCreatePackage = () => {
-    const newId = "pkg-" + Math.random().toString(36).substring(2, 9);
+  const handleCreatePackage = async () => {
+    const newId = createClientId("pkg");
     const added: DevicePackageConfig = {
       id: newId,
       ...newPackage,
@@ -897,26 +1151,32 @@ function AdminSettings() {
     if (unsavedDevicePackages) {
       setUnsavedDevicePackages(list);
     } else {
-      setDevicePackages(list);
-      localStorage.setItem(LOCAL_STORAGE_PREFIX + "device_packages", JSON.stringify(list));
-      addChangeLog("Device Packages", `Created device package: ${newPackage.name}`);
+      const saved = await persistSetting({
+        key: "device_packages",
+        payload: list,
+        apply: () => setDevicePackages(list),
+        section: "Device Packages",
+        detail: `Created device package: ${newPackage.name}`,
+        success: "Device package created!",
+      });
+      if (!saved) return;
     }
 
     setIsPackageModalOpen(false);
     setNewPackage({ name: "", price: 0, description: "", sensors: [], status: "active" });
-    toast.success("Device package created!");
+    if (unsavedDevicePackages) toast.success("Device package added to draft.");
   };
 
   // ===== Handlers: User Roles =====
   const initUserRolesEdit = () => {
-    setUnsavedUserRoles(JSON.parse(JSON.stringify(userRoles)));
+    setUnsavedUserRoles(JSON.parse(JSON.stringify(normalizeUserRoles(userRoles))));
   };
-  const activeRoleData = useMemo(() => {
-    const list = unsavedUserRoles || userRoles;
-    return list.find((r) => r.id === selectedRoleId) || list[0];
+  const activeRoleData = useMemo<UserRoleConfig>(() => {
+    const list = normalizeUserRoles(unsavedUserRoles || userRoles);
+    return list.find((r) => r.id === selectedRoleId) || list[0] || DEFAULT_USER_ROLES[0];
   }, [unsavedUserRoles, userRoles, selectedRoleId]);
 
-  const handleRolePermissionToggle = (roleId: string, permission: string) => {
+  const handleRolePermissionToggle = async (roleId: string, permission: string) => {
     const list = unsavedUserRoles || userRoles;
     const roleObj = list.find((r) => r.id === roleId);
     if (!roleObj) return;
@@ -941,12 +1201,17 @@ function AdminSettings() {
         }
         return item;
       });
-      setUserRoles(next);
-      localStorage.setItem(LOCAL_STORAGE_PREFIX + "user_roles", JSON.stringify(next));
-      addChangeLog("User Roles", `Updated permissions for role: ${roleObj.role}`);
+      await persistSetting({
+        key: "user_roles",
+        payload: next,
+        apply: () => setUserRoles(next),
+        section: "User Roles",
+        detail: `Updated permissions for role: ${roleObj.role}`,
+        success: "Role permissions updated.",
+      });
     }
   };
-  const handleRoleDescriptionChange = (roleId: string, val: string) => {
+  const handleRoleDescriptionChange = async (roleId: string, val: string) => {
     const list = unsavedUserRoles || userRoles;
     if (unsavedUserRoles) {
       const next = unsavedUserRoles.map((item) => {
@@ -963,17 +1228,29 @@ function AdminSettings() {
         }
         return item;
       });
-      setUserRoles(next);
-      localStorage.setItem(LOCAL_STORAGE_PREFIX + "user_roles", JSON.stringify(next));
+      await persistSetting({
+        key: "user_roles",
+        payload: next,
+        apply: () => setUserRoles(next),
+        section: "User Roles",
+        detail: `Updated description for role: ${list.find((role) => role.id === roleId)?.role ?? roleId}`,
+        success: "Role description updated.",
+      });
     }
   };
-  const saveUserRoles = () => {
+  const saveUserRoles = async () => {
     if (!unsavedUserRoles) return;
-    setUserRoles(unsavedUserRoles);
-    localStorage.setItem(LOCAL_STORAGE_PREFIX + "user_roles", JSON.stringify(unsavedUserRoles));
-    addChangeLog("User Roles", "Saved system permission updates across user roles");
-    setUnsavedUserRoles(null);
-    toast.success("User roles configuration saved!");
+    await persistSetting({
+      key: "user_roles",
+      payload: normalizeUserRoles(unsavedUserRoles),
+      apply: () => {
+        setUserRoles(normalizeUserRoles(unsavedUserRoles));
+        setUnsavedUserRoles(null);
+      },
+      section: "User Roles",
+      detail: "Saved system permission updates across user roles",
+      success: "User roles configuration saved!",
+    });
   };
 
   // ===== Handlers: Notification Channels =====
@@ -990,28 +1267,22 @@ function AdminSettings() {
     });
     setUnsavedNotificationChannels(next);
   };
-  const saveNotificationChannels = () => {
+  const saveNotificationChannels = async () => {
     if (!unsavedNotificationChannels) return;
-    setNotificationChannels(unsavedNotificationChannels);
-    localStorage.setItem(
-      LOCAL_STORAGE_PREFIX + "notification_channels",
-      JSON.stringify(unsavedNotificationChannels),
-    );
-    addChangeLog(
-      "Notification Channels",
-      "Updated alert transmission settings and API credentials",
-    );
-    setUnsavedNotificationChannels(null);
-    toast.success("Notification channels updated!");
+    await persistSetting({
+      key: "notification_channels",
+      payload: unsavedNotificationChannels,
+      apply: () => {
+        setNotificationChannels(unsavedNotificationChannels);
+        setUnsavedNotificationChannels(null);
+      },
+      section: "Notification Channels",
+      detail: "Updated alert transmission settings and secret references",
+      success: "Notification channels updated!",
+    });
   };
   const handleTestChannel = (chanName: string) => {
-    const promise = () =>
-      new Promise((resolve) => setTimeout(() => resolve({ name: chanName }), 1200));
-    toast.promise(promise, {
-      loading: `Sending mock test ping to ${chanName}...`,
-      success: (data: any) => `${data.name} connection test: SUCCESS (Ping 44ms)`,
-      error: "Test failed",
-    });
+    toast.warning(`${chanName} testing needs a deployed notification test function.`);
   };
 
   // ===== Handlers: Report Templates =====
@@ -1028,31 +1299,38 @@ function AdminSettings() {
     });
     setUnsavedReportTemplates(next);
   };
-  const handleDeleteReport = (id: string) => {
+  const handleDeleteReport = async (id: string) => {
     const list = unsavedReportTemplates || reportTemplates;
     const next = list.filter((item) => item.id !== id);
     if (unsavedReportTemplates) {
       setUnsavedReportTemplates(next);
     } else {
-      setReportTemplates(next);
-      localStorage.setItem(LOCAL_STORAGE_PREFIX + "report_templates", JSON.stringify(next));
-      addChangeLog("Report Templates", `Deleted template ${id}`);
-      toast.success("Report template removed.");
+      await persistSetting({
+        key: "report_templates",
+        payload: next,
+        apply: () => setReportTemplates(next),
+        section: "Report Templates",
+        detail: `Deleted template ${id}`,
+        success: "Report template removed.",
+      });
     }
   };
-  const saveReportTemplates = () => {
+  const saveReportTemplates = async () => {
     if (!unsavedReportTemplates) return;
-    setReportTemplates(unsavedReportTemplates);
-    localStorage.setItem(
-      LOCAL_STORAGE_PREFIX + "report_templates",
-      JSON.stringify(unsavedReportTemplates),
-    );
-    addChangeLog("Report Templates", "Saved automated report generation settings");
-    setUnsavedReportTemplates(null);
-    toast.success("Report templates saved!");
+    await persistSetting({
+      key: "report_templates",
+      payload: unsavedReportTemplates,
+      apply: () => {
+        setReportTemplates(unsavedReportTemplates);
+        setUnsavedReportTemplates(null);
+      },
+      section: "Report Templates",
+      detail: "Saved automated report generation settings",
+      success: "Report templates saved!",
+    });
   };
-  const handleCreateReport = () => {
-    const newId = "rep-" + Math.random().toString(36).substring(2, 9);
+  const handleCreateReport = async () => {
+    const newId = createClientId("rep");
     const added: ReportTemplateConfig = {
       id: newId,
       ...newReport,
@@ -1064,14 +1342,20 @@ function AdminSettings() {
     if (unsavedReportTemplates) {
       setUnsavedReportTemplates(list);
     } else {
-      setReportTemplates(list);
-      localStorage.setItem(LOCAL_STORAGE_PREFIX + "report_templates", JSON.stringify(list));
-      addChangeLog("Report Templates", `Added report template: ${newReport.name}`);
+      const saved = await persistSetting({
+        key: "report_templates",
+        payload: list,
+        apply: () => setReportTemplates(list),
+        section: "Report Templates",
+        detail: `Added report template: ${newReport.name}`,
+        success: "Report template created!",
+      });
+      if (!saved) return;
     }
 
     setIsReportModalOpen(false);
     setNewReport({ name: "", schedule: "Weekly", format: "PDF", parameters: [], status: "active" });
-    toast.success("Report template created!");
+    if (unsavedReportTemplates) toast.success("Report template added to draft.");
   };
 
   // ===== Handlers: Language Strings =====
@@ -1088,31 +1372,38 @@ function AdminSettings() {
     });
     setUnsavedLanguageStrings(next);
   };
-  const handleDeleteLanguageString = (id: string) => {
+  const handleDeleteLanguageString = async (id: string) => {
     const list = unsavedLanguageStrings || languageStrings;
     const next = list.filter((item) => item.id !== id);
     if (unsavedLanguageStrings) {
       setUnsavedLanguageStrings(next);
     } else {
-      setLanguageStrings(next);
-      localStorage.setItem(LOCAL_STORAGE_PREFIX + "language_strings", JSON.stringify(next));
-      addChangeLog("Language Strings", `Deleted localization key ${id}`);
-      toast.success("Language key deleted.");
+      await persistSetting({
+        key: "language_strings",
+        payload: next,
+        apply: () => setLanguageStrings(next),
+        section: "Language Strings",
+        detail: `Deleted localization key ${id}`,
+        success: "Language key deleted.",
+      });
     }
   };
-  const saveLanguageStrings = () => {
+  const saveLanguageStrings = async () => {
     if (!unsavedLanguageStrings) return;
-    setLanguageStrings(unsavedLanguageStrings);
-    localStorage.setItem(
-      LOCAL_STORAGE_PREFIX + "language_strings",
-      JSON.stringify(unsavedLanguageStrings),
-    );
-    addChangeLog("Language Strings", "Updated translation localization keys");
-    setUnsavedLanguageStrings(null);
-    toast.success("Translations saved successfully!");
+    await persistSetting({
+      key: "language_strings",
+      payload: unsavedLanguageStrings,
+      apply: () => {
+        setLanguageStrings(unsavedLanguageStrings);
+        setUnsavedLanguageStrings(null);
+      },
+      section: "Language Strings",
+      detail: "Updated translation localization keys",
+      success: "Translations saved successfully!",
+    });
   };
-  const handleCreateLanguageString = () => {
-    const newId = "lang-" + Math.random().toString(36).substring(2, 9);
+  const handleCreateLanguageString = async () => {
+    const newId = createClientId("lang");
     const added: LanguageStringConfig = {
       id: newId,
       ...newLanguageString,
@@ -1124,14 +1415,20 @@ function AdminSettings() {
     if (unsavedLanguageStrings) {
       setUnsavedLanguageStrings(list);
     } else {
-      setLanguageStrings(list);
-      localStorage.setItem(LOCAL_STORAGE_PREFIX + "language_strings", JSON.stringify(list));
-      addChangeLog("Language Strings", `Added localization key: ${newLanguageString.key}`);
+      const saved = await persistSetting({
+        key: "language_strings",
+        payload: list,
+        apply: () => setLanguageStrings(list),
+        section: "Language Strings",
+        detail: `Added localization key: ${newLanguageString.key}`,
+        success: "Localization key added!",
+      });
+      if (!saved) return;
     }
 
     setIsLanguageModalOpen(false);
     setNewLanguageString({ key: "", en: "", bn: "", category: "Common" });
-    toast.success("Localization key added!");
+    if (unsavedLanguageStrings) toast.success("Localization key added to draft.");
   };
 
   // Expand categories for select input
@@ -1163,6 +1460,11 @@ function AdminSettings() {
       );
     });
   }, [unsavedAlertTemplates, alertTemplates, alertSearch]);
+
+  const sensorOptions = useMemo(() => {
+    const list = unsavedSensorTypes || sensorTypes;
+    return list.length > 0 ? list : DEFAULT_SENSOR_TYPES;
+  }, [sensorTypes, unsavedSensorTypes]);
 
   // ===== Dynamic Dirty-state evaluations per tab =====
   const isSensorTypesDirty = useMemo(() => {
@@ -1201,6 +1503,8 @@ function AdminSettings() {
     return unsavedLanguageStrings !== null;
   }, [unsavedLanguageStrings]);
 
+  const activeTabMeta = SETTINGS_TABS.find((tab) => tab.value === activeTab) ?? SETTINGS_TABS[0]!;
+
   return (
     <div className="mx-auto w-full max-w-7xl">
       <PageHeader
@@ -1214,79 +1518,50 @@ function AdminSettings() {
           <Tabs
             value={activeTab}
             onValueChange={setActiveTab}
-            className="flex flex-col md:flex-row gap-6"
+            className="flex flex-col gap-4 md:flex-row md:gap-6"
           >
-            {/* Desktop Settings Menu Sidebar / Mobile Horizontal Scroller */}
-            <TabsList className="flex md:flex-col items-start justify-start md:h-auto md:w-56 bg-transparent p-0 gap-1.5 overflow-x-auto md:overflow-x-visible w-full pb-2 border-b border-border/40 md:border-b-0">
-              <TabsTrigger
-                value="sensor_types"
-                className="w-auto md:w-full justify-start py-2 px-3 text-left data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold hover:bg-muted/60"
-              >
-                <Cpu className="mr-2 h-4 w-4 shrink-0" />
-                Sensor Types
-              </TabsTrigger>
-              <TabsTrigger
-                value="default_safe_ranges"
-                className="w-auto md:w-full justify-start py-2 px-3 text-left data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold hover:bg-muted/60"
-              >
-                <Activity className="mr-2 h-4 w-4 shrink-0" />
-                Safe Ranges
-              </TabsTrigger>
-              <TabsTrigger
-                value="alert_thresholds"
-                className="w-auto md:w-full justify-start py-2 px-3 text-left data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold hover:bg-muted/60"
-              >
-                <AlertTriangle className="mr-2 h-4 w-4 shrink-0" />
-                Alert Thresholds
-              </TabsTrigger>
-              <TabsTrigger
-                value="alert_templates"
-                className="w-auto md:w-full justify-start py-2 px-3 text-left data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold hover:bg-muted/60"
-              >
-                <Bell className="mr-2 h-4 w-4 shrink-0" />
-                Alert Templates
-              </TabsTrigger>
-              <TabsTrigger
-                value="device_packages"
-                className="w-auto md:w-full justify-start py-2 px-3 text-left data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold hover:bg-muted/60"
-              >
-                <Package className="mr-2 h-4 w-4 shrink-0" />
-                Device Packages
-              </TabsTrigger>
-              <TabsTrigger
-                value="user_roles"
-                className="w-auto md:w-full justify-start py-2 px-3 text-left data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold hover:bg-muted/60"
-              >
-                <Users className="mr-2 h-4 w-4 shrink-0" />
-                User Roles
-              </TabsTrigger>
-              <TabsTrigger
-                value="notification_channels"
-                className="w-auto md:w-full justify-start py-2 px-3 text-left data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold hover:bg-muted/60"
-              >
-                <Volume2 className="mr-2 h-4 w-4 shrink-0" />
-                Notification Channels
-              </TabsTrigger>
-              <TabsTrigger
-                value="report_templates"
-                className="w-auto md:w-full justify-start py-2 px-3 text-left data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold hover:bg-muted/60"
-              >
-                <FileText className="mr-2 h-4 w-4 shrink-0" />
-                Report Templates
-              </TabsTrigger>
-              <TabsTrigger
-                value="language_strings"
-                className="w-auto md:w-full justify-start py-2 px-3 text-left data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-semibold hover:bg-muted/60"
-              >
-                <Languages className="mr-2 h-4 w-4 shrink-0" />
-                Language Strings
-              </TabsTrigger>
+            <div className="rounded-2xl border border-border/70 bg-card p-3 shadow-soft md:hidden">
+              <Label className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                Settings section
+              </Label>
+              <Select value={activeTab} onValueChange={setActiveTab}>
+                <SelectTrigger className="h-12 rounded-xl bg-background text-sm font-semibold">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SETTINGS_TABS.map((tab) => (
+                    <SelectItem key={tab.value} value={tab.value}>
+                      {tab.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                {activeTabMeta.description}
+              </p>
+            </div>
+
+            <TabsList className="hidden h-auto w-56 shrink-0 flex-col items-stretch justify-start gap-1.5 rounded-2xl border border-border/70 bg-card p-2 shadow-soft md:sticky md:top-20 md:flex">
+              {SETTINGS_TABS.map((tab) => {
+                const Icon = tab.icon;
+
+                return (
+                  <TabsTrigger
+                    key={tab.value}
+                    value={tab.value}
+                    className={SETTINGS_TAB_TRIGGER_CLASS}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{tab.label}</span>
+                  </TabsTrigger>
+                );
+              })}
             </TabsList>
 
-            <div className="flex-1 min-w-0 bg-card rounded-2xl border border-border/70 p-5 shadow-soft">
+            <div className="min-w-0 flex-1 rounded-2xl border border-border/70 bg-card p-4 shadow-soft sm:p-5">
               {/* 1. TAB: SENSOR TYPES */}
               <TabsContent value="sensor_types" className="mt-0 space-y-4">
-                <div className="flex items-center justify-between border-b border-border/50 pb-3">
+                <div className="flex flex-col gap-3 border-b border-border/50 pb-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="font-display text-lg font-bold text-foreground">
                       Sensor Specifications
@@ -1300,7 +1575,7 @@ function AdminSettings() {
                       Edit Configuration
                     </Button>
                   ) : (
-                    <div className="flex gap-2">
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                       <Button variant="ghost" size="sm" onClick={() => setUnsavedSensorTypes(null)}>
                         Cancel
                       </Button>
@@ -1311,8 +1586,76 @@ function AdminSettings() {
                   )}
                 </div>
 
-                <div className="overflow-x-auto rounded-lg border border-border/50">
-                  <table className="w-full text-left text-sm">
+                <div className="space-y-3 md:hidden">
+                  {(unsavedSensorTypes || sensorTypes).map((item) => (
+                    <div
+                      key={item.key}
+                      className="rounded-xl border border-border/60 bg-background p-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-foreground">{item.name}</p>
+                          <p className="break-all font-mono text-xs text-muted-foreground">
+                            {item.key}
+                          </p>
+                        </div>
+                        {isSensorTypesDirty ? (
+                          <Select
+                            value={item.status}
+                            onValueChange={(val) => handleSensorTypeChange(item.key, "status", val)}
+                          >
+                            <SelectTrigger className="h-8 w-28 shrink-0 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="active">Active</SelectItem>
+                              <SelectItem value="inactive">Inactive</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <StatusBadge status={item.status} />
+                        )}
+                      </div>
+                      <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border/50 pt-3 text-sm">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            Unit
+                          </p>
+                          <p className="mt-1 font-mono text-xs text-foreground">{item.unit}</p>
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            Calibration
+                          </p>
+                          {isSensorTypesDirty ? (
+                            <div className="mt-1 flex items-center gap-2">
+                              <Input
+                                type="number"
+                                value={item.calInterval}
+                                onChange={(e) =>
+                                  handleSensorTypeChange(
+                                    item.key,
+                                    "calInterval",
+                                    parseInt(e.target.value) || 0,
+                                  )
+                                }
+                                className="h-8 w-20 px-2 py-1 text-center text-xs"
+                              />
+                              <span className="text-xs text-muted-foreground">days</span>
+                            </div>
+                          ) : (
+                            <p className="mt-1 text-sm font-medium text-foreground">
+                              {item.calInterval} days
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="hidden overflow-x-auto rounded-lg border border-border/50 md:block">
+                  <table className="w-full min-w-[720px] text-left text-sm">
                     <thead className="bg-muted/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       <tr>
                         <th className="px-4 py-3">Metric Key</th>
@@ -1379,7 +1722,7 @@ function AdminSettings() {
 
               {/* 2. TAB: DEFAULT SAFE RANGES */}
               <TabsContent value="default_safe_ranges" className="mt-0 space-y-4">
-                <div className="flex items-center justify-between border-b border-border/50 pb-3">
+                <div className="flex flex-col gap-3 border-b border-border/50 pb-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="font-display text-lg font-bold text-foreground">
                       Default Target Safe Ranges
@@ -1393,7 +1736,7 @@ function AdminSettings() {
                       Edit Safe Ranges
                     </Button>
                   ) : (
-                    <div className="flex gap-2">
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                       <Button variant="ghost" size="sm" onClick={() => setUnsavedThresholds(null)}>
                         Cancel
                       </Button>
@@ -1408,8 +1751,80 @@ function AdminSettings() {
                   )}
                 </div>
 
-                <div className="overflow-x-auto rounded-lg border border-border/50">
-                  <table className="w-full text-left text-sm">
+                <div className="space-y-3 md:hidden">
+                  {(unsavedThresholds || thresholds).map((item) => (
+                    <div
+                      key={item.parameter}
+                      className="rounded-xl border border-border/60 bg-background p-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-foreground">
+                            {PARAMETER_NAMES[item.parameter] || item.parameter}
+                          </p>
+                          <p className="font-mono text-xs text-muted-foreground">
+                            {PARAMETER_UNITS[item.parameter] || "No unit"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border/50 pt-3">
+                        <div>
+                          <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                            Safe min
+                          </Label>
+                          {isSafeRangesDirty ? (
+                            <Input
+                              type="number"
+                              step="any"
+                              value={item.safe_min ?? ""}
+                              placeholder="No limit"
+                              onChange={(e) =>
+                                handleThresholdChange(
+                                  item.parameter,
+                                  "safe_min",
+                                  e.target.value === "" ? null : parseFloat(e.target.value),
+                                )
+                              }
+                              className="mt-1 h-9 text-sm"
+                            />
+                          ) : (
+                            <p className="mt-1 text-sm font-medium text-foreground">
+                              {item.safe_min ?? "No limit"}
+                            </p>
+                          )}
+                        </div>
+                        <div>
+                          <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                            Safe max
+                          </Label>
+                          {isSafeRangesDirty ? (
+                            <Input
+                              type="number"
+                              step="any"
+                              value={item.safe_max ?? ""}
+                              placeholder="No limit"
+                              onChange={(e) =>
+                                handleThresholdChange(
+                                  item.parameter,
+                                  "safe_max",
+                                  e.target.value === "" ? null : parseFloat(e.target.value),
+                                )
+                              }
+                              className="mt-1 h-9 text-sm"
+                            />
+                          ) : (
+                            <p className="mt-1 text-sm font-medium text-foreground">
+                              {item.safe_max ?? "No limit"}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="hidden overflow-x-auto rounded-lg border border-border/50 md:block">
+                  <table className="w-full min-w-[640px] text-left text-sm">
                     <thead className="bg-muted/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       <tr>
                         <th className="px-4 py-3">Parameter</th>
@@ -1470,7 +1885,7 @@ function AdminSettings() {
 
               {/* 3. TAB: ALERT THRESHOLDS */}
               <TabsContent value="alert_thresholds" className="mt-0 space-y-4">
-                <div className="flex items-center justify-between border-b border-border/50 pb-3">
+                <div className="flex flex-col gap-3 border-b border-border/50 pb-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="font-display text-lg font-bold text-foreground">
                       Default Alert Severity Boundaries
@@ -1484,7 +1899,7 @@ function AdminSettings() {
                       Edit Thresholds
                     </Button>
                   ) : (
-                    <div className="flex gap-2">
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                       <Button variant="ghost" size="sm" onClick={() => setUnsavedThresholds(null)}>
                         Cancel
                       </Button>
@@ -1499,8 +1914,72 @@ function AdminSettings() {
                   )}
                 </div>
 
-                <div className="overflow-x-auto rounded-lg border border-border/50">
-                  <table className="w-full text-left text-sm">
+                <div className="space-y-3 md:hidden">
+                  {(unsavedThresholds || thresholds).map((item) => (
+                    <div
+                      key={item.parameter}
+                      className="rounded-xl border border-border/60 bg-background p-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-foreground">
+                            {PARAMETER_NAMES[item.parameter] || item.parameter}
+                          </p>
+                          <p className="font-mono text-xs text-muted-foreground">
+                            {PARAMETER_UNITS[item.parameter] || "No unit"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border/50 pt-3">
+                        {[
+                          { label: "Crit min", field: "crit_min" as const, tone: "rose" },
+                          { label: "Warn min", field: "warn_min" as const, tone: "amber" },
+                          { label: "Warn max", field: "warn_max" as const, tone: "amber" },
+                          { label: "Crit max", field: "crit_max" as const, tone: "rose" },
+                        ].map((limit) => (
+                          <div key={limit.field}>
+                            <Label
+                              className={cn(
+                                "text-[11px] uppercase tracking-wider",
+                                limit.tone === "rose" ? "text-rose-700" : "text-amber-700",
+                              )}
+                            >
+                              {limit.label}
+                            </Label>
+                            {isAlertThresholdsDirty ? (
+                              <Input
+                                type="number"
+                                step="any"
+                                value={item[limit.field] ?? ""}
+                                placeholder="No limit"
+                                onChange={(e) =>
+                                  handleThresholdChange(
+                                    item.parameter,
+                                    limit.field,
+                                    e.target.value === "" ? null : parseFloat(e.target.value),
+                                  )
+                                }
+                                className={cn(
+                                  "mt-1 h-9 text-sm",
+                                  limit.tone === "rose"
+                                    ? "border-rose-200/60 focus:border-rose-400"
+                                    : "border-amber-200/60 focus:border-amber-400",
+                                )}
+                              />
+                            ) : (
+                              <p className="mt-1 text-sm font-medium text-foreground">
+                                {item[limit.field] ?? "No limit"}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="hidden overflow-x-auto rounded-lg border border-border/50 md:block">
+                  <table className="w-full min-w-[760px] text-left text-sm">
                     <thead className="bg-muted/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       <tr>
                         <th className="px-4 py-3">Parameter</th>
@@ -1597,7 +2076,7 @@ function AdminSettings() {
 
               {/* 4. TAB: ALERT TEMPLATES */}
               <TabsContent value="alert_templates" className="mt-0 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-3">
+                <div className="flex flex-col gap-3 border-b border-border/50 pb-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="font-display text-lg font-bold text-foreground">
                       Alert Message Templates
@@ -1606,7 +2085,7 @@ function AdminSettings() {
                       Manage templates generated dynamically on safe boundary exceedance
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                     <Button
                       variant="outline"
                       size="sm"
@@ -1620,7 +2099,7 @@ function AdminSettings() {
                         Edit Content
                       </Button>
                     ) : (
-                      <div className="flex gap-2">
+                      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -1742,7 +2221,7 @@ function AdminSettings() {
 
               {/* 5. TAB: DEVICE PACKAGES */}
               <TabsContent value="device_packages" className="mt-0 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-3">
+                <div className="flex flex-col gap-3 border-b border-border/50 pb-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="font-display text-lg font-bold text-foreground">
                       Commercial Hardware Packages
@@ -1751,7 +2230,7 @@ function AdminSettings() {
                       Manage product bundle lineups, telemetry combinations, and market prices
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                     <Button
                       variant="outline"
                       size="sm"
@@ -1765,7 +2244,7 @@ function AdminSettings() {
                         Edit Packages
                       </Button>
                     ) : (
-                      <div className="flex gap-2">
+                      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -1860,7 +2339,7 @@ function AdminSettings() {
                           Included Probes
                         </Label>
                         <div className="flex flex-wrap gap-1.5">
-                          {DEFAULT_SENSOR_TYPES.map((s) => {
+                          {sensorOptions.map((s) => {
                             const isIncluded = pkg.sensors.includes(s.name);
                             return (
                               <button
@@ -1888,7 +2367,7 @@ function AdminSettings() {
 
               {/* 6. TAB: USER ROLES */}
               <TabsContent value="user_roles" className="mt-0 space-y-4">
-                <div className="flex items-center justify-between border-b border-border/50 pb-3">
+                <div className="flex flex-col gap-3 border-b border-border/50 pb-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="font-display text-lg font-bold text-foreground">
                       User Roles & Access Control
@@ -1902,7 +2381,7 @@ function AdminSettings() {
                       Configure Permissions
                     </Button>
                   ) : (
-                    <div className="flex gap-2">
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                       <Button variant="ghost" size="sm" onClick={() => setUnsavedUserRoles(null)}>
                         Cancel
                       </Button>
@@ -2020,7 +2499,7 @@ function AdminSettings() {
 
               {/* 7. TAB: NOTIFICATION CHANNELS */}
               <TabsContent value="notification_channels" className="mt-0 space-y-4">
-                <div className="flex items-center justify-between border-b border-border/50 pb-3">
+                <div className="flex flex-col gap-3 border-b border-border/50 pb-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="font-display text-lg font-bold text-foreground">
                       Notification Channels
@@ -2035,7 +2514,7 @@ function AdminSettings() {
                       Configure Integrations
                     </Button>
                   ) : (
-                    <div className="flex gap-2">
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -2125,7 +2604,7 @@ function AdminSettings() {
                         </div>
                         <div className="space-y-1">
                           <Label className="text-[10px] font-bold text-muted-foreground uppercase">
-                            Authorization Key
+                            Secret Reference
                           </Label>
                           <Input
                             type="password"
@@ -2143,7 +2622,7 @@ function AdminSettings() {
 
               {/* 8. TAB: REPORT TEMPLATES */}
               <TabsContent value="report_templates" className="mt-0 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-3">
+                <div className="flex flex-col gap-3 border-b border-border/50 pb-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="font-display text-lg font-bold text-foreground">
                       Scheduled Telemetry Digests
@@ -2152,7 +2631,7 @@ function AdminSettings() {
                       Manage templates for scheduled email, PDF, or spreadsheet reports
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                     <Button
                       variant="outline"
                       size="sm"
@@ -2166,7 +2645,7 @@ function AdminSettings() {
                         Edit Schedules
                       </Button>
                     ) : (
-                      <div className="flex gap-2">
+                      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -2183,7 +2662,7 @@ function AdminSettings() {
                 </div>
 
                 <div className="overflow-x-auto rounded-lg border border-border/50">
-                  <table className="w-full text-left text-sm">
+                  <table className="w-full min-w-[760px] text-left text-sm">
                     <thead className="bg-muted/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       <tr>
                         <th className="px-4 py-3">Report Type Name</th>
@@ -2299,7 +2778,7 @@ function AdminSettings() {
 
               {/* 9. TAB: LANGUAGE STRINGS */}
               <TabsContent value="language_strings" className="mt-0 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-3">
+                <div className="flex flex-col gap-3 border-b border-border/50 pb-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="font-display text-lg font-bold text-foreground">
                       Localized App Strings
@@ -2308,7 +2787,7 @@ function AdminSettings() {
                       Manage translations, dictionary terms, and key-value mapping (En/Bn)
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                     <Button
                       variant="outline"
                       size="sm"
@@ -2322,7 +2801,7 @@ function AdminSettings() {
                         Edit Translations
                       </Button>
                     ) : (
-                      <div className="flex gap-2">
+                      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -2363,7 +2842,7 @@ function AdminSettings() {
                 </div>
 
                 <div className="overflow-x-auto rounded-lg border border-border/50">
-                  <table className="w-full text-left text-sm">
+                  <table className="w-full min-w-[760px] text-left text-sm">
                     <thead className="bg-muted/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       <tr>
                         <th className="px-4 py-3">Localization Identifier Key</th>
@@ -2640,7 +3119,7 @@ function AdminSettings() {
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Included Probes</Label>
               <div className="flex flex-wrap gap-1.5">
-                {DEFAULT_SENSOR_TYPES.map((s) => {
+                {sensorOptions.map((s) => {
                   const isChecked = newPackage.sensors.includes(s.name);
                   return (
                     <button
@@ -2737,7 +3216,7 @@ function AdminSettings() {
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Included Metrics</Label>
               <div className="flex flex-wrap gap-1.5">
-                {DEFAULT_SENSOR_TYPES.map((s) => {
+                {sensorOptions.map((s) => {
                   const isChecked = newReport.parameters.includes(s.name);
                   return (
                     <button

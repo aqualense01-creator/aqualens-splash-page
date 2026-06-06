@@ -40,7 +40,8 @@ import {
   type Pond,
   type Profile,
 } from "@/lib/insforge";
-import { PageHeader, StatusBadge } from "@/components/app/StatusBadge";
+import { PageHeader, StatusBadge, EmptyState } from "@/components/app/StatusBadge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/dashboard")({
@@ -50,10 +51,22 @@ export const Route = createFileRoute("/admin/dashboard")({
 
 type TrendRange = "7d" | "30d";
 
+function dbErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+}
+
+function assertDbOk(result: { error?: unknown }, fallback: string) {
+  if (result.error) throw new Error(dbErrorMessage(result.error, fallback));
+}
+
 function AdminDashboard() {
   const [range, setRange] = useState<TrendRange>("7d");
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["admin-overview"],
     refetchInterval: 30_000,
     queryFn: async () => {
@@ -68,25 +81,26 @@ function AdminDashboard() {
           .limit(200),
         insforge.database.from("profiles").select("*"),
       ]);
-      // Support tickets table is optional — swallow errors gracefully.
-      let tickets: any[] = [];
-      try {
-        const res = await insforge.database
-          .from("support_tickets")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(50);
-        tickets = res.data ?? [];
-      } catch {
-        tickets = [];
-      }
+      const ticketRes = await insforge.database
+        .from("support_tickets")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      assertDbOk(farms, "Failed to load farms");
+      assertDbOk(ponds, "Failed to load ponds");
+      assertDbOk(devices, "Failed to load devices");
+      assertDbOk(alerts, "Failed to load alerts");
+      assertDbOk(profiles, "Failed to load profiles");
+      assertDbOk(ticketRes, "Failed to load support tickets");
+
       return {
         farms: (farms.data ?? []) as Farm[],
         ponds: (ponds.data ?? []) as Pond[],
         devices: (devices.data ?? []) as Device[],
         alerts: (alerts.data ?? []) as Alert[],
         profiles: (profiles.data ?? []) as Profile[],
-        tickets,
+        tickets: ticketRes.data ?? [],
       };
     },
   });
@@ -227,82 +241,97 @@ function AdminDashboard() {
         }
       />
 
+      {isError ? (
+        <EmptyState
+          icon={<AlertTriangle className="h-6 w-6" />}
+          title="Platform metrics did not load"
+          description={dbErrorMessage(error, "Please refresh and try again.")}
+          action={
+            <Button variant="outline" onClick={() => refetch()}>
+              Try again
+            </Button>
+          }
+        />
+      ) : null}
+
       {/* === Top metric strip === */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-5">
-        <Stat
-          to="/admin/users"
-          label="Customers"
-          value={profiles.length}
-          icon={<Users className="h-4 w-4" />}
-          tone="default"
-        />
-        <Stat
-          to="/admin/farms"
-          label="Farms"
-          value={farms.length}
-          icon={<Building2 className="h-4 w-4" />}
-          hint={`${new Set(farms.map((f) => f.district).filter(Boolean)).size} districts`}
-          tone="default"
-        />
-        <Stat
-          label="Ponds"
-          value={ponds.length}
-          icon={<Waves className="h-4 w-4" />}
-          tone="primary"
-        />
-        <Stat
-          to="/admin/devices"
-          label="Devices"
-          value={devices.length}
-          icon={<Cpu className="h-4 w-4" />}
-          hint={`${online} online · ${offline} offline`}
-          tone="default"
-        />
-        <Stat
-          to="/admin/alerts"
-          label="Active alerts"
-          value={openAlerts.length}
-          icon={<AlertTriangle className="h-4 w-4" />}
-          hint={`${critical.length} critical`}
-          tone={critical.length ? "danger" : "default"}
-        />
-        <Stat
-          to="/admin/devices"
-          label="Online"
-          value={online}
-          icon={<Wifi className="h-4 w-4" />}
-          tone="success"
-        />
-        <Stat
-          to="/admin/devices"
-          label="Offline"
-          value={offline}
-          icon={<WifiOff className="h-4 w-4" />}
-          tone={offline ? "danger" : "default"}
-        />
-        <Stat
-          to="/admin/alerts"
-          label="Critical"
-          value={critical.length}
-          icon={<AlertTriangle className="h-4 w-4" />}
-          tone={critical.length ? "danger" : "default"}
-        />
-        <Stat
-          to="/admin/devices"
-          label="Calibration due"
-          value={calibrationDue}
-          icon={<Wrench className="h-4 w-4" />}
-          tone={calibrationDue ? "warning" : "default"}
-        />
-        <Stat
-          to="/admin/support"
-          label="Support tickets"
-          value={openTickets.length}
-          icon={<LifeBuoy className="h-4 w-4" />}
-          hint="Open"
-          tone={openTickets.length ? "warning" : "default"}
-        />
-      </div>
+      {!isError && (
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-5">
+          <Stat
+            to="/admin/users"
+            label="Customers"
+            value={profiles.length}
+            icon={<Users className="h-4 w-4" />}
+            tone="default"
+          />
+          <Stat
+            to="/admin/farms"
+            label="Farms"
+            value={farms.length}
+            icon={<Building2 className="h-4 w-4" />}
+            hint={`${new Set(farms.map((f) => f.district).filter(Boolean)).size} districts`}
+            tone="default"
+          />
+          <Stat
+            label="Ponds"
+            value={ponds.length}
+            icon={<Waves className="h-4 w-4" />}
+            tone="primary"
+          />
+          <Stat
+            to="/admin/devices"
+            label="Devices"
+            value={devices.length}
+            icon={<Cpu className="h-4 w-4" />}
+            hint={`${online} online · ${offline} offline`}
+            tone="default"
+          />
+          <Stat
+            to="/admin/alerts"
+            label="Active alerts"
+            value={openAlerts.length}
+            icon={<AlertTriangle className="h-4 w-4" />}
+            hint={`${critical.length} critical`}
+            tone={critical.length ? "danger" : "default"}
+          />
+          <Stat
+            to="/admin/devices"
+            label="Online"
+            value={online}
+            icon={<Wifi className="h-4 w-4" />}
+            tone="success"
+          />
+          <Stat
+            to="/admin/devices"
+            label="Offline"
+            value={offline}
+            icon={<WifiOff className="h-4 w-4" />}
+            tone={offline ? "danger" : "default"}
+          />
+          <Stat
+            to="/admin/alerts"
+            label="Critical"
+            value={critical.length}
+            icon={<AlertTriangle className="h-4 w-4" />}
+            tone={critical.length ? "danger" : "default"}
+          />
+          <Stat
+            to="/admin/devices"
+            label="Calibration due"
+            value={calibrationDue}
+            icon={<Wrench className="h-4 w-4" />}
+            tone={calibrationDue ? "warning" : "default"}
+          />
+          <Stat
+            to="/admin/support"
+            label="Support tickets"
+            value={openTickets.length}
+            icon={<LifeBuoy className="h-4 w-4" />}
+            hint="Open"
+            tone={openTickets.length ? "warning" : "default"}
+          />
+        </div>
+      )}
 
       {/* === Bento charts === */}
       <div className="mt-6 grid auto-rows-min grid-cols-1 gap-4 md:grid-cols-6">

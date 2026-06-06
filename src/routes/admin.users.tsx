@@ -132,6 +132,14 @@ function isSingleAdminEmail(value?: string | null) {
   return normalizedEmail(value) === SINGLE_ADMIN_EMAIL;
 }
 
+function dbErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+}
+
 type UserForm = {
   full_name: string;
   phone: string;
@@ -199,6 +207,8 @@ function AdminUsers() {
   const profiles = useMemo(() => profilesQ.data ?? [], [profilesQ.data]);
   const roles = useMemo(() => rolesQ.data ?? [], [rolesQ.data]);
   const farms = useMemo(() => farmsQ.data ?? [], [farmsQ.data]);
+  const usersLoading = profilesQ.isLoading || rolesQ.isLoading || farmsQ.isLoading;
+  const usersError = profilesQ.error ?? rolesQ.error ?? farmsQ.error;
 
   const roleByUser = useMemo(() => {
     const m = new Map<string, AppRole>();
@@ -316,22 +326,18 @@ function AdminUsers() {
         assigned_farm_id: f.assigned_farm_id || null,
       };
       if (id) {
-        const r = await insforge.database.from("profiles").update(profilePayload).eq("id", id);
+        const r = await insforge.database.rpc("admin_update_user_profile_role", {
+          _user_id: id,
+          _full_name: profilePayload.full_name,
+          _phone: profilePayload.phone,
+          _email: profilePayload.email,
+          _district: profilePayload.district,
+          _language: profilePayload.language,
+          _account_status: profilePayload.account_status,
+          _assigned_farm_id: profilePayload.assigned_farm_id,
+          _role: f.role,
+        });
         if (r.error) throw r.error;
-        // sync role
-        const existing = roles.filter((x) => x.user_id === id);
-        const keep = existing.find((x) => x.role === f.role);
-        if (!keep) {
-          const roleInsert = await insforge.database
-            .from("user_roles")
-            .insert([{ user_id: id, role: f.role }]);
-          if (roleInsert.error) throw roleInsert.error;
-        }
-        const remove = existing.filter((x) => x.role !== f.role);
-        for (const x of remove) {
-          const roleDelete = await insforge.database.from("user_roles").delete().eq("id", x.id);
-          if (roleDelete.error) throw roleDelete.error;
-        }
         return id;
       }
       throw new Error(
@@ -360,7 +366,9 @@ function AdminUsers() {
       const r = await insforge.database
         .from("profiles")
         .update({ account_status: status })
-        .eq("id", id);
+        .eq("id", id)
+        .select("id")
+        .single();
       if (r.error) throw r.error;
     },
     onSuccess: (_d, vars) => {
@@ -376,16 +384,12 @@ function AdminUsers() {
     mutationFn: async (id: string) => {
       const profile = profiles.find((p) => p.id === id);
       if (!profile?.email) throw new Error("User has no email on file");
-      // Best-effort: send reset email via Insforge auth
-      try {
-        // @ts-expect-error optional SDK surface
-        if (insforge.auth?.resetPasswordForEmail) {
-          // @ts-expect-error optional SDK surface
-          await insforge.auth.resetPasswordForEmail(profile.email);
-        }
-      } catch {
-        /* swallow; we still toast success below since UX is "email sent" */
-      }
+      const result = await insforge.auth.sendResetPasswordEmail({
+        email: normalizedEmail(profile.email),
+        redirectTo:
+          typeof window !== "undefined" ? `${window.location.origin}/reset-password` : undefined,
+      });
+      if (result.error) throw result.error;
     },
     onSuccess: () => {
       toast.success("Password reset email queued");
@@ -520,7 +524,29 @@ function AdminUsers() {
       </div>
 
       {/* Table (desktop) / cards (mobile) */}
-      {rows.length === 0 ? (
+      {usersLoading ? (
+        <div className="rounded-2xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">
+          Loading users...
+        </div>
+      ) : usersError ? (
+        <EmptyState
+          icon={<Users className="h-6 w-6" />}
+          title="Users did not load"
+          description={dbErrorMessage(usersError, "Please refresh and try again.")}
+          action={
+            <Button
+              variant="outline"
+              onClick={() => {
+                profilesQ.refetch();
+                rolesQ.refetch();
+                farmsQ.refetch();
+              }}
+            >
+              Try again
+            </Button>
+          }
+        />
+      ) : rows.length === 0 ? (
         <EmptyState
           icon={<Users className="h-6 w-6" />}
           title="No users match"
@@ -944,8 +970,9 @@ function AdminUsers() {
                   phone: form.phone.trim() ? normalizeBangladeshPhone(form.phone) : "",
                 };
                 if (!editingId) {
-                  toast.success("Invitation queued. The user will appear once they accept.");
-                  setEditorOpen(false);
+                  toast.error(
+                    "User invitations need the backend invite flow before they can be sent.",
+                  );
                   return;
                 }
                 upsertMut.mutate({ id: editingId, form: normalizedForm });

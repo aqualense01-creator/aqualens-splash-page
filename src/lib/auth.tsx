@@ -1,15 +1,20 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { insforge } from "./insforge";
 
-export type AppRole = "farmer" | "technician" | "admin";
+export type AppRole = "farmer" | "farm_manager" | "technician" | "admin" | "support";
+export type AccountStatus = "active" | "suspended" | "invited";
 
 export type Profile = {
   id: string;
   full_name: string | null;
+  email?: string | null;
   phone: string | null;
   district: string | null;
   language: "en" | "bn";
   avatar_url: string | null;
+  account_status?: AccountStatus | string | null;
+  assigned_farm_id?: string | null;
+  last_active_at?: string | null;
   created_at: string;
 };
 
@@ -34,8 +39,11 @@ type AuthCtx = {
   user: AuthUser | null;
   profile: Profile | null;
   roles: AppRole[];
+  accountStatus: AccountStatus;
   isAdmin: boolean;
   isTechnician: boolean;
+  isFarmManager: boolean;
+  isSupport: boolean;
   isFarmer: boolean;
   signIn: (email: string, password: string) => Promise<AuthResult>;
   signUp: (input: SignUpInput) => Promise<AuthResult>;
@@ -47,6 +55,40 @@ type AuthCtx = {
 };
 
 const Ctx = createContext<AuthCtx | null>(null);
+const APP_ROLES: AppRole[] = ["farmer", "farm_manager", "technician", "admin", "support"];
+
+function isAppRole(value: unknown): value is AppRole {
+  return typeof value === "string" && APP_ROLES.includes(value as AppRole);
+}
+
+function normalizeAccountStatus(value: unknown): AccountStatus | null {
+  if (value === "active" || value === "suspended" || value === "invited") return value;
+  return null;
+}
+
+function clearAuthState(
+  setUser: (value: AuthUser | null) => void,
+  setProfile: (value: Profile | null) => void,
+  setRoles: (value: AppRole[]) => void,
+) {
+  setUser(null);
+  setProfile(null);
+  setRoles([]);
+}
+
+function hasBrowserRefreshSignal(): boolean {
+  if (typeof document === "undefined") return true;
+  return document.cookie
+    .split(";")
+    .some((cookie) => cookie.trim().startsWith("insforge_csrf_token="));
+}
+
+function hasInMemorySession(): boolean {
+  const client = insforge as unknown as {
+    tokenManager?: { getSession?: () => unknown };
+  };
+  return Boolean(client.tokenManager?.getSession?.());
+}
 
 export function isBangladeshPhone(value: string): boolean {
   const cleaned = value.replace(/[\s-]/g, "");
@@ -82,15 +124,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
 
-  async function loadSession() {
+  async function loadSession(): Promise<{ blockedReason?: string }> {
     try {
       setLoading(true);
+      if (!hasBrowserRefreshSignal() && !hasInMemorySession()) {
+        clearAuthState(setUser, setProfile, setRoles);
+        return {};
+      }
+
       const { data: userData, error: userError } = await insforge.auth.getCurrentUser();
       if (userError || !userData?.user) {
-        setUser(null);
-        setProfile(null);
-        setRoles([]);
-        return;
+        clearAuthState(setUser, setProfile, setRoles);
+        return {};
       }
 
       const userObj = userData.user;
@@ -99,8 +144,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         insforge.database.from("user_roles").select("role").eq("user_id", userObj.id),
       ]);
 
+      if (profileRes.error) {
+        await insforge.auth.signOut().catch(() => undefined);
+        clearAuthState(setUser, setProfile, setRoles);
+        return {
+          blockedReason: authMessage(
+            profileRes.error,
+            "We could not load your profile. Please sign in again.",
+          ),
+        };
+      }
+
+      if (rolesRes.error) {
+        await insforge.auth.signOut().catch(() => undefined);
+        clearAuthState(setUser, setProfile, setRoles);
+        return {
+          blockedReason: authMessage(
+            rolesRes.error,
+            "We could not load your access role. Please sign in again.",
+          ),
+        };
+      }
+
       const currentProfile = profileRes.data as Profile | null;
-      const userRoles = (rolesRes.data ?? []).map((r: any) => r.role) as AppRole[];
+      if (!currentProfile) {
+        await insforge.auth.signOut().catch(() => undefined);
+        clearAuthState(setUser, setProfile, setRoles);
+        return {
+          blockedReason:
+            "Your user profile is not ready yet. Please contact support if this keeps happening.",
+        };
+      }
+
+      const accountStatus = normalizeAccountStatus(currentProfile?.account_status);
+      if (accountStatus !== "active") {
+        await insforge.auth.signOut().catch(() => undefined);
+        clearAuthState(setUser, setProfile, setRoles);
+        return {
+          blockedReason:
+            accountStatus === "suspended"
+              ? "This account is suspended. Contact support to restore access."
+              : accountStatus === "invited"
+                ? "This account is not active yet."
+                : "This account has an unknown status. Contact support to restore access.",
+        };
+      }
+
+      const userRoles = (rolesRes.data ?? [])
+        .map((r: any) => r.role)
+        .filter(isAppRole) as AppRole[];
 
       setUser({
         id: userObj.id,
@@ -108,12 +200,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         phone: currentProfile?.phone || null,
       });
       setProfile(currentProfile);
-      setRoles(userRoles.length > 0 ? userRoles : ["farmer"]);
+      if (userRoles.length === 0) {
+        await insforge.auth.signOut().catch(() => undefined);
+        clearAuthState(setUser, setProfile, setRoles);
+        return {
+          blockedReason: "Your account does not have an access role yet. Please contact support.",
+        };
+      }
+
+      setRoles(userRoles);
+      return {};
     } catch (err) {
       console.error("Error loading session:", err);
-      setUser(null);
-      setProfile(null);
-      setRoles([]);
+      clearAuthState(setUser, setProfile, setRoles);
+      return {};
     } finally {
       setLoading(false);
     }
@@ -136,7 +236,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           needsVerification: needsEmailVerification(error),
         };
       }
-      await loadSession();
+      const session = await loadSession();
+      if (session.blockedReason) return { error: session.blockedReason };
       return { error: null };
     } catch (e: any) {
       return { error: authMessage(e, "Failed to sign in.") };
@@ -162,7 +263,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (data?.accessToken) {
-        await loadSession();
+        const session = await loadSession();
+        if (session.blockedReason) return { error: session.blockedReason };
       }
 
       return {
@@ -185,7 +287,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       if (error) return { error: authMessage(error, "Failed to verify email.") };
 
-      await loadSession();
+      const session = await loadSession();
+      if (session.blockedReason) return { error: session.blockedReason };
       return { error: null };
     } catch (e: any) {
       return { error: authMessage(e, "Failed to verify email.") };
@@ -214,7 +317,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!isValidEmail(email)) return { error: "Enter a valid email address." };
       const { error } = await insforge.auth.sendResetPasswordEmail({
         email: email.trim().toLowerCase(),
-        redirectTo: typeof window !== "undefined" ? `${window.location.origin}/login` : undefined,
+        redirectTo:
+          typeof window !== "undefined" ? `${window.location.origin}/reset-password` : undefined,
       });
       if (error) return { error: authMessage(error, "Failed to send reset link.") };
       return { error: null };
@@ -229,10 +333,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       console.error("Error signing out:", e);
     }
-    setUser(null);
-    setProfile(null);
-    setRoles([]);
+    clearAuthState(setUser, setProfile, setRoles);
   };
+
+  const accountStatus = normalizeAccountStatus(profile?.account_status) ?? "suspended";
 
   return (
     <Ctx.Provider
@@ -241,8 +345,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         profile,
         roles,
+        accountStatus,
         isAdmin: roles.includes("admin"),
         isTechnician: roles.includes("technician"),
+        isFarmManager: roles.includes("farm_manager"),
+        isSupport: roles.includes("support"),
         isFarmer: roles.includes("farmer"),
         signIn,
         signUp,
@@ -250,7 +357,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         resendVerification,
         sendResetLink,
         signOut,
-        refresh: loadSession,
+        refresh: async () => {
+          await loadSession();
+        },
       }}
     >
       {children}

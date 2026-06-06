@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyOtpRouteImport } from './routes/verify-otp'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AppRouteImport } from './routes/app'
@@ -22,6 +23,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AppSetupRouteImport } from './routes/app.setup'
 import { Route as AppSettingsRouteImport } from './routes/app.settings'
 import { Route as AppReportsRouteImport } from './routes/app.reports'
+import { Route as AppMaintenanceRouteImport } from './routes/app.maintenance'
 import { Route as AppLiveRouteImport } from './routes/app.live'
 import { Route as AppFarmsRouteImport } from './routes/app.farms'
 import { Route as AppDevicesRouteImport } from './routes/app.devices'
@@ -47,6 +49,11 @@ const VerifyOtpRoute = VerifyOtpRouteImport.update({
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -102,6 +109,11 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
 const AppReportsRoute = AppReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMaintenanceRoute = AppMaintenanceRouteImport.update({
+  id: '/maintenance',
+  path: '/maintenance',
   getParentRoute: () => AppRoute,
 } as any)
 const AppLiveRoute = AppLiveRouteImport.update({
@@ -170,9 +182,9 @@ const AppPondsPondIdRoute = AppPondsPondIdRouteImport.update({
   getParentRoute: () => AppRoute,
 } as any)
 const AppMaintenanceDeviceIdRoute = AppMaintenanceDeviceIdRouteImport.update({
-  id: '/maintenance/$deviceId',
-  path: '/maintenance/$deviceId',
-  getParentRoute: () => AppRoute,
+  id: '/$deviceId',
+  path: '/$deviceId',
+  getParentRoute: () => AppMaintenanceRoute,
 } as any)
 const AppDevicesDeviceIdRoute = AppDevicesDeviceIdRouteImport.update({
   id: '/$deviceId',
@@ -192,6 +204,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/verify-otp': typeof VerifyOtpRoute
   '/admin/alerts': typeof AdminAlertsRoute
@@ -206,6 +219,7 @@ export interface FileRoutesByFullPath {
   '/app/devices': typeof AppDevicesRouteWithChildren
   '/app/farms': typeof AppFarmsRoute
   '/app/live': typeof AppLiveRoute
+  '/app/maintenance': typeof AppMaintenanceRouteWithChildren
   '/app/reports': typeof AppReportsRoute
   '/app/settings': typeof AppSettingsRoute
   '/app/setup': typeof AppSetupRoute
@@ -221,6 +235,7 @@ export interface FileRoutesByTo {
   '/activate-account': typeof ActivateAccountRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/verify-otp': typeof VerifyOtpRoute
   '/admin/alerts': typeof AdminAlertsRoute
@@ -235,6 +250,7 @@ export interface FileRoutesByTo {
   '/app/devices': typeof AppDevicesRouteWithChildren
   '/app/farms': typeof AppFarmsRoute
   '/app/live': typeof AppLiveRoute
+  '/app/maintenance': typeof AppMaintenanceRouteWithChildren
   '/app/reports': typeof AppReportsRoute
   '/app/settings': typeof AppSettingsRoute
   '/app/setup': typeof AppSetupRoute
@@ -253,6 +269,7 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/verify-otp': typeof VerifyOtpRoute
   '/admin/alerts': typeof AdminAlertsRoute
@@ -267,6 +284,7 @@ export interface FileRoutesById {
   '/app/devices': typeof AppDevicesRouteWithChildren
   '/app/farms': typeof AppFarmsRoute
   '/app/live': typeof AppLiveRoute
+  '/app/maintenance': typeof AppMaintenanceRouteWithChildren
   '/app/reports': typeof AppReportsRoute
   '/app/settings': typeof AppSettingsRoute
   '/app/setup': typeof AppSetupRoute
@@ -286,6 +304,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/forgot-password'
     | '/login'
+    | '/reset-password'
     | '/signup'
     | '/verify-otp'
     | '/admin/alerts'
@@ -300,6 +319,7 @@ export interface FileRouteTypes {
     | '/app/devices'
     | '/app/farms'
     | '/app/live'
+    | '/app/maintenance'
     | '/app/reports'
     | '/app/settings'
     | '/app/setup'
@@ -315,6 +335,7 @@ export interface FileRouteTypes {
     | '/activate-account'
     | '/forgot-password'
     | '/login'
+    | '/reset-password'
     | '/signup'
     | '/verify-otp'
     | '/admin/alerts'
@@ -329,6 +350,7 @@ export interface FileRouteTypes {
     | '/app/devices'
     | '/app/farms'
     | '/app/live'
+    | '/app/maintenance'
     | '/app/reports'
     | '/app/settings'
     | '/app/setup'
@@ -346,6 +368,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/forgot-password'
     | '/login'
+    | '/reset-password'
     | '/signup'
     | '/verify-otp'
     | '/admin/alerts'
@@ -360,6 +383,7 @@ export interface FileRouteTypes {
     | '/app/devices'
     | '/app/farms'
     | '/app/live'
+    | '/app/maintenance'
     | '/app/reports'
     | '/app/settings'
     | '/app/setup'
@@ -378,6 +402,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
   VerifyOtpRoute: typeof VerifyOtpRoute
 }
@@ -396,6 +421,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -473,6 +505,13 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/app/reports'
       preLoaderRoute: typeof AppReportsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/maintenance': {
+      id: '/app/maintenance'
+      path: '/maintenance'
+      fullPath: '/app/maintenance'
+      preLoaderRoute: typeof AppMaintenanceRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/live': {
@@ -568,10 +607,10 @@ declare module '@tanstack/react-router' {
     }
     '/app/maintenance/$deviceId': {
       id: '/app/maintenance/$deviceId'
-      path: '/maintenance/$deviceId'
+      path: '/$deviceId'
       fullPath: '/app/maintenance/$deviceId'
       preLoaderRoute: typeof AppMaintenanceDeviceIdRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof AppMaintenanceRoute
     }
     '/app/devices/$deviceId': {
       id: '/app/devices/$deviceId'
@@ -626,18 +665,30 @@ const AppDevicesRouteWithChildren = AppDevicesRoute._addFileChildren(
   AppDevicesRouteChildren,
 )
 
+interface AppMaintenanceRouteChildren {
+  AppMaintenanceDeviceIdRoute: typeof AppMaintenanceDeviceIdRoute
+}
+
+const AppMaintenanceRouteChildren: AppMaintenanceRouteChildren = {
+  AppMaintenanceDeviceIdRoute: AppMaintenanceDeviceIdRoute,
+}
+
+const AppMaintenanceRouteWithChildren = AppMaintenanceRoute._addFileChildren(
+  AppMaintenanceRouteChildren,
+)
+
 interface AppRouteChildren {
   AppAlertsRoute: typeof AppAlertsRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppDevicesRoute: typeof AppDevicesRouteWithChildren
   AppFarmsRoute: typeof AppFarmsRoute
   AppLiveRoute: typeof AppLiveRoute
+  AppMaintenanceRoute: typeof AppMaintenanceRouteWithChildren
   AppReportsRoute: typeof AppReportsRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppSetupRoute: typeof AppSetupRoute
   AppIndexRoute: typeof AppIndexRoute
   AppCalibrationDeviceIdRoute: typeof AppCalibrationDeviceIdRoute
-  AppMaintenanceDeviceIdRoute: typeof AppMaintenanceDeviceIdRoute
   AppPondsPondIdRoute: typeof AppPondsPondIdRoute
 }
 
@@ -647,12 +698,12 @@ const AppRouteChildren: AppRouteChildren = {
   AppDevicesRoute: AppDevicesRouteWithChildren,
   AppFarmsRoute: AppFarmsRoute,
   AppLiveRoute: AppLiveRoute,
+  AppMaintenanceRoute: AppMaintenanceRouteWithChildren,
   AppReportsRoute: AppReportsRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppSetupRoute: AppSetupRoute,
   AppIndexRoute: AppIndexRoute,
   AppCalibrationDeviceIdRoute: AppCalibrationDeviceIdRoute,
-  AppMaintenanceDeviceIdRoute: AppMaintenanceDeviceIdRoute,
   AppPondsPondIdRoute: AppPondsPondIdRoute,
 }
 
@@ -665,6 +716,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
   VerifyOtpRoute: VerifyOtpRoute,
 }

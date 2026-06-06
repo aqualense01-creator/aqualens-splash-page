@@ -1,7 +1,13 @@
 import { Activity, BellRing, Gauge, Radio, ShieldCheck } from "lucide-react";
+import { lazy, Suspense } from "react";
 import { useReducedMotion } from "framer-motion";
 import { Reveal } from "./Reveal";
-import { LiveDashboardMotionPlayer } from "./LiveDashboardMotion";
+
+const LiveDashboardMotionPlayer = lazy(() =>
+  import("./LiveDashboardMotion").then((module) => ({
+    default: module.LiveDashboardMotionPlayer,
+  })),
+);
 
 const highlights = [
   {
@@ -21,8 +27,40 @@ const highlights = [
   },
 ];
 
+function DashboardMotionFallback() {
+  return (
+    <div className="aspect-video w-full overflow-hidden rounded-md bg-[#f5faff] p-4 sm:p-6">
+      <div className="flex h-full flex-col rounded-md border border-border bg-card p-4 shadow-sm">
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <div>
+            <div className="h-3 w-28 rounded-full bg-primary/20" />
+            <div className="mt-2 h-6 w-44 rounded-full bg-muted/30" />
+          </div>
+          <div className="h-9 w-24 rounded-full bg-emerald-500/15" />
+        </div>
+        <div className="grid flex-1 gap-3 py-4 sm:grid-cols-3">
+          <div className="rounded-lg bg-primary/10 p-3">
+            <div className="h-3 w-20 rounded-full bg-primary/25" />
+            <div className="mt-5 h-9 w-28 rounded-full bg-primary/35" />
+          </div>
+          <div className="rounded-lg bg-amber-500/10 p-3">
+            <div className="h-3 w-24 rounded-full bg-amber-500/25" />
+            <div className="mt-5 h-9 w-20 rounded-full bg-amber-500/35" />
+          </div>
+          <div className="rounded-lg bg-rose-500/10 p-3">
+            <div className="h-3 w-24 rounded-full bg-rose-500/25" />
+            <div className="mt-5 h-9 w-24 rounded-full bg-rose-500/35" />
+          </div>
+        </div>
+        <div className="h-20 rounded-lg bg-surface" />
+      </div>
+    </div>
+  );
+}
+
 export function Dashboard() {
   const reduced = useReducedMotion();
+  const shouldReduceMotion = Boolean(reduced);
 
   return (
     <section
@@ -51,7 +89,13 @@ export function Dashboard() {
             className="relative mx-auto max-w-6xl overflow-hidden rounded-lg border border-border bg-card p-1.5 shadow-[0_34px_90px_-46px_rgba(15,44,68,0.48)] sm:p-3"
             aria-label="Animated Live Dashboard motion graphic"
           >
-            <LiveDashboardMotionPlayer reduced={Boolean(reduced)} />
+            {shouldReduceMotion ? (
+              <DashboardMotionFallback />
+            ) : (
+              <Suspense fallback={<DashboardMotionFallback />}>
+                <LiveDashboardMotionPlayer reduced={false} />
+              </Suspense>
+            )}
             <figcaption className="sr-only">
               Animated dashboard showing pond readings, oxygen trend, critical alert, recommended
               action and device health.

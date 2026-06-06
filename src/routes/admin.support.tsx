@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { insforge, type Profile, type Farm, type Pond, type Device } from "@/lib/insforge";
+import { useAuth } from "@/lib/auth";
 import { PageHeader, StatusBadge, EmptyState } from "@/components/app/StatusBadge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -70,9 +71,19 @@ export type TicketPriority = "low" | "medium" | "high" | "critical";
 
 export type TicketActivity = {
   id: string;
-  type: "created" | "assignment" | "status_change" | "note" | "resolution";
+  type: "created" | "assignment" | "status_change" | "note" | "resolution" | "attachment";
   author: string;
   body: string;
+  created_at: string;
+};
+
+export type TicketAttachment = {
+  id: string;
+  url: string;
+  storage_key: string | null;
+  file_name: string | null;
+  mime_type: string | null;
+  size_bytes: number | null;
   created_at: string;
 };
 
@@ -91,6 +102,7 @@ export type SupportTicket = {
   priority: TicketPriority;
   description: string;
   photos: string[];
+  attachments: TicketAttachment[];
   assigned_to: string | null; // Tech profile ID
   assigned_name: string | null;
   status: TicketStatus;
@@ -98,6 +110,48 @@ export type SupportTicket = {
   created_at: string;
   updated_at: string;
 };
+
+type SupportTicketRow = {
+  id: string;
+  created_by: string | null;
+  assigned_to: string | null;
+  farm_id: string | null;
+  pond_id: string | null;
+  device_id: string | null;
+  issue_type: string | null;
+  priority: string | null;
+  description: string | null;
+  photos: unknown;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type SupportTicketActivityRow = {
+  id: string;
+  ticket_id: string;
+  actor_id: string | null;
+  kind: string;
+  body: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+};
+
+type SupportTicketAttachmentRow = {
+  id: string;
+  ticket_id: string;
+  uploaded_by: string | null;
+  bucket: string;
+  storage_key: string;
+  url: string;
+  file_name: string | null;
+  mime_type: string | null;
+  size_bytes: number | null;
+  created_at: string;
+};
+
+const SUPPORT_ATTACHMENTS_BUCKET = "support-ticket-attachments";
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
 const STATUS_LABELS: Record<TicketStatus, string> = {
   open: "Open",
@@ -129,213 +183,192 @@ const STATUS_COLORS: Record<TicketStatus, string> = {
   closed: "bg-gray-500/10 text-gray-700 border-gray-500/30",
 };
 
-// ===== Initial Pre-populated Support Tickets =====
-const getInitialTickets = (
-  techs: Profile[],
-  farms: Farm[],
-  ponds: Pond[],
-  devices: Device[],
-): SupportTicket[] => {
-  const defaultTech = techs[0] ?? null;
-  const defaultFarm = farms[0] ?? null;
-  const defaultPond = ponds.find((p) => p.farm_id === defaultFarm?.id) ?? null;
-  const defaultDevice = devices.find((d) => d.farm_id === defaultFarm?.id) ?? null;
+function isTicketStatus(value: string): value is TicketStatus {
+  return ["open", "in_progress", "waiting_for_farmer", "resolved", "closed"].includes(value);
+}
 
-  return [
-    {
-      id: "TKT-3029",
-      issue_type: "Hardware",
-      farmer_id: "mock-farmer",
-      farmer_name: "Rahim Mia",
-      farmer_phone: "+8801712345678",
-      farm_id: defaultFarm?.id ?? "f1",
-      farm_name: defaultFarm?.name ?? "Sundarban Farm",
-      pond_id: defaultPond?.id ?? "p2",
-      pond_name: defaultPond?.name ?? "Pond 2 — Shrimp",
-      device_id: defaultDevice?.id ?? "d2",
-      device_serial: defaultDevice?.serial ?? "AQ-204",
-      priority: "critical",
-      description:
-        "My sensor node buoy (AQ-204) was hit by a paddle-wheel aerator during high winds. The dissolved oxygen reading is currently stuck at 2.8 mg/L even though the aerators are running, and there is visible condensation under the top cover. Need a replacement probe or field visit urgently.",
-      photos: [],
-      assigned_to: defaultTech?.id ?? "mock-tech",
-      assigned_name: defaultTech?.full_name ?? "Shahin Hossain",
-      status: "in_progress",
-      timeline: [
-        {
-          id: "act-1",
-          type: "created",
-          author: "Rahim Mia (Farmer)",
-          body: "Ticket raised from mobile app: Hardware damage and DO sensor calibration issue.",
-          created_at: new Date(Date.now() - 3600 * 24 * 1000).toISOString(),
-        },
-        {
-          id: "act-2",
-          type: "assignment",
-          author: "System Admin",
-          body: `Ticket assigned to technician ${defaultTech?.full_name ?? "Shahin Hossain"}.`,
-          created_at: new Date(Date.now() - 3600 * 20 * 1000).toISOString(),
-        },
-        {
-          id: "act-3",
-          type: "status_change",
-          author: defaultTech?.full_name ?? "Shahin Hossain",
-          body: "Status changed from 'Open' to 'In Progress'.",
-          created_at: new Date(Date.now() - 3600 * 19 * 1000).toISOString(),
-        },
-        {
-          id: "act-4",
-          type: "note",
-          author: defaultTech?.full_name ?? "Shahin Hossain (Tech)",
-          body: "Checked the cloud log. Readings dropped abruptly right after the impact. I am heading to Mirpur Farm tomorrow morning with a spare optical DO probe.",
-          created_at: new Date(Date.now() - 3600 * 18 * 1000).toISOString(),
-        },
-      ],
-      created_at: new Date(Date.now() - 3600 * 24 * 1000).toISOString(),
-      updated_at: new Date(Date.now() - 3600 * 18 * 1000).toISOString(),
-    },
-    {
-      id: "TKT-3011",
-      issue_type: "Water Quality",
-      farmer_id: "mock-farmer-2",
-      farmer_name: "Anisur Rahman",
-      farmer_phone: "+8801823456789",
-      farm_id: farms[1]?.id ?? "f2",
-      farm_name: farms[1]?.name ?? "Khulna East Farm",
-      pond_id: ponds.find((p) => p.farm_id === farms[1]?.id)?.id ?? "p3",
-      pond_name: ponds.find((p) => p.farm_id === farms[1]?.id)?.name ?? "Pond 3 — Tilapia",
-      device_id: devices.find((d) => d.farm_id === farms[1]?.id)?.id ?? "d3",
-      device_serial: devices.find((d) => d.farm_id === farms[1]?.id)?.serial ?? "AQ-211",
-      priority: "high",
-      description:
-        "Ammonia level warnings have been firing for Pond 3 since yesterday (currently reading 0.8 mg/L). We applied lime last week, but the readings are rising. We need support verifying if the sensor needs recalibration before we add probiotic treatments.",
-      photos: [],
-      assigned_to: null,
-      assigned_name: null,
-      status: "open",
-      timeline: [
-        {
-          id: "act-5",
-          type: "created",
-          author: "Anisur Rahman (Farmer)",
-          body: "Ticket raised: Ammonia warnings rising rapidly, requesting calibration verification.",
-          created_at: new Date(Date.now() - 3600 * 5 * 1000).toISOString(),
-        },
-      ],
-      created_at: new Date(Date.now() - 3600 * 5 * 1000).toISOString(),
-      updated_at: new Date(Date.now() - 3600 * 5 * 1000).toISOString(),
-    },
-    {
-      id: "TKT-2995",
-      issue_type: "Software",
-      farmer_id: "mock-farmer-3",
-      farmer_name: "Mofizur Rahman",
-      farmer_phone: "+8801934567890",
-      farm_id: defaultFarm?.id ?? "f1",
-      farm_name: defaultFarm?.name ?? "Sundarban Farm",
-      pond_id: ponds.find((p) => p.id === "p3")?.id ?? "p3",
-      pond_name: ponds.find((p) => p.id === "p3")?.name ?? "Pond 3 — Tilapia",
-      device_id: defaultDevice?.id ?? "d3",
-      device_serial: defaultDevice?.serial ?? "AQ-188",
-      priority: "medium",
-      description:
-        "The SMS notification services are not sending messages to my fallback mobile number when the battery drops low. The device battery is at 14% but I only received an app push, no SMS alerts.",
-      photos: [],
-      assigned_to: defaultTech?.id ?? "mock-tech",
-      assigned_name: defaultTech?.full_name ?? "Shahin Hossain",
-      status: "waiting_for_farmer",
-      timeline: [
-        {
-          id: "act-6",
-          type: "created",
-          author: "Mofizur Rahman (Farmer)",
-          body: "Ticket raised: SMS alert delivery issues for low battery warning.",
-          created_at: new Date(Date.now() - 3600 * 48 * 1000).toISOString(),
-        },
-        {
-          id: "act-7",
-          type: "assignment",
-          author: "System Admin",
-          body: `Ticket assigned to technician ${defaultTech?.full_name ?? "Shahin Hossain"}.`,
-          created_at: new Date(Date.now() - 3600 * 46 * 1000).toISOString(),
-        },
-        {
-          id: "act-8",
-          type: "note",
-          author: defaultTech?.full_name ?? "Shahin Hossain (Tech)",
-          body: "Checked the SMS gateway. The carrier reports a blocked sender configuration. Farmer Mofizur, could you please confirm if you have blocked or muted notifications from our SMS gateway number (+88016...)?",
-          created_at: new Date(Date.now() - 3600 * 24 * 1000).toISOString(),
-        },
-        {
-          id: "act-9",
-          type: "status_change",
-          author: defaultTech?.full_name ?? "Shahin Hossain",
-          body: "Status changed to 'Waiting for Farmer'.",
-          created_at: new Date(Date.now() - 3600 * 24 * 1000).toISOString(),
-        },
-      ],
-      created_at: new Date(Date.now() - 3600 * 48 * 1000).toISOString(),
-      updated_at: new Date(Date.now() - 3600 * 24 * 1000).toISOString(),
-    },
-    {
-      id: "TKT-2950",
-      issue_type: "Hardware",
-      farmer_id: "mock-farmer",
-      farmer_name: "Rahim Mia",
-      farmer_phone: "+8801712345678",
-      farm_id: defaultFarm?.id ?? "f1",
-      farm_name: defaultFarm?.name ?? "Sundarban Farm",
-      pond_id: defaultPond?.id ?? "p1",
-      pond_name: defaultPond?.name ?? "Pond 1 — Rui",
-      device_id: defaultDevice?.id ?? "d1",
-      device_serial: defaultDevice?.serial ?? "AQ-101",
-      priority: "low",
-      description:
-        "Solar panel bracket has a loose screw and keeps tilting during strong winds. Panel is still charging but angle is not optimal.",
-      photos: [],
-      assigned_to: defaultTech?.id ?? "mock-tech",
-      assigned_name: defaultTech?.full_name ?? "Shahin Hossain",
-      status: "resolved",
-      timeline: [
-        {
-          id: "act-10",
-          type: "created",
-          author: "Rahim Mia (Farmer)",
-          body: "Ticket raised: Loose solar bracket screw.",
-          created_at: new Date(Date.now() - 3600 * 120 * 1000).toISOString(),
-        },
-        {
-          id: "act-11",
-          type: "assignment",
-          author: "System Admin",
-          body: `Ticket assigned to technician ${defaultTech?.full_name ?? "Shahin Hossain"}.`,
-          created_at: new Date(Date.now() - 3600 * 118 * 1000).toISOString(),
-        },
-        {
-          id: "act-12",
-          type: "note",
-          author: defaultTech?.full_name ?? "Shahin Hossain (Tech)",
-          body: "Tightened the bracket bracket and added a lock washer to prevent it from slipping loose again. Charging efficiency is back to 100%.",
-          created_at: new Date(Date.now() - 3600 * 96 * 1000).toISOString(),
-        },
-        {
-          id: "act-13",
-          type: "resolution",
-          author: defaultTech?.full_name ?? "Shahin Hossain",
-          body: "Ticket marked as Resolved. Resolution note: Bracket tightened and lock-washer added on field visit.",
-          created_at: new Date(Date.now() - 3600 * 96 * 1000).toISOString(),
-        },
-      ],
-      created_at: new Date(Date.now() - 3600 * 120 * 1000).toISOString(),
-      updated_at: new Date(Date.now() - 3600 * 96 * 1000).toISOString(),
-    },
-  ];
-};
+function isTicketPriority(value: string): value is TicketPriority {
+  return ["low", "medium", "high", "critical"].includes(value);
+}
 
-const LOCAL_STORAGE_KEY = "acqua_support_tickets_store";
+function normalizeTicketStatus(value: string | null | undefined): TicketStatus {
+  return value && isTicketStatus(value) ? value : "open";
+}
+
+function normalizeTicketPriority(value: string | null | undefined): TicketPriority {
+  if (value === "normal") return "medium";
+  return value && isTicketPriority(value) ? value : "medium";
+}
+
+function normalizePhotos(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string");
+}
+
+function normalizeActivityKind(value: string): TicketActivity["type"] {
+  return ["created", "assignment", "status_change", "note", "resolution", "attachment"].includes(
+    value,
+  )
+    ? (value as TicketActivity["type"])
+    : "note";
+}
+
+function dbErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error) return error.message || fallback;
+  if (typeof error === "object" && error && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+}
+
+function isMissingSupportTable(error: unknown) {
+  const message = dbErrorMessage(error, "").toLowerCase();
+  return (
+    message.includes("support_ticket_activities") ||
+    message.includes("support_ticket_attachments") ||
+    (message.includes("relation") && message.includes("does not exist")) ||
+    message.includes("schema cache")
+  );
+}
+
+function safeFileName(fileName: string) {
+  return fileName.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120) || "attachment";
+}
+
+function mapTicketActivity(row: SupportTicketActivityRow, profiles: Profile[]): TicketActivity {
+  const actor = profiles.find((item) => item.id === row.actor_id) ?? null;
+  return {
+    id: row.id,
+    type: normalizeActivityKind(row.kind),
+    author: actor?.full_name ?? "Support",
+    body: row.body ?? "Ticket updated.",
+    created_at: row.created_at,
+  };
+}
+
+function mapTicketAttachment(row: SupportTicketAttachmentRow): TicketAttachment {
+  return {
+    id: row.id,
+    url: row.url,
+    storage_key: row.storage_key,
+    file_name: row.file_name,
+    mime_type: row.mime_type,
+    size_bytes: row.size_bytes,
+    created_at: row.created_at,
+  };
+}
+
+function mapSupportTicket({
+  row,
+  profiles,
+  farms,
+  ponds,
+  devices,
+  activities,
+  attachments,
+}: {
+  row: SupportTicketRow;
+  profiles: Profile[];
+  farms: Farm[];
+  ponds: Pond[];
+  devices: Device[];
+  activities: SupportTicketActivityRow[];
+  attachments: SupportTicketAttachmentRow[];
+}): SupportTicket {
+  const farm = farms.find((item) => item.id === row.farm_id) ?? null;
+  const pond = ponds.find((item) => item.id === row.pond_id) ?? null;
+  const device = devices.find((item) => item.id === row.device_id) ?? null;
+  const farmerId = farm?.owner_id ?? row.created_by ?? "";
+  const farmer = profiles.find((item) => item.id === farmerId) ?? null;
+  const assigned = profiles.find((item) => item.id === row.assigned_to) ?? null;
+  const status = normalizeTicketStatus(row.status);
+  const ticketActivities = activities
+    .filter((item) => item.ticket_id === row.id)
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  const ticketAttachments = attachments
+    .filter((item) => item.ticket_id === row.id)
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  const mappedAttachments = ticketAttachments.map(mapTicketAttachment);
+  const legacyAttachments = normalizePhotos(row.photos).map((url, index) => ({
+    id: `${row.id}-legacy-${index}`,
+    url,
+    storage_key: null,
+    file_name: "Attachment",
+    mime_type: null,
+    size_bytes: null,
+    created_at: row.created_at,
+  }));
+  const timeline: TicketActivity[] =
+    ticketActivities.length > 0
+      ? ticketActivities.map((item) => mapTicketActivity(item, profiles))
+      : [
+          {
+            id: `${row.id}-created`,
+            type: "created",
+            author: farmer?.full_name ?? "Requester",
+            body: row.description ?? "Support ticket created.",
+            created_at: row.created_at,
+          },
+        ];
+
+  if (ticketActivities.length === 0 && row.assigned_to) {
+    timeline.push({
+      id: `${row.id}-assigned`,
+      type: "assignment",
+      author: "Support",
+      body: `Assigned to ${assigned?.full_name ?? "technician"}.`,
+      created_at: row.updated_at,
+    });
+  }
+  if (ticketActivities.length === 0 && (status === "resolved" || status === "closed")) {
+    timeline.push({
+      id: `${row.id}-resolved`,
+      type: "resolution",
+      author: assigned?.full_name ?? "Support",
+      body: status === "resolved" ? "Ticket marked as resolved." : "Ticket closed.",
+      created_at: row.updated_at,
+    });
+  } else if (ticketActivities.length === 0 && status !== "open") {
+    timeline.push({
+      id: `${row.id}-status`,
+      type: "status_change",
+      author: assigned?.full_name ?? "Support",
+      body: `Status changed to ${STATUS_LABELS[status]}.`,
+      created_at: row.updated_at,
+    });
+  }
+
+  return {
+    id: row.id,
+    issue_type: row.issue_type ?? "Other",
+    farmer_id: farmerId,
+    farmer_name: farmer?.full_name ?? "Unknown requester",
+    farmer_phone: farmer?.phone ?? "--",
+    farm_id: row.farm_id,
+    farm_name: farm?.name ?? null,
+    pond_id: row.pond_id,
+    pond_name: pond?.name ?? null,
+    device_id: row.device_id,
+    device_serial: device?.serial ?? null,
+    priority: normalizeTicketPriority(row.priority),
+    description: row.description ?? "",
+    photos: Array.from(
+      new Set([...mappedAttachments.map((item) => item.url), ...normalizePhotos(row.photos)]),
+    ),
+    attachments: [...mappedAttachments, ...legacyAttachments],
+    assigned_to: row.assigned_to,
+    assigned_name: assigned?.full_name ?? null,
+    status,
+    timeline,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
 
 function AdminSupport() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // States
@@ -354,12 +387,12 @@ function AdminSupport() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newTicketForm, setNewTicketForm] = useState({
     issue_type: "Hardware",
-    farmer_id: "mock-farmer",
-    farmer_name: "Rahim Mia",
-    farmer_phone: "+8801712345678",
+    farmer_id: "",
+    farmer_name: "",
+    farmer_phone: "",
     farm_id: "",
     pond_id: "",
-    device_id: "",
+    device_id: "none",
     priority: "medium" as TicketPriority,
     description: "",
   });
@@ -411,11 +444,67 @@ function AdminSupport() {
     },
   });
 
+  const ticketsQ = useQuery({
+    queryKey: ["admin-support", "tickets"],
+    queryFn: async () => {
+      const r = await insforge.database
+        .from("support_tickets")
+        .select("*")
+        .order("updated_at", { ascending: false })
+        .limit(500);
+      if (r.error) throw r.error;
+      return (r.data ?? []) as SupportTicketRow[];
+    },
+  });
+
+  const ticketRows = useMemo(() => ticketsQ.data ?? [], [ticketsQ.data]);
+  const ticketIds = useMemo(() => ticketRows.map((ticket) => ticket.id), [ticketRows]);
+
+  const activitiesQ = useQuery({
+    queryKey: ["admin-support", "activities", ticketIds],
+    queryFn: async () => {
+      if (ticketIds.length === 0) return [] as SupportTicketActivityRow[];
+
+      const r = await insforge.database
+        .from("support_ticket_activities")
+        .select("*")
+        .in("ticket_id", ticketIds)
+        .order("created_at", { ascending: false })
+        .limit(2000);
+      if (r.error) {
+        if (isMissingSupportTable(r.error)) return [] as SupportTicketActivityRow[];
+        throw r.error;
+      }
+      return (r.data ?? []) as SupportTicketActivityRow[];
+    },
+  });
+
+  const attachmentsQ = useQuery({
+    queryKey: ["admin-support", "attachments", ticketIds],
+    queryFn: async () => {
+      if (ticketIds.length === 0) return [] as SupportTicketAttachmentRow[];
+
+      const r = await insforge.database
+        .from("support_ticket_attachments")
+        .select("*")
+        .in("ticket_id", ticketIds)
+        .order("created_at", { ascending: false })
+        .limit(2000);
+      if (r.error) {
+        if (isMissingSupportTable(r.error)) return [] as SupportTicketAttachmentRow[];
+        throw r.error;
+      }
+      return (r.data ?? []) as SupportTicketAttachmentRow[];
+    },
+  });
+
   const farms = useMemo(() => farmsQ.data ?? [], [farmsQ.data]);
   const ponds = useMemo(() => pondsQ.data ?? [], [pondsQ.data]);
   const devices = useMemo(() => devicesQ.data ?? [], [devicesQ.data]);
   const profiles = useMemo(() => profilesQ.data ?? [], [profilesQ.data]);
   const roles = useMemo(() => rolesQ.data ?? [], [rolesQ.data]);
+  const activityRows = useMemo(() => activitiesQ.data ?? [], [activitiesQ.data]);
+  const attachmentRows = useMemo(() => attachmentsQ.data ?? [], [attachmentsQ.data]);
 
   // Filter technicians
   const technicians = useMemo(() => {
@@ -432,30 +521,21 @@ function AdminSupport() {
     return profiles.filter((p) => !techUserIds.has(p.id));
   }, [profiles, roles]);
 
-  // Support Tickets State synced with LocalStorage fallback
-  const [tickets, setTickets] = useState<SupportTicket[]>([]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (raw) {
-      try {
-        setTickets(JSON.parse(raw));
-        return;
-      } catch {
-        // ignore & prepopulate
-      }
-    }
-    // Prepopulate
-    const prepop = getInitialTickets(technicians, farms, ponds, devices);
-    setTickets(prepop);
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(prepop));
-  }, [technicians, farms, ponds, devices]);
-
-  const saveTickets = (nextTickets: SupportTicket[]) => {
-    setTickets(nextTickets);
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(nextTickets));
-  };
+  const tickets = useMemo(
+    () =>
+      ticketRows.map((row) =>
+        mapSupportTicket({
+          row,
+          profiles,
+          farms,
+          ponds,
+          devices,
+          activities: activityRows,
+          attachments: attachmentRows,
+        }),
+      ),
+    [activityRows, attachmentRows, devices, farms, ponds, profiles, ticketRows],
+  );
 
   // Auto-fill values in new ticket form
   useEffect(() => {
@@ -465,82 +545,357 @@ function AdminSupport() {
   }, [farms, newTicketForm.farm_id]);
 
   useEffect(() => {
+    if (farmers.length > 0 && !newTicketForm.farmer_id) {
+      const farmer = farmers[0];
+      setNewTicketForm((f) => ({
+        ...f,
+        farmer_id: farmer.id,
+        farmer_name: farmer.full_name ?? "",
+        farmer_phone: farmer.phone ?? "",
+      }));
+    }
+  }, [farmers, newTicketForm.farmer_id]);
+
+  useEffect(() => {
     if (newTicketForm.farm_id) {
       const farmPonds = ponds.filter((p) => p.farm_id === newTicketForm.farm_id);
       const farmDevices = devices.filter((d) => d.farm_id === newTicketForm.farm_id);
       setNewTicketForm((f) => ({
         ...f,
         pond_id: farmPonds[0]?.id ?? "",
-        device_id: farmDevices[0]?.id ?? "",
+        device_id: farmDevices[0]?.id ?? "none",
       }));
     }
   }, [newTicketForm.farm_id, ponds, devices]);
 
-  // Ticket Mutations
+  const recordTicketActivity = async ({
+    ticketId,
+    kind,
+    body,
+    metadata = {},
+  }: {
+    ticketId: string;
+    kind: TicketActivity["type"];
+    body: string;
+    metadata?: Record<string, unknown>;
+  }) => {
+    if (!user?.id) throw new Error("Please sign in again before updating this ticket.");
+    const result = await insforge.database.from("support_ticket_activities").insert([
+      {
+        ticket_id: ticketId,
+        actor_id: user.id,
+        kind,
+        body,
+        metadata,
+      },
+    ]);
+    if (result.error) {
+      if (isMissingSupportTable(result.error)) {
+        throw new Error("Support ticket activity storage has not been deployed yet.");
+      }
+      throw new Error(dbErrorMessage(result.error, "Could not save ticket activity"));
+    }
+  };
+
+  const tryRecordTicketActivity = async (
+    args: Parameters<typeof recordTicketActivity>[0],
+  ): Promise<string | null> => {
+    try {
+      await recordTicketActivity(args);
+      return null;
+    } catch (error) {
+      return dbErrorMessage(error, "Ticket updated, but the timeline entry was not saved.");
+    }
+  };
+
+  const refreshSupportTickets = async () => {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ["admin-support", "tickets"] }),
+      qc.invalidateQueries({ queryKey: ["admin-support", "activities"] }),
+      qc.invalidateQueries({ queryKey: ["admin-support", "attachments"] }),
+    ]);
+  };
+
+  const updateTicketMutation = useMutation({
+    mutationFn: async ({
+      ticketId,
+      patch,
+      activity,
+      successMessage,
+    }: {
+      ticketId: string;
+      patch: Partial<SupportTicket>;
+      activity?: {
+        kind: TicketActivity["type"];
+        body: string;
+        metadata?: Record<string, unknown>;
+      };
+      successMessage?: string;
+    }) => {
+      const dbPatch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      if ("assigned_to" in patch) dbPatch.assigned_to = patch.assigned_to ?? null;
+      if ("status" in patch && patch.status) dbPatch.status = patch.status;
+      if ("priority" in patch && patch.priority) dbPatch.priority = patch.priority;
+      if ("description" in patch && patch.description != null)
+        dbPatch.description = patch.description;
+
+      const result = await insforge.database
+        .from("support_tickets")
+        .update(dbPatch)
+        .eq("id", ticketId);
+      if (result.error) throw result.error;
+      if (activity) {
+        const activityWarning = await tryRecordTicketActivity({ ticketId, ...activity });
+        return { activityWarning };
+      }
+      return { activityWarning: null };
+    },
+    onSuccess: async (data, variables) => {
+      if (variables.successMessage) toast.success(variables.successMessage);
+      if (data.activityWarning) toast.warning(data.activityWarning);
+      await refreshSupportTickets();
+    },
+    onError: (error) => toast.error(dbErrorMessage(error, "Could not update ticket")),
+  });
+
+  const createTicketMutation = useMutation({
+    mutationFn: async () => {
+      if (!user?.id) throw new Error("Please sign in again before creating a ticket.");
+      const { farm_id, pond_id, device_id, issue_type, priority, description } = newTicketForm;
+      if (!description.trim()) throw new Error("Please enter an issue description");
+
+      const selectedDeviceId = device_id === "none" ? null : device_id || null;
+      const requesterId = newTicketForm.farmer_id || user.id;
+      const selectedFarm = farm_id ? farms.find((farm) => farm.id === farm_id) : null;
+      const selectedPond = pond_id ? ponds.find((pond) => pond.id === pond_id) : null;
+      const selectedDevice = selectedDeviceId
+        ? devices.find((device) => device.id === selectedDeviceId)
+        : null;
+
+      if (selectedFarm && requesterId !== user.id && selectedFarm.owner_id !== requesterId) {
+        throw new Error("Selected farm does not belong to the selected requester.");
+      }
+      if (selectedPond && selectedFarm && selectedPond.farm_id !== selectedFarm.id) {
+        throw new Error("Selected pond does not belong to the selected farm.");
+      }
+      if (selectedDevice?.farm_id && selectedFarm && selectedDevice.farm_id !== selectedFarm.id) {
+        throw new Error("Selected device does not belong to the selected farm.");
+      }
+      if (selectedDevice?.pond_id && selectedPond && selectedDevice.pond_id !== selectedPond.id) {
+        throw new Error("Selected device does not belong to the selected pond.");
+      }
+
+      const result = await insforge.database
+        .from("support_tickets")
+        .insert([
+          {
+            created_by: requesterId,
+            farm_id: farm_id || null,
+            pond_id: pond_id || null,
+            device_id: selectedDeviceId,
+            issue_type,
+            priority,
+            description: description.trim(),
+            photos: [],
+            status: "open",
+          },
+        ])
+        .select();
+      if (result.error) throw result.error;
+      const ticket = ((result.data ?? []) as SupportTicketRow[])[0];
+      let activityWarning: string | null = null;
+      if (ticket?.id) {
+        activityWarning = await tryRecordTicketActivity({
+          ticketId: ticket.id,
+          kind: "created",
+          body: description.trim(),
+        });
+      }
+      return { activityWarning };
+    },
+    onSuccess: async (data) => {
+      toast.success("Support ticket created");
+      if (data.activityWarning) toast.warning(data.activityWarning);
+      setCreateDialogOpen(false);
+      setNewTicketForm({
+        issue_type: "Hardware",
+        farmer_id: farmers[0]?.id ?? "",
+        farmer_name: farmers[0]?.full_name ?? "",
+        farmer_phone: farmers[0]?.phone ?? "",
+        farm_id: farms[0]?.id ?? "",
+        pond_id: "",
+        device_id: "none",
+        priority: "medium",
+        description: "",
+      });
+      await refreshSupportTickets();
+    },
+    onError: (error) => toast.error(dbErrorMessage(error, "Could not create ticket")),
+  });
+
+  const addNoteMutation = useMutation({
+    mutationFn: async ({ ticketId, body }: { ticketId: string; body: string }) => {
+      await recordTicketActivity({ ticketId, kind: "note", body });
+    },
+    onSuccess: async () => {
+      toast.success("Note saved");
+      setNewNote("");
+      await refreshSupportTickets();
+    },
+    onError: (error) => toast.error(dbErrorMessage(error, "Could not save note")),
+  });
+
+  const uploadAttachmentMutation = useMutation({
+    mutationFn: async ({ ticketId, file }: { ticketId: string; file: File }) => {
+      if (!user?.id) throw new Error("Please sign in again before uploading an attachment.");
+      if (file.size > MAX_ATTACHMENT_BYTES) {
+        throw new Error("Attachment must be 10MB or smaller.");
+      }
+
+      const key = `${ticketId}/${Date.now()}-${safeFileName(file.name)}`;
+      const upload = await insforge.storage.from(SUPPORT_ATTACHMENTS_BUCKET).upload(key, file);
+      if (upload.error || !upload.data) {
+        throw new Error(dbErrorMessage(upload.error, "Attachment upload failed"));
+      }
+
+      const inserted = await insforge.database
+        .from("support_ticket_attachments")
+        .insert([
+          {
+            ticket_id: ticketId,
+            uploaded_by: user.id,
+            bucket: SUPPORT_ATTACHMENTS_BUCKET,
+            storage_key: upload.data.key,
+            url: upload.data.url,
+            file_name: file.name,
+            mime_type: file.type || upload.data.mimeType || null,
+            size_bytes: file.size,
+          },
+        ])
+        .select();
+
+      if (inserted.error) {
+        const cleanup = await insforge.storage
+          .from(SUPPORT_ATTACHMENTS_BUCKET)
+          .remove(upload.data.key);
+        if (cleanup.error) {
+          throw new Error(
+            `Attachment record failed and uploaded file cleanup also failed: ${dbErrorMessage(
+              cleanup.error,
+              "cleanup failed",
+            )}`,
+          );
+        }
+        if (isMissingSupportTable(inserted.error)) {
+          throw new Error("Support ticket attachment storage has not been deployed yet.");
+        }
+        throw new Error(dbErrorMessage(inserted.error, "Could not save attachment record"));
+      }
+
+      const attachment = ((inserted.data ?? []) as SupportTicketAttachmentRow[])[0];
+      const activityWarning = await tryRecordTicketActivity({
+        ticketId,
+        kind: "attachment",
+        body: `Attached ${file.name}`,
+        metadata: {
+          attachment_id: attachment?.id ?? null,
+          file_name: file.name,
+          storage_key: upload.data.key,
+          url: upload.data.url,
+        },
+      });
+      return { activityWarning };
+    },
+    onSuccess: async (data) => {
+      toast.success("Attachment uploaded");
+      if (data.activityWarning) toast.warning(data.activityWarning);
+      await refreshSupportTickets();
+    },
+    onError: (error) => toast.error(dbErrorMessage(error, "Could not upload attachment")),
+  });
+
+  const deleteAttachmentMutation = useMutation({
+    mutationFn: async ({
+      ticketId,
+      attachment,
+    }: {
+      ticketId: string;
+      attachment: TicketAttachment;
+    }) => {
+      if (attachment.storage_key) {
+        const removed = await insforge.storage
+          .from(SUPPORT_ATTACHMENTS_BUCKET)
+          .remove(attachment.storage_key);
+        if (removed.error) {
+          throw new Error(dbErrorMessage(removed.error, "Could not remove attachment file"));
+        }
+      }
+
+      const result = await insforge.database
+        .from("support_ticket_attachments")
+        .delete()
+        .eq("id", attachment.id);
+      if (result.error) throw result.error;
+      const activityWarning = await tryRecordTicketActivity({
+        ticketId,
+        kind: "attachment",
+        body: `Removed ${attachment.file_name ?? "attachment"}`,
+        metadata: { attachment_id: attachment.id, storage_key: attachment.storage_key },
+      });
+      return { activityWarning };
+    },
+    onSuccess: async (data) => {
+      toast.success("Attachment removed");
+      if (data.activityWarning) toast.warning(data.activityWarning);
+      await refreshSupportTickets();
+    },
+    onError: (error) => toast.error(dbErrorMessage(error, "Could not remove attachment")),
+  });
+
   const updateTicket = (
     ticketId: string,
     patch: Partial<SupportTicket>,
-    activity?: TicketActivity,
+    activity?: { kind: TicketActivity["type"]; body: string; metadata?: Record<string, unknown> },
+    successMessage?: string,
   ) => {
-    const next = tickets.map((t) => {
-      if (t.id === ticketId) {
-        const updatedTimeline = activity ? [...t.timeline, activity] : t.timeline;
-        return {
-          ...t,
-          ...patch,
-          timeline: updatedTimeline,
-          updated_at: new Date().toISOString(),
-        };
-      }
-      return t;
-    });
-    saveTickets(next);
+    updateTicketMutation.mutate({ ticketId, patch, activity, successMessage });
   };
 
   // Actions
   const handleAssign = (ticketId: string, techId: string) => {
+    if (techId === "none") {
+      updateTicket(
+        ticketId,
+        { assigned_to: null, assigned_name: null },
+        { kind: "assignment", body: "Ticket unassigned." },
+        "Ticket unassigned",
+      );
+      return;
+    }
+
     const tech = technicians.find((t) => t.id === techId);
     if (!tech) return;
 
-    const activity: TicketActivity = {
-      id: "act-" + Math.random().toString(36).slice(2, 10),
-      type: "assignment",
-      author: "System Admin",
-      body: `Assigned ticket to technician ${tech.full_name ?? "Unknown"}.`,
-      created_at: new Date().toISOString(),
-    };
-
-    updateTicket(ticketId, { assigned_to: techId, assigned_name: tech.full_name }, activity);
-    toast.success(`Ticket assigned to ${tech.full_name}`);
+    updateTicket(
+      ticketId,
+      { assigned_to: techId, assigned_name: tech.full_name },
+      { kind: "assignment", body: `Assigned to ${tech.full_name ?? "technician"}.` },
+      `Ticket assigned to ${tech.full_name ?? "technician"}`,
+    );
   };
 
   const handleStatusChange = (ticketId: string, status: TicketStatus) => {
-    const activity: TicketActivity = {
-      id: "act-" + Math.random().toString(36).slice(2, 10),
-      type: "status_change",
-      author: "System Admin",
-      body: `Changed status to '${STATUS_LABELS[status]}'.`,
-      created_at: new Date().toISOString(),
-    };
-
-    updateTicket(ticketId, { status }, activity);
-    toast.success(`Status updated to ${STATUS_LABELS[status]}`);
+    updateTicket(
+      ticketId,
+      { status },
+      { kind: "status_change", body: `Status changed to ${STATUS_LABELS[status]}.` },
+      `Status updated to ${STATUS_LABELS[status]}`,
+    );
   };
 
   const handleAddNote = (ticketId: string) => {
     if (!newNote.trim()) return;
-
-    const activity: TicketActivity = {
-      id: "act-" + Math.random().toString(36).slice(2, 10),
-      type: "note",
-      author: "System Admin (Note)",
-      body: newNote.trim(),
-      created_at: new Date().toISOString(),
-    };
-
-    updateTicket(ticketId, {}, activity);
-    setNewNote("");
-    toast.success("Note added to timeline");
+    addNoteMutation.mutate({ ticketId, body: newNote.trim() });
   };
 
   const handleCloseWithResolution = (ticketId: string) => {
@@ -549,43 +904,21 @@ function AdminSupport() {
       return;
     }
 
-    const activity: TicketActivity = {
-      id: "act-" + Math.random().toString(36).slice(2, 10),
-      type: "resolution",
-      author: "System Admin",
-      body: `Closed ticket with resolution: ${resolutionNote.trim()}`,
-      created_at: new Date().toISOString(),
-    };
-
-    updateTicket(ticketId, { status: "resolved" }, activity);
+    updateTicket(
+      ticketId,
+      { status: "resolved" },
+      { kind: "resolution", body: `Ticket resolved. ${resolutionNote.trim()}` },
+      "Ticket marked resolved",
+    );
     setResolutionNote("");
     setCloseResolutionOpen(false);
-    toast.success("Ticket closed and marked resolved");
   };
 
   const handlePhotoUpload = (ticketId: string, e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const file = files[0];
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      const t = tickets.find((x) => x.id === ticketId);
-      if (t) {
-        const nextPhotos = [...t.photos, dataUrl];
-        const activity: TicketActivity = {
-          id: "act-" + Math.random().toString(36).slice(2, 10),
-          type: "note",
-          author: "System Admin",
-          body: "Uploaded a new photo attachment.",
-          created_at: new Date().toISOString(),
-        };
-        updateTicket(ticketId, { photos: nextPhotos }, activity);
-        toast.success("Attachment uploaded successfully");
-      }
-    };
-    reader.readAsDataURL(file);
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    uploadAttachmentMutation.mutate({ ticketId, file });
   };
 
   const handleCreateTicket = () => {
@@ -596,58 +929,13 @@ function AdminSupport() {
       return;
     }
 
-    const farmer = profiles.find((p) => p.id === farmer_id);
-    const farm = farms.find((f) => f.id === farm_id);
-    const pond = ponds.find((p) => p.id === pond_id);
-    const device = devices.find((d) => d.id === device_id);
-
-    const ticketId = "TKT-" + Math.floor(1000 + Math.random() * 9000);
-
-    const newTicket: SupportTicket = {
-      id: ticketId,
-      issue_type,
-      farmer_id,
-      farmer_name: farmer?.full_name ?? "Unknown Farmer",
-      farmer_phone: farmer?.phone ?? "—",
-      farm_id: farm_id || null,
-      farm_name: farm?.name ?? null,
-      pond_id: pond_id || null,
-      pond_name: pond?.name ?? null,
-      device_id: device_id || null,
-      device_serial: device?.serial ?? null,
-      priority,
-      description,
-      photos: [],
-      assigned_to: null,
-      assigned_name: null,
-      status: "open",
-      timeline: [
-        {
-          id: "act-create",
-          type: "created",
-          author: `${farmer?.full_name ?? "Farmer"} (Raised via admin)`,
-          body: description,
-          created_at: new Date().toISOString(),
-        },
-      ],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    saveTickets([newTicket, ...tickets]);
-    toast.success(`Support ticket ${ticketId} created`);
-    setCreateDialogOpen(false);
-    setNewTicketForm({
-      issue_type: "Hardware",
-      farmer_id: "mock-farmer",
-      farmer_name: "Rahim Mia",
-      farmer_phone: "+8801712345678",
-      farm_id: farms[0]?.id ?? "",
-      pond_id: "",
-      device_id: "",
-      priority: "medium",
-      description: "",
-    });
+    void farmer_id;
+    void farm_id;
+    void pond_id;
+    void device_id;
+    void issue_type;
+    void priority;
+    createTicketMutation.mutate();
   };
 
   // Memoized lists & counts
@@ -1029,26 +1317,34 @@ function AdminSupport() {
                     <ImageIcon className="h-3.5 w-3.5" /> Photo Attachments
                   </h3>
                   <div className="flex flex-wrap gap-2.5">
-                    {activeTicket.photos.map((p, idx) => (
+                    {activeTicket.attachments.map((attachment) => (
                       <div
-                        key={idx}
+                        key={attachment.id}
                         className="relative group overflow-hidden rounded-xl border border-border h-20 w-20 bg-muted"
                       >
-                        <img src={p} alt="Attachment" className="h-full w-full object-cover" />
-                        <button
-                          onClick={() => {
-                            const nextPhotos = activeTicket.photos.filter((_, i) => i !== idx);
-                            updateTicket(activeTicket.id, { photos: nextPhotos });
-                            toast.success("Attachment removed");
-                          }}
-                          className="absolute right-1 top-1 hidden group-hover:grid place-items-center h-5 w-5 rounded-full bg-rose-600 text-white shadow-soft transition"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
+                        <img
+                          src={attachment.url}
+                          alt={attachment.file_name ?? "Attachment"}
+                          className="h-full w-full object-cover"
+                        />
+                        {attachment.storage_key && (
+                          <button
+                            onClick={() =>
+                              deleteAttachmentMutation.mutate({
+                                ticketId: activeTicket.id,
+                                attachment,
+                              })
+                            }
+                            className="absolute right-1 top-1 hidden group-hover:grid place-items-center h-5 w-5 rounded-full bg-rose-600 text-white shadow-soft transition"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
                       </div>
                     ))}
                     <button
                       onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadAttachmentMutation.isPending}
                       className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/80 hover:border-primary/50 bg-card/50 hover:bg-primary/5 h-20 w-20 text-muted-foreground hover:text-primary transition"
                     >
                       <Upload className="h-4 w-4 mb-1" />
@@ -1079,6 +1375,7 @@ function AdminSupport() {
                         status_change: <Clock className="h-3.5 w-3.5 text-sky-500" />,
                         note: <MessageSquare className="h-3.5 w-3.5 text-slate-500" />,
                         resolution: <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />,
+                        attachment: <ImageIcon className="h-3.5 w-3.5 text-cyan-600" />,
                       };
                       return (
                         <div key={act.id} className="relative">
@@ -1158,7 +1455,7 @@ function AdminSupport() {
 
                   {/* Add Note */}
                   <div className="space-y-1.5 pt-2">
-                    <Label className="text-xs text-muted-foreground">Add Internal Note</Label>
+                    <Label className="text-xs text-muted-foreground">Add Ticket Note</Label>
                     <div className="flex gap-2">
                       <Input
                         value={newNote}
@@ -1195,7 +1492,7 @@ function AdminSupport() {
 
       {/* Resolution Dialog */}
       <Dialog open={closeResolutionOpen} onOpenChange={setCloseResolutionOpen}>
-        <DialogContent sm-max-w-md>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Close Ticket &amp; Log Resolution</DialogTitle>
             <DialogDescription>
@@ -1355,7 +1652,7 @@ function AdminSupport() {
               <div className="space-y-1.5">
                 <Label className="text-muted-foreground">Device</Label>
                 <Select
-                  value={newTicketForm.device_id}
+                  value={newTicketForm.device_id || "none"}
                   onValueChange={(v) => setNewTicketForm({ ...newTicketForm, device_id: v })}
                   disabled={!newTicketForm.farm_id}
                 >
@@ -1363,7 +1660,7 @@ function AdminSupport() {
                     <SelectValue placeholder="Select Device" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None / Unassigned</SelectItem>
+                    <SelectItem value="none">None / Unassigned</SelectItem>
                     {devices
                       .filter((d) => d.farm_id === newTicketForm.farm_id)
                       .map((d) => (

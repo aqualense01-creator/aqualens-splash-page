@@ -85,6 +85,14 @@ type CalibrationRow = {
   performed_at: string;
 };
 
+function dbErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+}
+
 function resultMeta(result?: string | null) {
   switch (result) {
     case "pass":
@@ -106,9 +114,10 @@ function addDays(iso: string, days: number) {
 
 function CalibrationPage() {
   const { deviceId } = Route.useParams();
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin, isTechnician } = useAuth();
   const qc = useQueryClient();
   const defaultTech = profile?.full_name ?? user?.email ?? "Technician";
+  const canWriteCalibration = isAdmin || isTechnician;
 
   const [forms, setForms] = useState<Record<SensorKey, CardForm>>(() =>
     SENSORS.reduce(
@@ -216,6 +225,10 @@ function CalibrationPage() {
 
   const save = useMutation({
     mutationFn: async (sensor: SensorKey) => {
+      if (!canWriteCalibration) {
+        throw new Error("Calibration logs require technician access.");
+      }
+
       const f = forms[sensor];
       // Validation
       if (!f.calibration_value.trim()) throw new Error("Calibration value is required");
@@ -245,11 +258,10 @@ function CalibrationPage() {
       ]);
       if (error) throw new Error(error.message);
 
-      // Best-effort: update the matching sensors row so headers reflect the new dates.
       const row = sensorRows?.find((s) => s.sensor_type === sensor);
       const nextDue = addDays(performedAt, NEXT_DUE_DAYS).toISOString();
       if (row) {
-        await insforge.database
+        const sensorUpdate = await insforge.database
           .from("sensors")
           .update({
             last_calibrated: performedAt,
@@ -257,8 +269,16 @@ function CalibrationPage() {
             status: f.result === "fail" ? "fault" : "ok",
           })
           .eq("id", row.id);
+        if (sensorUpdate.error) {
+          throw new Error(
+            dbErrorMessage(
+              sensorUpdate.error,
+              "Calibration saved, but sensor status update failed",
+            ),
+          );
+        }
       } else {
-        await insforge.database.from("sensors").insert([
+        const sensorInsert = await insforge.database.from("sensors").insert([
           {
             device_id: deviceId,
             sensor_type: sensor,
@@ -267,6 +287,14 @@ function CalibrationPage() {
             status: f.result === "fail" ? "fault" : "ok",
           },
         ]);
+        if (sensorInsert.error) {
+          throw new Error(
+            dbErrorMessage(
+              sensorInsert.error,
+              "Calibration saved, but sensor status update failed",
+            ),
+          );
+        }
       }
     },
     onSuccess: (_d, sensor) => {
@@ -318,6 +346,12 @@ function CalibrationPage() {
       </div>
 
       {/* Sensor cards */}
+      {!canWriteCalibration && (
+        <div className="rounded-2xl border border-border/70 bg-muted/30 p-4 text-sm text-muted-foreground">
+          Calibration history is read-only for this account. Contact a technician to schedule
+          calibration or sensor replacement.
+        </div>
+      )}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {SENSORS.map((s) => {
           const f = forms[s.key];
@@ -336,6 +370,7 @@ function CalibrationPage() {
               key={s.key}
               onSubmit={(e) => {
                 e.preventDefault();
+                if (!canWriteCalibration) return;
                 save.mutate(s.key);
               }}
               className="flex flex-col rounded-2xl border border-border/70 bg-card p-5 shadow-soft"
@@ -385,109 +420,116 @@ function CalibrationPage() {
                 </div>
               </div>
 
-              <div className="mt-4 grid gap-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs">Calibration value *</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      required
-                      value={f.calibration_value}
-                      onChange={(e) =>
-                        setForms((p) => ({
-                          ...p,
-                          [s.key]: { ...p[s.key], calibration_value: e.target.value },
-                        }))
-                      }
-                      placeholder={s.unit}
-                    />
+              {canWriteCalibration && (
+                <>
+                  <div className="mt-4 grid gap-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs">Calibration value *</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          required
+                          value={f.calibration_value}
+                          onChange={(e) =>
+                            setForms((p) => ({
+                              ...p,
+                              [s.key]: { ...p[s.key], calibration_value: e.target.value },
+                            }))
+                          }
+                          placeholder={s.unit}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Reference value</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={f.reference_value}
+                          onChange={(e) =>
+                            setForms((p) => ({
+                              ...p,
+                              [s.key]: { ...p[s.key], reference_value: e.target.value },
+                            }))
+                          }
+                          placeholder={s.unit}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-xs">Result *</Label>
+                      <Select
+                        value={f.result}
+                        onValueChange={(v) =>
+                          setForms((p) => ({
+                            ...p,
+                            [s.key]: { ...p[s.key], result: v as Result },
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pass">Pass</SelectItem>
+                          <SelectItem value="fail">Fail</SelectItem>
+                          <SelectItem value="needs_review">Needs review</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label className="text-xs">Calibration date / time *</Label>
+                      <Input
+                        type="datetime-local"
+                        required
+                        value={f.performed_at}
+                        onChange={(e) =>
+                          setForms((p) => ({
+                            ...p,
+                            [s.key]: { ...p[s.key], performed_at: e.target.value },
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-xs">Technician *</Label>
+                      <Input
+                        required
+                        maxLength={120}
+                        value={f.technician_name}
+                        onChange={(e) =>
+                          setForms((p) => ({
+                            ...p,
+                            [s.key]: { ...p[s.key], technician_name: e.target.value },
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-xs">Notes</Label>
+                      <Input
+                        maxLength={500}
+                        value={f.notes}
+                        onChange={(e) =>
+                          setForms((p) => ({
+                            ...p,
+                            [s.key]: { ...p[s.key], notes: e.target.value },
+                          }))
+                        }
+                        placeholder="Optional"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <Label className="text-xs">Reference value</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={f.reference_value}
-                      onChange={(e) =>
-                        setForms((p) => ({
-                          ...p,
-                          [s.key]: { ...p[s.key], reference_value: e.target.value },
-                        }))
-                      }
-                      placeholder={s.unit}
-                    />
-                  </div>
-                </div>
 
-                <div>
-                  <Label className="text-xs">Result *</Label>
-                  <Select
-                    value={f.result}
-                    onValueChange={(v) =>
-                      setForms((p) => ({ ...p, [s.key]: { ...p[s.key], result: v as Result } }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pass">Pass</SelectItem>
-                      <SelectItem value="fail">Fail</SelectItem>
-                      <SelectItem value="needs_review">Needs review</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label className="text-xs">Calibration date / time *</Label>
-                  <Input
-                    type="datetime-local"
-                    required
-                    value={f.performed_at}
-                    onChange={(e) =>
-                      setForms((p) => ({
-                        ...p,
-                        [s.key]: { ...p[s.key], performed_at: e.target.value },
-                      }))
-                    }
-                  />
-                </div>
-
-                <div>
-                  <Label className="text-xs">Technician *</Label>
-                  <Input
-                    required
-                    maxLength={120}
-                    value={f.technician_name}
-                    onChange={(e) =>
-                      setForms((p) => ({
-                        ...p,
-                        [s.key]: { ...p[s.key], technician_name: e.target.value },
-                      }))
-                    }
-                  />
-                </div>
-
-                <div>
-                  <Label className="text-xs">Notes</Label>
-                  <Input
-                    maxLength={500}
-                    value={f.notes}
-                    onChange={(e) =>
-                      setForms((p) => ({
-                        ...p,
-                        [s.key]: { ...p[s.key], notes: e.target.value },
-                      }))
-                    }
-                    placeholder="Optional"
-                  />
-                </div>
-              </div>
-
-              <Button type="submit" className="mt-4 w-full" disabled={isSaving}>
-                {isSaving ? "Saving…" : "Save calibration"}
-              </Button>
+                  <Button type="submit" className="mt-4 w-full" disabled={isSaving}>
+                    {isSaving ? "Saving…" : "Save calibration"}
+                  </Button>
+                </>
+              )}
             </form>
           );
         })}
