@@ -16,6 +16,7 @@ import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { readFarmSelection, writeFarmSelection } from "@/lib/farm-selection";
 import { insforge, type Farm } from "@/lib/insforge";
+import { cn } from "@/lib/utils";
 
 const EMPTY_FARMS: Pick<Farm, "id" | "name">[] = [];
 
@@ -34,6 +35,23 @@ export function AppTopbar() {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const isAppRoute = pathname.startsWith("/app");
   const [activeFarmId, setActiveFarmId] = useState<string>("all");
+
+  const [demoEnabled, setDemoEnabled] = useState(true);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const val = window.localStorage.getItem("acqua_lence_demo_mode");
+    setDemoEnabled(val !== "false");
+  }, []);
+
+  const toggleDemoMode = () => {
+    const newVal = !demoEnabled;
+    setDemoEnabled(newVal);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("acqua_lence_demo_mode", String(newVal));
+      window.location.reload();
+    }
+  };
 
   const farmsQ = useQuery({
     queryKey: ["app-topbar-farms", user?.id],
@@ -131,6 +149,38 @@ export function AppTopbar() {
       </div>
 
       <div className="ml-auto flex items-center gap-1 sm:gap-2">
+        {/* Demo Mode Toggle */}
+        <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/30 px-2 py-1 select-none">
+          <span className="relative flex h-2 w-2">
+            <span className={cn(
+              "absolute inline-flex h-full w-full rounded-full opacity-75",
+              demoEnabled ? "animate-ping bg-emerald-400" : "bg-muted-foreground"
+            )}></span>
+            <span className={cn(
+              "relative inline-flex rounded-full h-2 w-2",
+              demoEnabled ? "bg-emerald-500" : "bg-muted-foreground/60"
+            )}></span>
+          </span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground hidden sm:inline">
+            {lang === "bn" ? "ডেমো মোড" : "Demo Mode"}
+          </span>
+          <button
+            onClick={toggleDemoMode}
+            type="button"
+            className={cn(
+              "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-1 focus:ring-primary focus:ring-offset-1",
+              demoEnabled ? "bg-primary" : "bg-muted-foreground/30"
+            )}
+          >
+            <span
+              className={cn(
+                "pointer-events-none inline-block h-3.5 w-3.5 transform rounded-full bg-background shadow-sm ring-0 transition duration-200 ease-in-out",
+                demoEnabled ? "translate-x-4" : "translate-x-0"
+              )}
+            />
+          </button>
+        </div>
+
         {/* Notification Bell with Badge */}
         <Button
           variant="ghost"
